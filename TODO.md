@@ -7,6 +7,7 @@
 - [x] Evaluated Better Auth anonymous plugin — **decided against it**. Plugin creates fake user records, has no transactional merge, requires explicit client call (not auto on first visit). Using custom cookie + DB row approach instead. Better Auth is used only for real authentication.
 - [x] Implemented anonymous session creation — `anonymous_session` table (Drizzle), SvelteKit server hook auto-creates cookie + DB row on first visit, validates on return visits, replaces invalid/expired sessions. Service module at `src/lib/server/services/anonymous-session.ts`. Docker Postgres on port 5434 (local Postgres occupies 5432/5433).
 - [x] Tests for anonymous session system — Playwright E2E tests (8 tests: cookie setting, reuse, invalid replacement, cross-page persistence in both JS-enabled and JS-disabled modes) + Vitest integration tests (10 tests: create, validate, delete, expire, constants)
+- [x] GitHub Actions CI workflow — runs lint, type-check, unit tests, and Playwright E2E against Postgres service container on every push/PR to master. Created `dev` branch for ongoing work.
 
 ## In Progress
 
@@ -39,7 +40,8 @@
 ### Phase 4: Polish & Infrastructure
 
 - [ ] SST (Ion) deployment setup
-- [ ] GitHub Actions CI pipeline (Vitest → Drizzle migration check → Playwright)
+- [x] GitHub Actions CI pipeline (lint, check, Vitest, Playwright with Postgres service container)
+- [ ] Branch protection on master (requires GitHub Pro or public repo)
 - [ ] Service worker for offline caching (JS enhancement)
 - [ ] Capacitor setup for Android
 - [ ] Stripe subscription integration
