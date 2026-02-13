@@ -1,3 +1,6 @@
+[![CI](https://github.com/peterolson/dong-chinese-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/peterolson/dong-chinese-v2/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/peterolson/dong-chinese-v2/branch/master/graph/badge.svg)](https://codecov.io/gh/peterolson/dong-chinese-v2)
+
 # sv
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
