@@ -15,10 +15,7 @@ export async function createAnonymousSession(db: DB): Promise<string> {
 	return row.id;
 }
 
-export async function validateAnonymousSession(
-	db: DB,
-	id: string
-): Promise<boolean> {
+export async function validateAnonymousSession(db: DB, id: string): Promise<boolean> {
 	const [row] = await db
 		.select({ id: anonymousSession.id })
 		.from(anonymousSession)
@@ -31,7 +28,10 @@ export async function deleteAnonymousSession(db: DB, id: string): Promise<void> 
 	await db.delete(anonymousSession).where(eq(anonymousSession.id, id));
 }
 
-export async function deleteExpiredSessions(db: DB, maxAgeDays: number = MAX_AGE_DAYS): Promise<number> {
+export async function deleteExpiredSessions(
+	db: DB,
+	maxAgeDays: number = MAX_AGE_DAYS
+): Promise<number> {
 	const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
 	const deleted = await db
 		.delete(anonymousSession)
