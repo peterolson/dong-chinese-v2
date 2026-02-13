@@ -1,0 +1,44 @@
+# Dong Chinese v2 — Project Tracker
+
+## Done
+
+- [x] Project scaffolded with `sv create` (SvelteKit, TypeScript, Drizzle, Better Auth, Storybook 10, Playwright, Vitest, ESLint, Prettier, MCP)
+- [x] Dev environment running (Docker Postgres, Better Auth schema, demo works at `/demo/better-auth`)
+- [x] Evaluated Better Auth anonymous plugin — **decided against it**. Plugin creates fake user records, has no transactional merge, requires explicit client call (not auto on first visit). Using custom cookie + DB row approach instead. Better Auth is used only for real authentication.
+- [x] Implemented anonymous session creation — `anonymous_session` table (Drizzle), SvelteKit server hook auto-creates cookie + DB row on first visit, validates on return visits, replaces invalid/expired sessions. Service module at `src/lib/server/services/anonymous-session.ts`. Docker Postgres on port 5434 (local Postgres occupies 5432/5433).
+
+## In Progress
+
+(nothing currently in progress)
+
+## Up Next
+
+### Phase 1: Foundation
+
+- [ ] Implement progress merge on account creation (additive merge in a single transaction)
+- [ ] Build login/signup pages with SvelteKit form actions (must work without JS)
+- [ ] Add GitHub OAuth flow
+- [ ] Write Playwright tests for auth flows (with and without JS)
+
+### Phase 2: Meteor Migration
+
+- [ ] Write Meteor user export script (MongoDB → JSON)
+- [ ] Write Postgres import script preserving bcrypt hashes
+- [ ] Verify existing Meteor passwords work with Better Auth
+- [ ] Write progress data migration script
+
+### Phase 3: Core Learning Features
+
+- [ ] Dictionary page with character breakdowns
+- [ ] Lesson system (reading, writing, both)
+- [ ] Interactive subtitles for media content
+- [ ] Progress tracking and spaced repetition
+- [ ] Edge caching strategy for dictionary pages (Cache-Control + stale-while-revalidate)
+
+### Phase 4: Polish & Infrastructure
+
+- [ ] SST (Ion) deployment setup
+- [ ] GitHub Actions CI pipeline (Vitest → Drizzle migration check → Playwright)
+- [ ] Service worker for offline caching (JS enhancement)
+- [ ] Capacitor setup for Android
+- [ ] Stripe subscription integration
