@@ -6,7 +6,21 @@ on:
     branches: [master]
 
 jobs:
-  ci:
+  lint-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - run: npm ci
+      - name: Verify auth schema is up to date
+        run: npm run auth:schema && git diff --exit-code src/lib/server/db/auth.schema.ts
+      - run: npm run lint
+      - run: npm run check
+
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -33,10 +47,21 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run auth:schema
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npx drizzle-kit push --force
-      - run: npm run check
-      - run: npm run lint
       - run: npm run test:unit -- --run
       - run: npx playwright test
