@@ -1,7 +1,6 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { anonymousSession } from '$lib/server/db/schema';
+import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
 import {
 	COOKIE_NAME,
@@ -14,9 +13,6 @@ import {
 } from './anonymous-session';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const client = postgres('postgres://root:mysecretpassword@localhost:5434/local');
-const db = drizzle(client);
 
 afterEach(async () => {
 	await db.delete(anonymousSession);
