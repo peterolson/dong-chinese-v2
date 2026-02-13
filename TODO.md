@@ -18,8 +18,10 @@
 ### Phase 1: Foundation
 
 - [ ] Implement progress merge on account creation (additive merge in a single transaction)
-- [ ] Build login/signup pages with SvelteKit form actions (must work without JS)
-- [ ] Add GitHub OAuth flow
+- [x] Build login page with SvelteKit form actions (must work without JS) — email/password login at `/login`, social provider buttons (GitHub/Google/Facebook/Twitter, conditionally rendered), auth-status header component, sign-out via form POST, open redirect prevention
+- [ ] Build signup page with SvelteKit form actions (must work without JS)
+- [x] Add social OAuth provider support (GitHub, Google, Facebook, Twitter — conditionally configured via env vars)
+- [x] Add username login support — Better Auth `username` plugin, unified "Email or username" field on `/login`, detects email vs username by `@`, `AuthUser` type for plugin-augmented user, updated stories with username error case
 - [ ] Write Playwright tests for auth flows (with and without JS)
 
 ### Phase 2: Meteor Migration
