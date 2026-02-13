@@ -61,5 +61,11 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - run: npx drizzle-kit push --force
-      - run: npm run test:unit -- --run
+      - run: npm run test:coverage
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
       - run: npx playwright test
