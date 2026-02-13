@@ -12,6 +12,17 @@ const dirname =
 export default defineConfig({
 	plugins: [sveltekit(), devtoolsJson()],
 	test: {
+		coverage: {
+			provider: 'v8',
+			reporter: ['text', 'html', 'lcov'],
+			reportsDirectory: './coverage',
+			include: ['src/**/*.{ts,js,svelte}'],
+			exclude: [
+				'src/**/*.{test,spec}.{ts,js}',
+				'src/**/*.stories.{ts,js,svelte}',
+				'src/lib/server/db/migrations/**'
+			]
+		},
 		expect: {
 			requireAssertions: true
 		},
