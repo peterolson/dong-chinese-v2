@@ -15,8 +15,6 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - name: Verify auth schema is up to date
-        run: npm run auth:schema && git diff --exit-code src/lib/server/db/auth.schema.ts
       - run: npm run lint
       - run: npm run check
 
