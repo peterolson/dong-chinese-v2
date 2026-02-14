@@ -23,10 +23,12 @@
 		align-items: center;
 		gap: 0.75rem;
 		font-size: 0.875rem;
+		color: var(--primary-foreground);
+		user-select: none;
 	}
 
 	.user-name {
-		color: var(--color-text, #333);
+		opacity: 0.9;
 	}
 
 	form {
@@ -35,19 +37,36 @@
 
 	button {
 		background: none;
-		border: none;
-		color: var(--color-primary, #1a73e8);
+		border: 1px solid rgb(255 255 255 / 0.3);
+		color: var(--primary-foreground);
 		cursor: pointer;
-		padding: 0;
+		padding: 0.25rem 0.75rem;
 		font-size: inherit;
-		text-decoration: underline;
+		border-radius: var(--radius);
+		transition:
+			background-color 0.15s,
+			border-color 0.15s;
 	}
 
 	button:hover {
-		opacity: 0.8;
+		background: rgb(255 255 255 / 0.15);
+		border-color: rgb(255 255 255 / 0.5);
 	}
 
 	a {
-		color: var(--color-primary, #1a73e8);
+		color: var(--primary-foreground);
+		padding: 0.25rem 0.75rem;
+		border: 1px solid rgb(255 255 255 / 0.3);
+		border-radius: var(--radius);
+		transition:
+			background-color 0.15s,
+			border-color 0.15s;
+		text-decoration: none;
+	}
+
+	a:hover {
+		background: rgb(255 255 255 / 0.15);
+		border-color: rgb(255 255 255 / 0.5);
+		text-decoration: none;
 	}
 </style>
