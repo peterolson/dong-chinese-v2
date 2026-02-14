@@ -3,6 +3,10 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth, getConfiguredSocialProviders } from '$lib/server/auth';
 import { sanitizeRedirectTo } from '$lib/server/services/sanitize-redirect';
 import { APIError } from 'better-auth';
+import { db } from '$lib/server/db';
+import { userEmail } from '$lib/server/db/schema';
+import { user } from '$lib/server/db/auth.schema';
+import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -27,8 +31,29 @@ export const actions: Actions = {
 
 		try {
 			if (identifier.includes('@')) {
+				// Look up user_email table to resolve secondary emails to the primary email
+				let loginEmail = identifier;
+				const emailRecord = await db
+					.select({ userId: userEmail.userId })
+					.from(userEmail)
+					.innerJoin(user, eq(user.id, userEmail.userId))
+					.where(eq(userEmail.email, identifier.toLowerCase()))
+					.limit(1);
+
+				if (emailRecord.length > 0) {
+					// Use the user's primary email (from user table) for Better Auth
+					const userRecord = await db
+						.select({ email: user.email })
+						.from(user)
+						.where(eq(user.id, emailRecord[0].userId))
+						.limit(1);
+					if (userRecord.length > 0) {
+						loginEmail = userRecord[0].email;
+					}
+				}
+
 				await auth.api.signInEmail({
-					body: { email: identifier, password }
+					body: { email: loginEmail, password }
 				});
 			} else {
 				await auth.api.signInUsername({
