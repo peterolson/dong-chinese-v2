@@ -5,6 +5,7 @@
 	import favicon32 from '$lib/assets/favicon-32.png';
 	import favicon16 from '$lib/assets/favicon-16.png';
 	import appleTouchIcon from '$lib/assets/apple-touch-icon.png';
+	import logoTransparent from '$lib/assets/logo-transparent.webp';
 	import { resolve } from '$app/paths';
 	import AuthStatus from '$lib/components/auth-status.svelte';
 	import type { LayoutData } from './$types';
@@ -25,7 +26,9 @@
 </svelte:head>
 
 <header class="site-header">
-	<a href={resolve('/')} class="site-name">懂中文 Dong Chinese</a>
+	<a href={resolve('/')} class="site-name">
+		<img src={logoTransparent} alt="懂中文 Dong Chinese" class="site-logo" />
+	</a>
 	<AuthStatus user={data.user} />
 </header>
 
@@ -35,21 +38,15 @@
 
 <style>
 	.site-header {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid var(--color-border, #e0e0e0);
+		justify-content: space-between;
+		padding: 0px 1rem;
 	}
 
-	.site-name {
-		font-weight: 700;
-		font-size: 1.125rem;
-		text-decoration: none;
-		color: var(--color-text, #333);
-	}
-
-	main {
-		padding: 1rem;
+	.site-logo {
+		max-height: 56px;
 	}
 </style>
