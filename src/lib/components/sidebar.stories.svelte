@@ -15,6 +15,7 @@
 
 <Story
 	name="Home Active"
+	args={{ currentPath: '/' }}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const nav = canvas.getByRole('navigation', { name: 'Main navigation' });
@@ -24,14 +25,11 @@
 		const lessonsLink = canvas.getByRole('link', { name: 'Lessons' });
 		await expect(lessonsLink).not.toHaveAttribute('aria-current');
 	}}
->
-	<div style="height: 500px;">
-		<Sidebar currentPath="/" />
-	</div>
-</Story>
+/>
 
 <Story
 	name="Lessons Active"
+	args={{ currentPath: '/lessons' }}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const lessonsLink = canvas.getByRole('link', { name: 'Lessons' });
@@ -39,26 +37,15 @@
 		const homeLink = canvas.getByRole('link', { name: 'Home' });
 		await expect(homeLink).not.toHaveAttribute('aria-current');
 	}}
->
-	<div style="height: 500px;">
-		<Sidebar currentPath="/lessons" />
-	</div>
-</Story>
+/>
 
-<Story name="Dictionary Active">
-	<div style="height: 500px;">
-		<Sidebar currentPath="/dictionary" />
-	</div>
-</Story>
+<Story name="Dictionary Active" args={{ currentPath: '/dictionary' }} />
 
-<Story name="Settings Active">
-	<div style="height: 500px;">
-		<Sidebar currentPath="/settings" />
-	</div>
-</Story>
+<Story name="Settings Active" args={{ currentPath: '/settings' }} />
 
 <Story
 	name="No Active Page"
+	args={{ currentPath: '/some-other-page' }}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const links = canvas.getAllByRole('link');
@@ -66,8 +53,4 @@
 			await expect(link).not.toHaveAttribute('aria-current');
 		}
 	}}
->
-	<div style="height: 500px;">
-		<Sidebar currentPath="/some-other-page" />
-	</div>
-</Story>
+/>
