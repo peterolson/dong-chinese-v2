@@ -12,7 +12,7 @@
 	};
 
 	const mainNav: NavItem[] = [
-		{ href: resolve('/'), label: 'Home', icon: House },
+		{ href: '/', label: 'Home', icon: House },
 		{ href: '/lessons', label: 'Lessons', icon: BookOpen },
 		{ href: '/dictionary', label: 'Dictionary', icon: BookText },
 		{ href: '/media', label: 'Media', icon: Play }
@@ -32,7 +32,7 @@
 		{#each mainNav as item (item.href)}
 			<li>
 				<a
-					href={item.href}
+					href={resolve(item.href)}
 					class="nav-link"
 					aria-current={isActive(item.href) ? 'page' : undefined}
 				>
@@ -49,7 +49,7 @@
 		{#each secondaryNav as item (item.href)}
 			<li>
 				<a
-					href={item.href}
+					href={resolve(item.href)}
 					class="nav-link"
 					aria-current={isActive(item.href) ? 'page' : undefined}
 				>
