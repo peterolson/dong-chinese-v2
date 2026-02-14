@@ -118,12 +118,8 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		// Social buttons should be rendered
-		await expect(
-			canvas.getByRole('button', { name: /continue with github/i })
-		).toBeInTheDocument();
-		await expect(
-			canvas.getByRole('button', { name: /continue with google/i })
-		).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
 		// "or" divider should be visible
 		await expect(canvas.getByText('or')).toBeInTheDocument();
 	}}
@@ -146,12 +142,8 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		// All four social buttons
-		await expect(
-			canvas.getByRole('button', { name: /continue with github/i })
-		).toBeInTheDocument();
-		await expect(
-			canvas.getByRole('button', { name: /continue with google/i })
-		).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
 		await expect(
 			canvas.getByRole('button', { name: /continue with facebook/i })
 		).toBeInTheDocument();

@@ -1,14 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth, getConfiguredSocialProviders } from '$lib/server/auth';
+import { sanitizeRedirectTo } from '$lib/server/services/sanitize-redirect';
 import { APIError } from 'better-auth';
-
-function sanitizeRedirectTo(value: string | null): string {
-	if (!value) return '/';
-	// Prevent open redirects: must start with / and not //
-	if (value.startsWith('/') && !value.startsWith('//')) return value;
-	return '/';
-}
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {

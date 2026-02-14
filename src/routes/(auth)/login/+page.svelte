@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -39,8 +40,8 @@
 	</form>
 
 	<p class="links">
-		<a href="/register">Create an account</a>
-		<a href="/forgot-password">Forgot password?</a>
+		<a href={resolve('/(auth)/register')}>Create an account</a>
+		<a href={resolve('/(auth)/forgot-password')}>Forgot password?</a>
 	</p>
 
 	{#if data.socialProviders.length > 0}

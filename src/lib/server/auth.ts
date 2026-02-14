@@ -12,10 +12,26 @@ const socialProviderConfig: Record<
 	SocialProviderName,
 	{ clientIdVar: string; clientSecretVar: string; label: string }
 > = {
-	github: { clientIdVar: 'GITHUB_CLIENT_ID', clientSecretVar: 'GITHUB_CLIENT_SECRET', label: 'GitHub' },
-	google: { clientIdVar: 'GOOGLE_CLIENT_ID', clientSecretVar: 'GOOGLE_CLIENT_SECRET', label: 'Google' },
-	facebook: { clientIdVar: 'FACEBOOK_CLIENT_ID', clientSecretVar: 'FACEBOOK_CLIENT_SECRET', label: 'Facebook' },
-	twitter: { clientIdVar: 'TWITTER_CLIENT_ID', clientSecretVar: 'TWITTER_CLIENT_SECRET', label: 'Twitter' }
+	github: {
+		clientIdVar: 'GITHUB_CLIENT_ID',
+		clientSecretVar: 'GITHUB_CLIENT_SECRET',
+		label: 'GitHub'
+	},
+	google: {
+		clientIdVar: 'GOOGLE_CLIENT_ID',
+		clientSecretVar: 'GOOGLE_CLIENT_SECRET',
+		label: 'Google'
+	},
+	facebook: {
+		clientIdVar: 'FACEBOOK_CLIENT_ID',
+		clientSecretVar: 'FACEBOOK_CLIENT_SECRET',
+		label: 'Facebook'
+	},
+	twitter: {
+		clientIdVar: 'TWITTER_CLIENT_ID',
+		clientSecretVar: 'TWITTER_CLIENT_SECRET',
+		label: 'Twitter'
+	}
 };
 
 export function getConfiguredSocialProviders(): Array<{ name: SocialProviderName; label: string }> {

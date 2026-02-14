@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import type { AuthUser } from '$lib/server/auth';
 
 	let { user }: { user: AuthUser | null } = $props();
@@ -12,7 +13,7 @@
 			<button type="submit">Sign out</button>
 		</form>
 	{:else}
-		<a href="/login">Log in</a>
+		<a href={resolve('/login')}>Log in</a>
 	{/if}
 </div>
 

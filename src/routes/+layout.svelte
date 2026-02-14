@@ -1,5 +1,6 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import { resolve } from '$app/paths';
 	import AuthStatus from '$lib/components/auth-status.svelte';
 	import type { LayoutData } from './$types';
 
@@ -11,7 +12,7 @@
 </svelte:head>
 
 <header class="site-header">
-	<a href="/" class="site-name">Dong Chinese</a>
+	<a href={resolve('/')} class="site-name">Dong Chinese</a>
 	<AuthStatus user={data.user} />
 </header>
 
