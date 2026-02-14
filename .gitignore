@@ -26,6 +26,7 @@ test-results
 
 # Coverage
 /coverage
+/ci-logs3
 
 *storybook.log
 storybook-static
