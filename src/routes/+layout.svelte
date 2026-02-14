@@ -25,7 +25,13 @@
 </svelte:head>
 
 <!-- CSS-only sidebar toggle (works without JS) -->
-<input type="checkbox" id="sidebar-toggle" class="sidebar-checkbox" aria-hidden="true" tabindex="-1" />
+<input
+	type="checkbox"
+	id="sidebar-toggle"
+	class="sidebar-checkbox"
+	aria-hidden="true"
+	tabindex="-1"
+/>
 
 <SiteHeader user={data.user} />
 
