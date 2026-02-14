@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RouteId } from '$app/types';
 	import { House, BookOpen, BookText, Play, Settings } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -6,19 +7,19 @@
 	let { currentPath }: { currentPath?: string } = $props();
 
 	type NavItem = {
-		href: string;
+		route: RouteId;
 		label: string;
 		icon: typeof House;
 	};
 
 	const mainNav: NavItem[] = [
-		{ href: '/', label: 'Home', icon: House },
-		{ href: '/lessons', label: 'Lessons', icon: BookOpen },
-		{ href: '/dictionary', label: 'Dictionary', icon: BookText },
-		{ href: '/media', label: 'Media', icon: Play }
+		{ route: '/', label: 'Home', icon: House },
+		{ route: '/(app)/lessons', label: 'Lessons', icon: BookOpen },
+		{ route: '/(app)/dictionary', label: 'Dictionary', icon: BookText },
+		{ route: '/(app)/media', label: 'Media', icon: Play }
 	];
 
-	const secondaryNav: NavItem[] = [{ href: '/settings', label: 'Settings', icon: Settings }];
+	const secondaryNav: NavItem[] = [{ route: '/(app)/settings', label: 'Settings', icon: Settings }];
 
 	function isActive(href: string): boolean {
 		const pathname = currentPath ?? page.url.pathname;
@@ -29,13 +30,10 @@
 
 <nav class="sidebar" aria-label="Main navigation">
 	<ul class="nav-list">
-		{#each mainNav as item (item.href)}
+		{#each mainNav as item (item.route)}
+			{@const href = resolve(item.route)}
 			<li>
-				<a
-					href={resolve(item.href)}
-					class="nav-link"
-					aria-current={isActive(item.href) ? 'page' : undefined}
-				>
+				<a {href} class="nav-link" aria-current={isActive(href) ? 'page' : undefined}>
 					<item.icon size={20} class="nav-icon" aria-hidden="true" />
 					{item.label}
 				</a>
@@ -46,13 +44,10 @@
 	<div class="nav-divider"></div>
 
 	<ul class="nav-list">
-		{#each secondaryNav as item (item.href)}
+		{#each secondaryNav as item (item.route)}
+			{@const href = resolve(item.route)}
 			<li>
-				<a
-					href={resolve(item.href)}
-					class="nav-link"
-					aria-current={isActive(item.href) ? 'page' : undefined}
-				>
+				<a {href} class="nav-link" aria-current={isActive(href) ? 'page' : undefined}>
 					<item.icon size={20} class="nav-icon" aria-hidden="true" />
 					{item.label}
 				</a>
