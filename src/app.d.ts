@@ -8,6 +8,7 @@ declare global {
 			user?: User;
 			session?: Session;
 			anonymousSessionId?: string;
+			magicLinkUrl?: string;
 		}
 
 		// interface Error {}

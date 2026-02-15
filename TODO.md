@@ -11,6 +11,10 @@
 
 - [x] Backwards-compatible login for Meteor users — bcrypt password hash/verify override in Better Auth, `user_email` table for multi-email login, secondary email → primary email resolution in sign-in action, import script (`scripts/import-meteor-users.ts`) for migrating 24k users from MongoDB preserving bcrypt hashes and OAuth provider IDs, bcrypt compatibility tests
 
+- [x] Reusable UI components — `Alert` (error/success/warning/info variants with lucide icons), `Button` (primary/secondary/tertiary/outline variants), `ProgressButton` (Button wrapper with loading spinner). Global CSS alert color variables. Storybook stories for all.
+- [x] Magic link sign-in — `sendMagicLink` form action with secondary→primary email resolution, email service (`src/lib/server/services/email.ts`), new/existing user detection for contextual email copy, loading state on submit button. 8 new unit tests covering all code paths.
+- [x] Login page uses new components — replaced inline `.error`/`.success` styles and raw `<button>` elements with `Alert`, `Button`, and `ProgressButton` components
+
 ## In Progress
 
 (nothing currently in progress)
@@ -24,6 +28,7 @@
 - [ ] Build signup page with SvelteKit form actions (must work without JS)
 - [x] Add social OAuth provider support (GitHub, Google, Facebook, Twitter — conditionally configured via env vars)
 - [x] Add username login support — Better Auth `username` plugin, unified "Email or username" field on `/login`, detects email vs username by `@`, `AuthUser` type for plugin-augmented user, updated stories with username error case
+- [x] Magic link sign-in with email service, reusable Alert/Button/ProgressButton components (PR #9)
 - [ ] Write Playwright tests for auth flows (with and without JS)
 
 ### Phase 2: Meteor Migration

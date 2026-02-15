@@ -120,8 +120,9 @@
 		// Social buttons should be rendered
 		await expect(canvas.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
 		await expect(canvas.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
-		// "or" divider should be visible
-		await expect(canvas.getByText('or')).toBeInTheDocument();
+		// "or" dividers should be visible (one before magic link, one before social)
+		const dividers = canvas.getAllByText('or');
+		await expect(dividers.length).toBeGreaterThanOrEqual(2);
 	}}
 />
 

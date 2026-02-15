@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { magicLink } from 'better-auth/plugins/magic-link';
 import { username } from 'better-auth/plugins/username';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
@@ -87,6 +88,16 @@ export const auth = betterAuth({
 			minUsernameLength: 1,
 			maxUsernameLength: 255,
 			usernameValidator: () => true
+		}),
+		magicLink({
+			expiresIn: 300,
+			disableSignUp: false,
+			sendMagicLink: async ({ url }) => {
+				// Don't send here — stash the URL so the form action can send
+				// to the correct recipient with the right content.
+				const event = getRequestEvent();
+				event.locals.magicLinkUrl = url;
+			}
 		}),
 		sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
 	]

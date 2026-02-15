@@ -15,6 +15,16 @@
 	--surface: #f7f7f7;
 	--surface-hover: #eeeeee;
 
+	/* Alert colors */
+	--error: #c00;
+	--error-bg: #fdd;
+	--success: #080;
+	--success-bg: #dfd;
+	--warning: #a85d00;
+	--warning-bg: #fff3cd;
+	--info: #0066ab;
+	--info-bg: #d6eaf8;
+
 	/* Layout */
 	--header-height: 56px;
 	--sidebar-width: 260px;
