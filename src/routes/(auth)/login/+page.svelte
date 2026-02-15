@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import Alert from '$lib/components/alert.svelte';
+	import Button from '$lib/components/button.svelte';
+	import ProgressButton from '$lib/components/progress-button.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let magicLinkLoading = $state(false);
 </script>
 
 <svelte:head>
@@ -14,7 +19,7 @@
 	<h1>Log in</h1>
 
 	{#if form?.message}
-		<p class="error" role="alert">{form.message}</p>
+		<Alert variant="error">{form.message}</Alert>
 	{/if}
 
 	<form method="post" action="?/signIn" use:enhance>
@@ -36,13 +41,44 @@
 			<input type="password" name="password" autocomplete="current-password" required />
 		</label>
 
-		<button type="submit">Log in</button>
+		<Button type="submit">Log in</Button>
 	</form>
 
 	<p class="links">
 		<a href={resolve('/(auth)/register')}>Create an account</a>
 		<a href={resolve('/(auth)/forgot-password')}>Forgot password?</a>
 	</p>
+
+	<div class="divider"><span>or</span></div>
+
+	{#if form?.magicLinkMessage && !form?.magicLinkError}
+		<Alert variant="success">{form.magicLinkMessage}</Alert>
+	{:else}
+		<form
+			method="post"
+			action="?/sendMagicLink"
+			use:enhance={() => {
+				magicLinkLoading = true;
+				return async ({ update }) => {
+					magicLinkLoading = false;
+					await update();
+				};
+			}}
+		>
+			<input type="hidden" name="redirectTo" value={data.redirectTo} />
+
+			{#if form?.magicLinkMessage && form?.magicLinkError}
+				<Alert variant="error">{form.magicLinkMessage}</Alert>
+			{/if}
+
+			<label>
+				<span>Email</span>
+				<input type="email" name="email" autocomplete="email" required />
+			</label>
+
+			<ProgressButton type="submit" loading={magicLinkLoading}>Email sign-in link</ProgressButton>
+		</form>
+	{/if}
 
 	{#if data.socialProviders.length > 0}
 		<div class="divider"><span>or</span></div>
@@ -52,9 +88,9 @@
 				<form method="post" action="?/signInSocial" use:enhance>
 					<input type="hidden" name="provider" value={provider.name} />
 					<input type="hidden" name="redirectTo" value={data.redirectTo} />
-					<button type="submit" class="social-button">
+					<Button type="submit" variant="outline">
 						Continue with {provider.label}
-					</button>
+					</Button>
 				</form>
 			{/each}
 		</div>
@@ -70,15 +106,6 @@
 
 	h1 {
 		margin-bottom: 1.5rem;
-	}
-
-	.error {
-		color: var(--color-error, #c00);
-		background: var(--color-error-bg, #fdd);
-		border: 1px solid var(--color-error-border, #c00);
-		border-radius: 4px;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 1rem;
 	}
 
 	form {
@@ -98,25 +125,12 @@
 	}
 
 	input[type='text'],
-	input[type='password'] {
+	input[type='password'],
+	input[type='email'] {
 		padding: 0.5rem;
 		border: 1px solid var(--color-border, #ccc);
 		border-radius: 4px;
 		font-size: 1rem;
-	}
-
-	button[type='submit'] {
-		padding: 0.5rem 1rem;
-		background: var(--color-primary, #1a73e8);
-		color: var(--color-primary-text, #fff);
-		border: none;
-		border-radius: 4px;
-		font-size: 1rem;
-		cursor: pointer;
-	}
-
-	button[type='submit']:hover {
-		opacity: 0.9;
 	}
 
 	.links {
@@ -146,17 +160,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.social-button {
-		width: 100%;
-		background: var(--color-surface, #fff);
-		color: var(--color-text, #333);
-		border: 1px solid var(--color-border, #ccc);
-	}
-
-	.social-button:hover {
-		background: var(--color-surface-hover, #f5f5f5);
-		opacity: 1;
 	}
 </style>

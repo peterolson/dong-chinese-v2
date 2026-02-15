@@ -8,8 +8,10 @@ type SocialProvider = { name: SocialProviderName; label: string };
 const mockSignInEmail = vi.fn();
 const mockSignInUsername = vi.fn();
 const mockSignInSocial = vi.fn();
+const mockSignInMagicLink = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetConfiguredSocialProviders = vi.fn<() => SocialProvider[]>(() => []);
+const mockSendEmail = vi.fn<(...args: unknown[]) => Promise<boolean>>(() => Promise.resolve(true));
 
 vi.mock('$lib/server/auth', () => ({
 	auth: {
@@ -17,6 +19,7 @@ vi.mock('$lib/server/auth', () => ({
 			signInEmail: (...args: unknown[]) => mockSignInEmail(...args),
 			signInUsername: (...args: unknown[]) => mockSignInUsername(...args),
 			signInSocial: (...args: unknown[]) => mockSignInSocial(...args),
+			signInMagicLink: (...args: unknown[]) => mockSignInMagicLink(...args),
 			signOut: (...args: unknown[]) => mockSignOut(...args)
 		}
 	},
@@ -25,7 +28,7 @@ vi.mock('$lib/server/auth', () => ({
 
 // Mock the db module — mockDbSelect controls what the user_email query returns
 const mockDbSelectResult = vi.fn<() => Array<{ userId: string }>>(() => []);
-const mockDbSelectUserResult = vi.fn<() => Array<{ email: string }>>(() => []);
+const mockDbSelectUserResult = vi.fn<() => Array<Record<string, string>>>(() => []);
 let dbSelectCallCount = 0;
 
 vi.mock('$lib/server/db', () => {
@@ -66,6 +69,10 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn()
 }));
 
+vi.mock('$lib/server/services/email', () => ({
+	sendEmail: (...args: unknown[]) => mockSendEmail(...args)
+}));
+
 vi.mock('$lib/server/services/sanitize-redirect', async () => {
 	const actual = await vi.importActual<typeof import('$lib/server/services/sanitize-redirect')>(
 		'$lib/server/services/sanitize-redirect'
@@ -95,7 +102,10 @@ function makeEvent(
 	} as Parameters<typeof load>[0];
 }
 
-function makeActionEvent(formEntries: Record<string, string>) {
+function makeActionEvent(
+	formEntries: Record<string, string>,
+	locals: Record<string, unknown> = {}
+) {
 	const form = new FormData();
 	for (const [k, v] of Object.entries(formEntries)) {
 		form.set(k, v);
@@ -104,8 +114,9 @@ function makeActionEvent(formEntries: Record<string, string>) {
 		request: {
 			formData: () => Promise.resolve(form),
 			headers: new Headers()
-		}
-	} as Parameters<NonNullable<typeof actions>['signIn']>[0];
+		},
+		locals
+	} as unknown as Parameters<NonNullable<typeof actions>['signIn']>[0];
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -115,6 +126,7 @@ beforeEach(() => {
 	mockGetConfiguredSocialProviders.mockReturnValue([]);
 	mockDbSelectResult.mockReturnValue([]);
 	mockDbSelectUserResult.mockReturnValue([]);
+	mockSendEmail.mockResolvedValue(true);
 	dbSelectCallCount = 0;
 });
 
@@ -296,6 +308,189 @@ describe('actions.signInSocial', () => {
 
 		expect(result?.status).toBe(400);
 		expect((result?.data as { message: string }).message).toBe('Social sign-in failed.');
+	});
+});
+
+describe('actions.sendMagicLink', () => {
+	it('returns 400 when email is empty', async () => {
+		const event = makeActionEvent({ email: '', redirectTo: '/' });
+		const result = await actions!.sendMagicLink(event);
+
+		expect(result?.status).toBe(400);
+		expect((result?.data as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Email is required.'
+		);
+	});
+
+	it('trims and lowercases the email', async () => {
+		mockSignInMagicLink.mockResolvedValue({});
+		const event = makeActionEvent(
+			{ email: '  User@Test.COM  ', redirectTo: '/' },
+			{ magicLinkUrl: 'https://example.com/magic' }
+		);
+
+		await actions!.sendMagicLink(event);
+
+		// signInMagicLink should receive the cleaned email
+		expect(mockSignInMagicLink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({ email: 'user@test.com' })
+			})
+		);
+		// sendEmail should also receive the cleaned email
+		expect(mockSendEmail).toHaveBeenCalledWith(
+			'user@test.com',
+			expect.any(String),
+			expect.any(String),
+			expect.any(String)
+		);
+	});
+
+	it('sends "create account" email for new user (email not in any table)', async () => {
+		// No results from either db query
+		mockDbSelectResult.mockReturnValue([]);
+		mockDbSelectUserResult.mockReturnValue([]);
+		mockSignInMagicLink.mockResolvedValue({});
+
+		const event = makeActionEvent(
+			{ email: 'new@test.com', redirectTo: '/dashboard' },
+			{ magicLinkUrl: 'https://example.com/magic-link' }
+		);
+		const result = await actions!.sendMagicLink(event);
+
+		expect(mockSignInMagicLink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: { email: 'new@test.com', callbackURL: '/dashboard' }
+			})
+		);
+		expect(mockSendEmail).toHaveBeenCalledWith(
+			'new@test.com',
+			'Create your Dong Chinese account',
+			expect.stringContaining('create your account'),
+			expect.stringContaining('Create your Dong Chinese account')
+		);
+		expect((result as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Check your email for a link to create your account.'
+		);
+	});
+
+	it('sends "sign in" email for existing user found via primary email', async () => {
+		// user_email lookup returns nothing, but user table lookup finds the user
+		mockDbSelectResult.mockReturnValue([]);
+		mockDbSelectUserResult.mockReturnValue([{ id: 'user-123' }]);
+		mockSignInMagicLink.mockResolvedValue({});
+
+		const event = makeActionEvent(
+			{ email: 'existing@test.com', redirectTo: '/' },
+			{ magicLinkUrl: 'https://example.com/magic-link' }
+		);
+		const result = await actions!.sendMagicLink(event);
+
+		// Should use the same email (it's already the primary)
+		expect(mockSignInMagicLink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: { email: 'existing@test.com', callbackURL: '/' }
+			})
+		);
+		expect(mockSendEmail).toHaveBeenCalledWith(
+			'existing@test.com',
+			'Sign in to Dong Chinese',
+			expect.stringContaining('sign in'),
+			expect.stringContaining('Sign in to Dong Chinese')
+		);
+		expect((result as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Check your email for a sign-in link.'
+		);
+	});
+
+	it('resolves secondary email to primary and sends "sign in" email', async () => {
+		// user_email lookup finds the user, then user table returns primary email
+		mockDbSelectResult.mockReturnValue([{ userId: 'user-456' }]);
+		mockDbSelectUserResult.mockReturnValue([{ email: 'primary@test.com' }]);
+		mockSignInMagicLink.mockResolvedValue({});
+
+		const event = makeActionEvent(
+			{ email: 'secondary@test.com', redirectTo: '/' },
+			{ magicLinkUrl: 'https://example.com/magic-link' }
+		);
+		const result = await actions!.sendMagicLink(event);
+
+		// signInMagicLink should use the resolved primary email
+		expect(mockSignInMagicLink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: { email: 'primary@test.com', callbackURL: '/' }
+			})
+		);
+		// sendEmail should still send to the original email the user typed
+		expect(mockSendEmail).toHaveBeenCalledWith(
+			'secondary@test.com',
+			'Sign in to Dong Chinese',
+			expect.any(String),
+			expect.any(String)
+		);
+		expect((result as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Check your email for a sign-in link.'
+		);
+	});
+
+	it('returns 500 when signInMagicLink throws', async () => {
+		mockSignInMagicLink.mockRejectedValue(new Error('auth failure'));
+
+		const event = makeActionEvent({ email: 'user@test.com', redirectTo: '/' });
+		const result = await actions!.sendMagicLink(event);
+
+		expect(result?.status).toBe(500);
+		expect((result?.data as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Something went wrong. Please try again.'
+		);
+		expect(mockSendEmail).not.toHaveBeenCalled();
+	});
+
+	it('returns 500 when magicLinkUrl is not set on locals', async () => {
+		mockSignInMagicLink.mockResolvedValue({});
+
+		// No magicLinkUrl in locals
+		const event = makeActionEvent({ email: 'user@test.com', redirectTo: '/' });
+		const result = await actions!.sendMagicLink(event);
+
+		expect(result?.status).toBe(500);
+		expect((result?.data as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Something went wrong. Please try again.'
+		);
+		expect(mockSendEmail).not.toHaveBeenCalled();
+	});
+
+	it('returns 500 when sendEmail fails', async () => {
+		mockSignInMagicLink.mockResolvedValue({});
+		mockSendEmail.mockResolvedValue(false);
+
+		const event = makeActionEvent(
+			{ email: 'user@test.com', redirectTo: '/' },
+			{ magicLinkUrl: 'https://example.com/magic-link' }
+		);
+		const result = await actions!.sendMagicLink(event);
+
+		expect(result?.status).toBe(500);
+		expect((result?.data as { magicLinkMessage: string }).magicLinkMessage).toBe(
+			'Failed to send email. Please try again.'
+		);
+	});
+
+	it('includes the magic link URL in the email body', async () => {
+		mockSignInMagicLink.mockResolvedValue({});
+
+		const event = makeActionEvent(
+			{ email: 'user@test.com', redirectTo: '/' },
+			{ magicLinkUrl: 'https://dong-chinese.com/auth/magic?token=abc123' }
+		);
+		await actions!.sendMagicLink(event);
+
+		expect(mockSendEmail).toHaveBeenCalledWith(
+			'user@test.com',
+			expect.any(String),
+			expect.stringContaining('https://dong-chinese.com/auth/magic?token=abc123'),
+			expect.stringContaining('https://dong-chinese.com/auth/magic?token=abc123')
+		);
 	});
 });
 
