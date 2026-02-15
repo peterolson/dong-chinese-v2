@@ -9,15 +9,17 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/login');
 
 				await expect(page.locator('h1')).toHaveText('Log in');
-				await expect(page.locator('input[name="identifier"]')).toBeVisible();
-				await expect(page.locator('input[name="password"]')).toBeVisible();
-				await expect(page.locator('button[type="submit"]')).toContainText('Log in');
+
+				const signInForm = page.locator('form[action="?/signIn"]');
+				await expect(signInForm.locator('input[name="identifier"]')).toBeVisible();
+				await expect(signInForm.locator('input[name="password"]')).toBeVisible();
+				await expect(signInForm.locator('button[type="submit"]')).toContainText('Log in');
 			});
 
 			test('has link to register page', async ({ page }) => {
 				await page.goto('/login');
 
-				const registerLink = page.locator('a', { hasText: 'Create an account' });
+				const registerLink = page.locator('.auth-links a', { hasText: 'Create an account' });
 				await expect(registerLink).toBeVisible();
 				await expect(registerLink).toHaveAttribute('href', /register/);
 			});
@@ -25,7 +27,7 @@ for (const jsEnabled of [true, false]) {
 			test('has link to forgot password page', async ({ page }) => {
 				await page.goto('/login');
 
-				const forgotLink = page.locator('a', { hasText: 'Forgot password?' });
+				const forgotLink = page.locator('.auth-links a', { hasText: 'Forgot password?' });
 				await expect(forgotLink).toBeVisible();
 				await expect(forgotLink).toHaveAttribute('href', /forgot-password/);
 			});
@@ -40,18 +42,20 @@ for (const jsEnabled of [true, false]) {
 			test('magic link form is present', async ({ page }) => {
 				await page.goto('/login');
 
-				await expect(page.locator('input[name="email"]')).toBeVisible();
+				const magicForm = page.locator('form[action="?/sendMagicLink"]');
+				await expect(magicForm).toBeVisible();
+				await expect(magicForm.locator('input[name="email"]')).toBeVisible();
 			});
 
 			test('navigating to register works', async ({ page }) => {
 				await page.goto('/login');
-				await page.locator('a', { hasText: 'Create an account' }).click();
+				await page.locator('.auth-links a', { hasText: 'Create an account' }).click();
 				await expect(page.locator('h1')).toHaveText('Create an account');
 			});
 
 			test('navigating to forgot password works', async ({ page }) => {
 				await page.goto('/login');
-				await page.locator('a', { hasText: 'Forgot password?' }).click();
+				await page.locator('.auth-links a', { hasText: 'Forgot password?' }).click();
 				await expect(page.locator('h1')).toHaveText('Reset your password');
 			});
 		});
@@ -61,12 +65,14 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/register');
 
 				await expect(page.locator('h1')).toHaveText('Create an account');
-				await expect(page.locator('input[name="name"]')).toBeVisible();
-				await expect(page.locator('input[name="email"]')).toBeVisible();
-				await expect(page.locator('input[name="username"]')).toBeVisible();
-				await expect(page.locator('input[name="password"]')).toBeVisible();
-				await expect(page.locator('input[name="confirmPassword"]')).toBeVisible();
-				await expect(page.locator('button[type="submit"]')).toContainText('Create account');
+
+				const signUpForm = page.locator('form[action="?/signUp"]');
+				await expect(signUpForm.locator('input[name="name"]')).toBeVisible();
+				await expect(signUpForm.locator('input[name="email"]')).toBeVisible();
+				await expect(signUpForm.locator('input[name="username"]')).toBeVisible();
+				await expect(signUpForm.locator('input[name="password"]')).toBeVisible();
+				await expect(signUpForm.locator('input[name="confirmPassword"]')).toBeVisible();
+				await expect(signUpForm.locator('button[type="submit"]')).toContainText('Create account');
 			});
 
 			test('form submits via POST (no-JS baseline)', async ({ page }) => {
@@ -79,7 +85,7 @@ for (const jsEnabled of [true, false]) {
 			test('has link back to login', async ({ page }) => {
 				await page.goto('/register');
 
-				const loginLink = page.locator('a', { hasText: 'Log in' });
+				const loginLink = page.locator('.auth-footer a', { hasText: 'Log in' });
 				await expect(loginLink).toBeVisible();
 				await expect(loginLink).toHaveAttribute('href', /login/);
 			});
@@ -87,18 +93,24 @@ for (const jsEnabled of [true, false]) {
 			test('name and username are optional (no required attribute)', async ({ page }) => {
 				await page.goto('/register');
 
-				const nameInput = page.locator('input[name="name"]');
-				const usernameInput = page.locator('input[name="username"]');
-				await expect(nameInput).not.toHaveAttribute('required', '');
-				await expect(usernameInput).not.toHaveAttribute('required', '');
+				const signUpForm = page.locator('form[action="?/signUp"]');
+				await expect(signUpForm.locator('input[name="name"]')).not.toHaveAttribute('required', '');
+				await expect(signUpForm.locator('input[name="username"]')).not.toHaveAttribute(
+					'required',
+					''
+				);
 			});
 
 			test('email and password are required', async ({ page }) => {
 				await page.goto('/register');
 
-				await expect(page.locator('input[name="email"]')).toHaveAttribute('required', '');
-				await expect(page.locator('input[name="password"]')).toHaveAttribute('required', '');
-				await expect(page.locator('input[name="confirmPassword"]')).toHaveAttribute('required', '');
+				const signUpForm = page.locator('form[action="?/signUp"]');
+				await expect(signUpForm.locator('input[name="email"]')).toHaveAttribute('required', '');
+				await expect(signUpForm.locator('input[name="password"]')).toHaveAttribute('required', '');
+				await expect(signUpForm.locator('input[name="confirmPassword"]')).toHaveAttribute(
+					'required',
+					''
+				);
 			});
 		});
 
@@ -107,8 +119,10 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/forgot-password');
 
 				await expect(page.locator('h1')).toHaveText('Reset your password');
-				await expect(page.locator('input[name="email"]')).toBeVisible();
-				await expect(page.locator('button[type="submit"]')).toContainText('Send reset link');
+
+				const form = page.locator('form[action="?/requestReset"]');
+				await expect(form.locator('input[name="email"]')).toBeVisible();
+				await expect(form.locator('button[type="submit"]')).toContainText('Send reset link');
 			});
 
 			test('form submits via POST (no-JS baseline)', async ({ page }) => {
@@ -121,7 +135,7 @@ for (const jsEnabled of [true, false]) {
 			test('has link back to login', async ({ page }) => {
 				await page.goto('/forgot-password');
 
-				const loginLink = page.locator('a', { hasText: 'Back to log in' });
+				const loginLink = page.locator('.auth-footer a', { hasText: 'Back to log in' });
 				await expect(loginLink).toBeVisible();
 				await expect(loginLink).toHaveAttribute('href', /login/);
 			});
@@ -130,8 +144,6 @@ for (const jsEnabled of [true, false]) {
 		test.describe('Reset password page', () => {
 			test('redirects to forgot-password when no token is present', async ({ page }) => {
 				await page.goto('/reset-password');
-
-				// Should redirect to /forgot-password
 				await expect(page).toHaveURL(/forgot-password/);
 			});
 
@@ -139,9 +151,11 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/reset-password?token=test-token');
 
 				await expect(page.locator('h1')).toHaveText('Set a new password');
-				await expect(page.locator('input[name="newPassword"]')).toBeVisible();
-				await expect(page.locator('input[name="confirmPassword"]')).toBeVisible();
-				await expect(page.locator('button[type="submit"]')).toContainText('Reset password');
+
+				const form = page.locator('form[action="?/resetPassword"]');
+				await expect(form.locator('input[name="newPassword"]')).toBeVisible();
+				await expect(form.locator('input[name="confirmPassword"]')).toBeVisible();
+				await expect(form.locator('button[type="submit"]')).toContainText('Reset password');
 			});
 
 			test('form submits via POST with hidden token (no-JS baseline)', async ({ page }) => {
@@ -150,14 +164,14 @@ for (const jsEnabled of [true, false]) {
 				const form = page.locator('form[action="?/resetPassword"]');
 				await expect(form).toHaveAttribute('method', 'post');
 
-				const hiddenToken = page.locator('input[name="token"][type="hidden"]');
+				const hiddenToken = form.locator('input[name="token"][type="hidden"]');
 				await expect(hiddenToken).toHaveValue('test-token');
 			});
 
 			test('has link back to login', async ({ page }) => {
 				await page.goto('/reset-password?token=test-token');
 
-				const loginLink = page.locator('a', { hasText: 'Back to log in' });
+				const loginLink = page.locator('.auth-footer a', { hasText: 'Back to log in' });
 				await expect(loginLink).toBeVisible();
 			});
 		});
@@ -167,10 +181,10 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/login');
 				await expect(page.locator('h1')).toHaveText('Log in');
 
-				await page.locator('a', { hasText: 'Create an account' }).click();
+				await page.locator('.auth-links a', { hasText: 'Create an account' }).click();
 				await expect(page.locator('h1')).toHaveText('Create an account');
 
-				await page.locator('a', { hasText: 'Log in' }).click();
+				await page.locator('.auth-footer a', { hasText: 'Log in' }).click();
 				await expect(page.locator('h1')).toHaveText('Log in');
 			});
 
@@ -178,10 +192,10 @@ for (const jsEnabled of [true, false]) {
 				await page.goto('/login');
 				await expect(page.locator('h1')).toHaveText('Log in');
 
-				await page.locator('a', { hasText: 'Forgot password?' }).click();
+				await page.locator('.auth-links a', { hasText: 'Forgot password?' }).click();
 				await expect(page.locator('h1')).toHaveText('Reset your password');
 
-				await page.locator('a', { hasText: 'Back to log in' }).click();
+				await page.locator('.auth-footer a', { hasText: 'Back to log in' }).click();
 				await expect(page.locator('h1')).toHaveText('Log in');
 			});
 		});
