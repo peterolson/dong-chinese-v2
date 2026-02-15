@@ -16,7 +16,7 @@
 	}: {
 		title: string;
 		subtitle?: string;
-		socialProviders?: { name: string; label: string }[];
+		socialProviders?: { name: 'google' | 'facebook' | 'github'; label: string }[];
 		redirectTo?: string;
 		socialButtonPrefix?: string;
 		alerts?: Snippet;
