@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import Alert from '$lib/components/alert.svelte';
-	import AuthCard from '$lib/components/auth-card.svelte';
-	import Button from '$lib/components/button.svelte';
+	import Alert from '$lib/components/ui/alert.svelte';
+	import AuthCard from '$lib/components/auth/auth-card.svelte';
+	import Button from '$lib/components/ui/button.svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Mail from 'lucide-svelte/icons/mail';
-	import Alert from './alert.svelte';
-	import ProgressButton from './progress-button.svelte';
+	import Alert from '../ui/alert.svelte';
+	import ProgressButton from '../ui/progress-button.svelte';
 
 	let {
 		redirectTo = '/',

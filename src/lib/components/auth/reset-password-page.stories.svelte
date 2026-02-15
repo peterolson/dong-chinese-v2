@@ -1,7 +1,7 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { expect, within } from 'storybook/test';
-	import ResetPasswordPage from '../../routes/(auth)/reset-password/+page.svelte';
+	import ResetPasswordPage from '../../../routes/(auth)/reset-password/+page.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Auth/ResetPasswordPage',

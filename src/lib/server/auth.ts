@@ -6,7 +6,10 @@ import { username } from 'better-auth/plugins/username';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
+import { eq, and } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { userEmail } from '$lib/server/db/schema';
+import { sendEmail } from '$lib/server/services/email';
 
 export type SocialProviderName = 'github' | 'google' | 'facebook';
 
@@ -52,6 +55,47 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					await db
+						.insert(userEmail)
+						.values({
+							userId: user.id,
+							email: user.email,
+							verified: user.emailVerified ?? false,
+							isPrimary: true
+						})
+						.onConflictDoNothing();
+				}
+			},
+			update: {
+				after: async (user) => {
+					if (user.emailVerified) {
+						await db
+							.update(userEmail)
+							.set({ verified: true, updatedAt: new Date() })
+							.where(and(eq(userEmail.userId, user.id), eq(userEmail.email, user.email)));
+					}
+				}
+			}
+		}
+	},
+	emailVerification: {
+		sendOnSignUp: true,
+		autoSignInAfterVerification: true,
+		sendVerificationEmail: async ({ user, url }) => {
+			await sendEmail(
+				user.email,
+				'Verify your email — Dong Chinese',
+				`<p>Click the link below to verify your email address:</p>
+				 <p><a href="${url}">Verify email</a></p>
+				 <p>This link expires in 1 hour.</p>`,
+				`Verify your email:\n\n${url}\n\nThis link expires in 1 hour.`
+			);
+		}
+	},
 	emailAndPassword: {
 		enabled: true,
 		minPasswordLength: 1,

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import Alert from '$lib/components/alert.svelte';
-	import AuthCard from '$lib/components/auth-card.svelte';
-	import Button from '$lib/components/button.svelte';
-	import MagicLinkForm from '$lib/components/magic-link-form.svelte';
-	import PasswordInput from '$lib/components/password-input.svelte';
+	import Alert from '$lib/components/ui/alert.svelte';
+	import AuthCard from '$lib/components/auth/auth-card.svelte';
+	import Button from '$lib/components/ui/button.svelte';
+	import MagicLinkForm from '$lib/components/auth/magic-link-form.svelte';
+	import PasswordInput from '$lib/components/auth/password-input.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

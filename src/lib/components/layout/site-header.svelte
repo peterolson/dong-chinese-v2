@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Menu } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
-	import AuthStatus from '$lib/components/auth-status.svelte';
+	import AuthStatus from '$lib/components/layout/auth-status.svelte';
 	import type { AuthUser } from '$lib/server/auth';
 	import logoTransparent from '$lib/assets/logo-transparent.webp';
 

@@ -1,7 +1,7 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { expect, within } from 'storybook/test';
-	import RegisterPage from '../../routes/(auth)/register/+page.svelte';
+	import RegisterPage from '../../../routes/(auth)/register/+page.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Auth/RegisterPage',

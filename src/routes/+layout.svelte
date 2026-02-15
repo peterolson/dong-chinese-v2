@@ -5,8 +5,8 @@
 	import favicon32 from '$lib/assets/favicon-32.png';
 	import favicon16 from '$lib/assets/favicon-16.png';
 	import appleTouchIcon from '$lib/assets/apple-touch-icon.png';
-	import SiteHeader from '$lib/components/site-header.svelte';
-	import Sidebar from '$lib/components/sidebar.svelte';
+	import SiteHeader from '$lib/components/layout/site-header.svelte';
+	import Sidebar from '$lib/components/layout/sidebar.svelte';
 	import type { LayoutData } from './$types';
 	import './global.css';
 
