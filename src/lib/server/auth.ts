@@ -12,33 +12,40 @@ export type SocialProviderName = 'github' | 'google' | 'facebook';
 
 const socialProviderConfig: Record<
 	SocialProviderName,
-	{ clientIdVar: string; clientSecretVar: string; label: string }
+	{ clientIdVar: string; clientSecretVar: string; label: string; order: number }
 > = {
-	github: {
-		clientIdVar: 'GITHUB_CLIENT_ID',
-		clientSecretVar: 'GITHUB_CLIENT_SECRET',
-		label: 'GitHub'
-	},
 	google: {
 		clientIdVar: 'GOOGLE_CLIENT_ID',
 		clientSecretVar: 'GOOGLE_CLIENT_SECRET',
-		label: 'Google'
+		label: 'Google',
+		order: 1
 	},
 	facebook: {
 		clientIdVar: 'FACEBOOK_CLIENT_ID',
 		clientSecretVar: 'FACEBOOK_CLIENT_SECRET',
-		label: 'Facebook'
+		label: 'Facebook',
+		order: 2
+	},
+	github: {
+		clientIdVar: 'GITHUB_CLIENT_ID',
+		clientSecretVar: 'GITHUB_CLIENT_SECRET',
+		label: 'GitHub',
+		order: 3
 	}
 };
 
 export function getConfiguredSocialProviders(): Array<{ name: SocialProviderName; label: string }> {
-	const providers: Array<{ name: SocialProviderName; label: string }> = [];
+	const providers: Array<{ name: SocialProviderName; label: string; order: number }> = [];
 	for (const [name, config] of Object.entries(socialProviderConfig)) {
 		if (env[config.clientIdVar] && env[config.clientSecretVar]) {
-			providers.push({ name: name as SocialProviderName, label: config.label });
+			providers.push({
+				name: name as SocialProviderName,
+				label: config.label,
+				order: config.order
+			});
 		}
 	}
-	return providers;
+	return providers.sort((a, b) => a.order - b.order);
 }
 
 export const auth = betterAuth({
@@ -47,6 +54,11 @@ export const auth = betterAuth({
 	database: drizzleAdapter(db, { provider: 'pg' }),
 	emailAndPassword: {
 		enabled: true,
+		minPasswordLength: 1,
+		sendResetPassword: async ({ url }) => {
+			const event = getRequestEvent();
+			event.locals.resetPasswordUrl = url;
+		},
 		password: {
 			hash: async (password) => {
 				const bcrypt = await import('bcryptjs');

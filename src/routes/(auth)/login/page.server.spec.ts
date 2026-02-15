@@ -146,7 +146,8 @@ describe('load', () => {
 
 		expect(result).toEqual({
 			socialProviders: [{ name: 'github', label: 'GitHub' }],
-			redirectTo: '/dashboard'
+			redirectTo: '/dashboard',
+			passwordReset: false
 		});
 	});
 

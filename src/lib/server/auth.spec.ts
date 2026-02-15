@@ -59,7 +59,7 @@ describe('getConfiguredSocialProviders', () => {
 		mockEnv['GITHUB_CLIENT_SECRET'] = 'gh-secret';
 
 		const providers = getConfiguredSocialProviders();
-		expect(providers).toEqual([{ name: 'github', label: 'GitHub' }]);
+		expect(providers).toEqual([{ name: 'github', label: 'GitHub', order: 3 }]);
 	});
 
 	it('does not return github when only GITHUB_CLIENT_ID is set', () => {
@@ -77,11 +77,11 @@ describe('getConfiguredSocialProviders', () => {
 
 		const providers = getConfiguredSocialProviders();
 		expect(providers).toHaveLength(2);
-		expect(providers).toContainEqual({ name: 'github', label: 'GitHub' });
-		expect(providers).toContainEqual({ name: 'google', label: 'Google' });
+		expect(providers).toContainEqual({ name: 'github', label: 'GitHub', order: 3 });
+		expect(providers).toContainEqual({ name: 'google', label: 'Google', order: 1 });
 	});
 
-	it('returns all three providers when all are configured', () => {
+	it('returns all three providers sorted by order when all are configured', () => {
 		mockEnv['GITHUB_CLIENT_ID'] = 'gh-id';
 		mockEnv['GITHUB_CLIENT_SECRET'] = 'gh-secret';
 		mockEnv['GOOGLE_CLIENT_ID'] = 'google-id';
@@ -91,7 +91,7 @@ describe('getConfiguredSocialProviders', () => {
 
 		const providers = getConfiguredSocialProviders();
 		expect(providers).toHaveLength(3);
-		expect(providers.map((p) => p.name)).toEqual(['github', 'google', 'facebook']);
+		expect(providers.map((p) => p.name)).toEqual(['google', 'facebook', 'github']);
 	});
 });
 

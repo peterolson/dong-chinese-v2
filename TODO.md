@@ -14,6 +14,7 @@
 - [x] Reusable UI components — `Alert` (error/success/warning/info variants with lucide icons), `Button` (primary/secondary/tertiary/outline variants), `ProgressButton` (Button wrapper with loading spinner). Global CSS alert color variables. Storybook stories for all.
 - [x] Magic link sign-in — `sendMagicLink` form action with secondary→primary email resolution, email service (`src/lib/server/services/email.ts`), new/existing user detection for contextual email copy, loading state on submit button. 8 new unit tests covering all code paths.
 - [x] Login page uses new components — replaced inline `.error`/`.success` styles and raw `<button>` elements with `Alert`, `Button`, and `ProgressButton` components
+- [x] Auth pages redesign — Login page with two-column responsive layout (credentials left, social right on desktop, stacked on mobile), branded social buttons (Google white/colorful, Facebook blue, GitHub dark) ordered Google > Facebook > GitHub, magic link at bottom. Register page with full sign-up form (name, email, username, password, confirm) + social sign-up. Forgot-password page with email form and password reset email flow. Reset-password page with token-based new password form. All pages use consistent card styling with `SocialIcon` component. Stories for all pages.
 
 ## In Progress
 
@@ -25,7 +26,7 @@
 
 - [ ] Implement progress merge on account creation (additive merge in a single transaction)
 - [x] Build login page with SvelteKit form actions (must work without JS) — email/password login at `/login`, social provider buttons (GitHub/Google/Facebook/Twitter, conditionally rendered), auth-status header component, sign-out via form POST, open redirect prevention
-- [ ] Build signup page with SvelteKit form actions (must work without JS)
+- [x] Build signup page with SvelteKit form actions (must work without JS)
 - [x] Add social OAuth provider support (GitHub, Google, Facebook, Twitter — conditionally configured via env vars)
 - [x] Add username login support — Better Auth `username` plugin, unified "Email or username" field on `/login`, detects email vs username by `@`, `AuthUser` type for plugin-augmented user, updated stories with username error case
 - [x] Magic link sign-in with email service, reusable Alert/Button/ProgressButton components (PR #9)
