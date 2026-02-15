@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { username } from 'better-auth/plugins/username';
@@ -6,7 +7,7 @@ import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 
-export type SocialProviderName = 'github' | 'google' | 'facebook' | 'twitter';
+export type SocialProviderName = 'github' | 'google' | 'facebook';
 
 const socialProviderConfig: Record<
 	SocialProviderName,
@@ -26,11 +27,6 @@ const socialProviderConfig: Record<
 		clientIdVar: 'FACEBOOK_CLIENT_ID',
 		clientSecretVar: 'FACEBOOK_CLIENT_SECRET',
 		label: 'Facebook'
-	},
-	twitter: {
-		clientIdVar: 'TWITTER_CLIENT_ID',
-		clientSecretVar: 'TWITTER_CLIENT_SECRET',
-		label: 'Twitter'
 	}
 };
 
@@ -48,7 +44,21 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
-	emailAndPassword: { enabled: true },
+	emailAndPassword: {
+		enabled: true,
+		password: {
+			hash: async (password) => {
+				const bcrypt = await import('bcryptjs');
+				const sha256 = createHash('sha256').update(password).digest('hex');
+				return bcrypt.default.hash(sha256, 10);
+			},
+			verify: async ({ hash, password }) => {
+				const bcrypt = await import('bcryptjs');
+				const sha256 = createHash('sha256').update(password).digest('hex');
+				return bcrypt.default.compare(sha256, hash);
+			}
+		}
+	},
 	socialProviders: {
 		...(env.GITHUB_CLIENT_ID &&
 			env.GITHUB_CLIENT_SECRET && {
@@ -69,13 +79,6 @@ export const auth = betterAuth({
 				facebook: {
 					clientId: env.FACEBOOK_CLIENT_ID,
 					clientSecret: env.FACEBOOK_CLIENT_SECRET
-				}
-			}),
-		...(env.TWITTER_CLIENT_ID &&
-			env.TWITTER_CLIENT_SECRET && {
-				twitter: {
-					clientId: env.TWITTER_CLIENT_ID,
-					clientSecret: env.TWITTER_CLIENT_SECRET
 				}
 			})
 	},

@@ -9,6 +9,8 @@
 - [x] Tests for anonymous session system — Playwright E2E tests (8 tests: cookie setting, reuse, invalid replacement, cross-page persistence in both JS-enabled and JS-disabled modes) + Vitest integration tests (10 tests: create, validate, delete, expire, constants)
 - [x] GitHub Actions CI workflow — runs lint, type-check, unit tests, and Playwright E2E against Postgres service container on every push/PR to master. Created `dev` branch for ongoing work.
 
+- [x] Backwards-compatible login for Meteor users — bcrypt password hash/verify override in Better Auth, `user_email` table for multi-email login, secondary email → primary email resolution in sign-in action, import script (`scripts/import-meteor-users.ts`) for migrating 24k users from MongoDB preserving bcrypt hashes and OAuth provider IDs, bcrypt compatibility tests
+
 ## In Progress
 
 (nothing currently in progress)
@@ -26,9 +28,8 @@
 
 ### Phase 2: Meteor Migration
 
-- [ ] Write Meteor user export script (MongoDB → JSON)
-- [ ] Write Postgres import script preserving bcrypt hashes
-- [ ] Verify existing Meteor passwords work with Better Auth
+- [x] Write Postgres import script preserving bcrypt hashes — `scripts/import-meteor-users.ts`, run with `npm run import:users`
+- [x] Verify existing Meteor passwords work with Better Auth — bcrypt `$2b$10$` hashes verified compatible
 - [ ] Write progress data migration script
 
 ### Phase 3: Core Learning Features

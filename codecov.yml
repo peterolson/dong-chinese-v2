@@ -1,0 +1,5 @@
+ignore:
+  - 'src/lib/server/auth.ts'
+  - 'src/lib/server/db/index.ts'
+  - 'src/lib/server/db/auth.schema.ts'
+  - 'src/hooks.server.ts'
