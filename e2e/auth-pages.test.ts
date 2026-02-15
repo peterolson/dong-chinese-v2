@@ -42,6 +42,12 @@ for (const jsEnabled of [true, false]) {
 			test('magic link form is present', async ({ page }) => {
 				await page.goto('/login');
 
+				// Magic link form is inside a <details> element, collapsed by default
+				const details = page.locator('.magic-link-details');
+				await expect(details.locator('summary')).toBeVisible();
+
+				// Click summary to expand, then verify the form
+				await details.locator('summary').click();
 				const magicForm = page.locator('form[action="?/sendMagicLink"]');
 				await expect(magicForm).toBeVisible();
 				await expect(magicForm.locator('input[name="email"]')).toBeVisible();
