@@ -23,6 +23,49 @@ vi.mock('$lib/server/auth', () => ({
 	getConfiguredSocialProviders: () => mockGetConfiguredSocialProviders()
 }));
 
+// Mock the db module — mockDbSelect controls what the user_email query returns
+const mockDbSelectResult = vi.fn<() => Array<{ userId: string }>>(() => []);
+const mockDbSelectUserResult = vi.fn<() => Array<{ email: string }>>(() => []);
+let dbSelectCallCount = 0;
+
+vi.mock('$lib/server/db', () => {
+	// Build a chainable mock for db.select().from().innerJoin().where().limit()
+	const makeChain = (resultFn: () => unknown[]) => {
+		const chain = {
+			from: vi.fn().mockReturnThis(),
+			innerJoin: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			limit: vi.fn(() => resultFn())
+		};
+		return chain;
+	};
+
+	return {
+		db: {
+			select: vi.fn(() => {
+				dbSelectCallCount++;
+				// First select() call is the user_email lookup, second is the user primary email lookup
+				if (dbSelectCallCount % 2 === 1) {
+					return makeChain(mockDbSelectResult);
+				}
+				return makeChain(mockDbSelectUserResult);
+			})
+		}
+	};
+});
+
+vi.mock('$lib/server/db/schema', () => ({
+	userEmail: { userId: 'user_id', email: 'email' }
+}));
+
+vi.mock('$lib/server/db/auth.schema', () => ({
+	user: { id: 'id', email: 'email' }
+}));
+
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn()
+}));
+
 vi.mock('$lib/server/services/sanitize-redirect', async () => {
 	const actual = await vi.importActual<typeof import('$lib/server/services/sanitize-redirect')>(
 		'$lib/server/services/sanitize-redirect'
@@ -70,6 +113,9 @@ function makeActionEvent(formEntries: Record<string, string>) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetConfiguredSocialProviders.mockReturnValue([]);
+	mockDbSelectResult.mockReturnValue([]);
+	mockDbSelectUserResult.mockReturnValue([]);
+	dbSelectCallCount = 0;
 });
 
 describe('load', () => {
@@ -139,6 +185,30 @@ describe('actions.signIn', () => {
 		});
 		expect(mockSignInUsername).not.toHaveBeenCalled();
 		expect.assertions(3);
+	});
+
+	it('resolves secondary email to primary email via user_email table', async () => {
+		// Simulate: user enters secondary@test.com, user_email lookup finds userId,
+		// then user table lookup returns primary@test.com
+		mockDbSelectResult.mockReturnValue([{ userId: 'user-123' }]);
+		mockDbSelectUserResult.mockReturnValue([{ email: 'primary@test.com' }]);
+
+		const event = makeActionEvent({
+			identifier: 'secondary@test.com',
+			password: 'secret',
+			redirectTo: '/'
+		});
+		mockSignInEmail.mockResolvedValue({});
+
+		await expect(actions!.signIn(event)).rejects.toEqual(
+			expect.objectContaining({ status: 302, location: '/' })
+		);
+
+		// Should call signInEmail with the primary email, not the secondary
+		expect(mockSignInEmail).toHaveBeenCalledWith({
+			body: { email: 'primary@test.com', password: 'secret' }
+		});
+		expect.assertions(2);
 	});
 
 	it('calls signInUsername when identifier does not contain @', async () => {

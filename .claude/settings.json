@@ -1,0 +1,15 @@
+{
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write|NotebookEdit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));const f=d.tool_input.file_path||d.tool_input.notebook_path;if(f)require('child_process').execSync('npx prettier --write --ignore-unknown '+JSON.stringify(f),{stdio:'inherit'})\" 2>/dev/null || true"
+					}
+				]
+			}
+		]
+	}
+}

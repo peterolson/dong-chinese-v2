@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import bcrypt from 'bcryptjs';
 
 // Mock all external dependencies before importing the module under test
 const mockEnv: Record<string, string | undefined> = {};
@@ -79,18 +81,58 @@ describe('getConfiguredSocialProviders', () => {
 		expect(providers).toContainEqual({ name: 'google', label: 'Google' });
 	});
 
-	it('returns all four providers when all are configured', () => {
+	it('returns all three providers when all are configured', () => {
 		mockEnv['GITHUB_CLIENT_ID'] = 'gh-id';
 		mockEnv['GITHUB_CLIENT_SECRET'] = 'gh-secret';
 		mockEnv['GOOGLE_CLIENT_ID'] = 'google-id';
 		mockEnv['GOOGLE_CLIENT_SECRET'] = 'google-secret';
 		mockEnv['FACEBOOK_CLIENT_ID'] = 'fb-id';
 		mockEnv['FACEBOOK_CLIENT_SECRET'] = 'fb-secret';
-		mockEnv['TWITTER_CLIENT_ID'] = 'tw-id';
-		mockEnv['TWITTER_CLIENT_SECRET'] = 'tw-secret';
 
 		const providers = getConfiguredSocialProviders();
-		expect(providers).toHaveLength(4);
-		expect(providers.map((p) => p.name)).toEqual(['github', 'google', 'facebook', 'twitter']);
+		expect(providers).toHaveLength(3);
+		expect(providers.map((p) => p.name)).toEqual(['github', 'google', 'facebook']);
+	});
+});
+
+describe('bcrypt(sha256(password)) — Meteor-compatible password scheme', () => {
+	// Helper matching the auth.ts implementation
+	const hashFn = async (password: string) => {
+		const sha256 = createHash('sha256').update(password).digest('hex');
+		return bcrypt.hash(sha256, 10);
+	};
+	const verifyFn = async ({ hash, password }: { hash: string; password: string }) => {
+		const sha256 = createHash('sha256').update(password).digest('hex');
+		return bcrypt.compare(sha256, hash);
+	};
+
+	it('hashes and verifies a new password', async () => {
+		const hash = await hashFn('mySecurePassword!');
+		expect(hash).toMatch(/^\$2[ab]\$10\$/);
+		expect(await verifyFn({ hash, password: 'mySecurePassword!' })).toBe(true);
+		expect(await verifyFn({ hash, password: 'wrong' })).toBe(false);
+	});
+
+	it('verifies a Meteor-imported hash (bcrypt of sha256 digest)', async () => {
+		// Simulate a Meteor-stored hash
+		const sha256 = createHash('sha256').update('tester').digest('hex');
+		const meteorHash = await bcrypt.hash(sha256, 10);
+
+		expect(await verifyFn({ hash: meteorHash, password: 'tester' })).toBe(true);
+		expect(await verifyFn({ hash: meteorHash, password: 'wrong' })).toBe(false);
+	});
+
+	it('rejects raw password against a Meteor hash (must sha256 first)', async () => {
+		const sha256 = createHash('sha256').update('tester').digest('hex');
+		const meteorHash = await bcrypt.hash(sha256, 10);
+
+		// Without sha256, raw password should NOT match
+		expect(await bcrypt.compare('tester', meteorHash)).toBe(false);
+	});
+
+	it('round-trips correctly: hash then verify', async () => {
+		const password = 'café☕unicode';
+		const hash = await hashFn(password);
+		expect(await verifyFn({ hash, password })).toBe(true);
 	});
 });
