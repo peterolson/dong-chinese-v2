@@ -5,7 +5,6 @@
 
 	const { Story } = defineMeta({
 		title: 'Components/ProgressButton',
-		component: ProgressButton,
 		tags: ['autodocs']
 	});
 </script>

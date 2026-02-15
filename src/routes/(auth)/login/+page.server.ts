@@ -162,9 +162,7 @@ export const actions: Actions = {
 		}
 
 		// Send to the original email the user typed, not the resolved primary
-		const subject = isNewUser
-			? 'Create your Dong Chinese account'
-			: 'Sign in to Dong Chinese';
+		const subject = isNewUser ? 'Create your Dong Chinese account' : 'Sign in to Dong Chinese';
 		const action = isNewUser ? 'create your account' : 'sign in';
 		const sent = await sendEmail(
 			email,

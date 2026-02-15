@@ -5,7 +5,6 @@
 
 	const { Story } = defineMeta({
 		title: 'Components/Button',
-		component: Button,
 		tags: ['autodocs']
 	});
 </script>
