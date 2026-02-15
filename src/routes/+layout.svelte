@@ -92,12 +92,11 @@
 
 	.main-content {
 		flex: 1;
-		padding: 1.5rem;
 		min-width: 0;
 	}
 
 	/* ── Desktop: sidebar in-flow, visible by default, checkbox hides it ── */
-	@media (min-width: 768px) {
+	@media (min-width: 960px) {
 		.sidebar-wrapper {
 			position: sticky;
 			top: var(--header-height);
@@ -123,10 +122,6 @@
 		/* Never show backdrop on desktop */
 		:global(.sidebar-checkbox:checked) ~ .app-body .sidebar-backdrop {
 			display: none;
-		}
-
-		.main-content {
-			padding: 2rem;
 		}
 	}
 </style>
