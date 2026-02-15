@@ -42,7 +42,13 @@
 			{/if}
 
 			<div class="auth-columns" class:has-social={hasSocial}>
+				<div class="credentials-column">
+					{@render children()}
+				</div>
+
 				{#if hasSocial}
+					<div class="column-divider"><span>or</span></div>
+
 					<div class="social-column">
 						{#each socialProviders as provider (provider.name)}
 							<form method="post" action="?/signInSocial" use:enhance>
@@ -59,13 +65,7 @@
 							{@render socialExtra()}
 						{/if}
 					</div>
-
-					<div class="column-divider"><span>or</span></div>
 				{/if}
-
-				<div class="credentials-column">
-					{@render children()}
-				</div>
 			</div>
 
 			{#if afterColumns}
@@ -142,12 +142,12 @@
 			gap: 0;
 		}
 
-		.auth-columns.has-social .social-column {
+		.auth-columns.has-social .credentials-column {
 			flex: 1;
 			padding-right: 1.75rem;
 		}
 
-		.auth-columns.has-social .credentials-column {
+		.auth-columns.has-social .social-column {
 			flex: 1;
 			padding-left: 1.75rem;
 		}
