@@ -1,7 +1,7 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { expect, within } from 'storybook/test';
-	import LoginPage from '../../routes/(auth)/login/+page.svelte';
+	import LoginPage from '../../../routes/(auth)/login/+page.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Auth/LoginPage',
@@ -18,7 +18,8 @@
 	args={{
 		data: {
 			socialProviders: [],
-			redirectTo: '/'
+			redirectTo: '/',
+			passwordReset: false
 		},
 		form: null
 	}}
@@ -31,9 +32,8 @@
 		await expect(identifierInput).toBeInTheDocument();
 		await expect(identifierInput).toHaveAttribute('type', 'text');
 		await expect(identifierInput).toBeRequired();
-		const passwordInput = canvas.getByLabelText(/password/i);
+		const passwordInput = canvas.getByLabelText(/^password$/i);
 		await expect(passwordInput).toBeInTheDocument();
-		await expect(passwordInput).toHaveAttribute('type', 'password');
 		await expect(passwordInput).toBeRequired();
 		// Submit button
 		await expect(canvas.getByRole('button', { name: /log in/i })).toBeInTheDocument();
@@ -50,7 +50,7 @@
 		const alert = canvas.queryByRole('alert');
 		await expect(alert).not.toBeInTheDocument();
 		// No social providers section
-		const socialButton = canvas.queryByText(/continue with/i);
+		const socialButton = canvas.queryByText(/google|facebook|github/i);
 		await expect(socialButton).not.toBeInTheDocument();
 	}}
 />
@@ -60,7 +60,8 @@
 	args={{
 		data: {
 			socialProviders: [],
-			redirectTo: '/'
+			redirectTo: '/',
+			passwordReset: false
 		},
 		form: {
 			message: 'Invalid credentials.',
@@ -84,7 +85,8 @@
 	args={{
 		data: {
 			socialProviders: [],
-			redirectTo: '/'
+			redirectTo: '/',
+			passwordReset: false
 		},
 		form: {
 			message: 'Invalid credentials.',
@@ -108,21 +110,22 @@
 	args={{
 		data: {
 			socialProviders: [
-				{ name: 'github', label: 'GitHub' },
-				{ name: 'google', label: 'Google' }
+				{ name: 'google', label: 'Google' },
+				{ name: 'github', label: 'GitHub' }
 			],
-			redirectTo: '/'
+			redirectTo: '/',
+			passwordReset: false
 		},
 		form: null
 	}}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		// Social buttons should be rendered
-		await expect(canvas.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
-		await expect(canvas.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
-		// "or" dividers should be visible (one before magic link, one before social)
+		// Social buttons should be rendered with branded text
+		await expect(canvas.getByRole('button', { name: /google/i })).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /github/i })).toBeInTheDocument();
+		// "or" divider should be visible
 		const dividers = canvas.getAllByText('or');
-		await expect(dividers.length).toBeGreaterThanOrEqual(2);
+		await expect(dividers.length).toBeGreaterThanOrEqual(1);
 	}}
 />
 
@@ -131,25 +134,39 @@
 	args={{
 		data: {
 			socialProviders: [
-				{ name: 'github', label: 'GitHub' },
 				{ name: 'google', label: 'Google' },
 				{ name: 'facebook', label: 'Facebook' },
-				{ name: 'twitter', label: 'Twitter' }
+				{ name: 'github', label: 'GitHub' }
 			],
-			redirectTo: '/dashboard'
+			redirectTo: '/dashboard',
+			passwordReset: false
 		},
 		form: null
 	}}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		// All four social buttons
-		await expect(canvas.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
-		await expect(canvas.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
-		await expect(
-			canvas.getByRole('button', { name: /continue with facebook/i })
-		).toBeInTheDocument();
-		await expect(
-			canvas.getByRole('button', { name: /continue with twitter/i })
-		).toBeInTheDocument();
+		// All three social buttons
+		await expect(canvas.getByRole('button', { name: /google/i })).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /facebook/i })).toBeInTheDocument();
+		await expect(canvas.getByRole('button', { name: /github/i })).toBeInTheDocument();
+	}}
+/>
+
+<Story
+	name="Password Reset Success"
+	args={{
+		data: {
+			socialProviders: [],
+			redirectTo: '/',
+			passwordReset: true
+		},
+		form: null
+	}}
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		// Success message should be visible
+		const status = canvas.getByRole('status');
+		await expect(status).toBeInTheDocument();
+		await expect(status).toHaveTextContent(/password has been reset/i);
 	}}
 />

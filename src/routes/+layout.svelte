@@ -5,8 +5,8 @@
 	import favicon32 from '$lib/assets/favicon-32.png';
 	import favicon16 from '$lib/assets/favicon-16.png';
 	import appleTouchIcon from '$lib/assets/apple-touch-icon.png';
-	import SiteHeader from '$lib/components/site-header.svelte';
-	import Sidebar from '$lib/components/sidebar.svelte';
+	import SiteHeader from '$lib/components/layout/site-header.svelte';
+	import Sidebar from '$lib/components/layout/sidebar.svelte';
 	import type { LayoutData } from './$types';
 	import './global.css';
 
@@ -92,12 +92,11 @@
 
 	.main-content {
 		flex: 1;
-		padding: 1.5rem;
 		min-width: 0;
 	}
 
 	/* ── Desktop: sidebar in-flow, visible by default, checkbox hides it ── */
-	@media (min-width: 768px) {
+	@media (min-width: 960px) {
 		.sidebar-wrapper {
 			position: sticky;
 			top: var(--header-height);
@@ -123,10 +122,6 @@
 		/* Never show backdrop on desktop */
 		:global(.sidebar-checkbox:checked) ~ .app-body .sidebar-backdrop {
 			display: none;
-		}
-
-		.main-content {
-			padding: 2rem;
 		}
 	}
 </style>

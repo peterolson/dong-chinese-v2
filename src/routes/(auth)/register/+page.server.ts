@@ -4,10 +4,6 @@ import { auth, getConfiguredSocialProviders } from '$lib/server/auth';
 import { sanitizeRedirectTo } from '$lib/server/services/sanitize-redirect';
 import { handleSendMagicLink } from '$lib/server/services/magic-link';
 import { APIError } from 'better-auth';
-import { db } from '$lib/server/db';
-import { userEmail } from '$lib/server/db/schema';
-import { user } from '$lib/server/db/auth.schema';
-import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -15,60 +11,78 @@ export const load: PageServerLoad = async (event) => {
 	}
 	return {
 		socialProviders: getConfiguredSocialProviders(),
-		redirectTo: sanitizeRedirectTo(event.url.searchParams.get('redirectTo')),
-		passwordReset: event.url.searchParams.get('reset') === 'success'
+		redirectTo: sanitizeRedirectTo(event.url.searchParams.get('redirectTo'))
 	};
 };
 
 export const actions: Actions = {
-	signIn: async (event) => {
+	signUp: async (event) => {
 		const formData = await event.request.formData();
-		const identifier = formData.get('identifier')?.toString() ?? '';
+		const name = formData.get('name')?.toString()?.trim() ?? '';
+		const email = formData.get('email')?.toString()?.trim().toLowerCase() ?? '';
+		const username = formData.get('username')?.toString()?.trim() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
+		const confirmPassword = formData.get('confirmPassword')?.toString() ?? '';
 		const redirectTo = sanitizeRedirectTo(formData.get('redirectTo')?.toString() ?? null);
 
-		if (!identifier || !password) {
-			return fail(400, { message: 'Email or username and password are required.', identifier });
+		if (!email || !password) {
+			return fail(400, {
+				message: 'Email and password are required.',
+				name,
+				email,
+				username
+			});
+		}
+
+		if (password !== confirmPassword) {
+			return fail(400, {
+				message: 'Passwords do not match.',
+				name,
+				email,
+				username
+			});
 		}
 
 		try {
-			if (identifier.includes('@')) {
-				// Look up user_email table to resolve secondary emails to the primary email
-				let loginEmail = identifier;
-				const emailRecord = await db
-					.select({ userId: userEmail.userId })
-					.from(userEmail)
-					.innerJoin(user, eq(user.id, userEmail.userId))
-					.where(eq(userEmail.email, identifier.toLowerCase()))
-					.limit(1);
-
-				if (emailRecord.length > 0) {
-					// Use the user's primary email (from user table) for Better Auth
-					const userRecord = await db
-						.select({ email: user.email })
-						.from(user)
-						.where(eq(user.id, emailRecord[0].userId))
-						.limit(1);
-					if (userRecord.length > 0) {
-						loginEmail = userRecord[0].email;
-					}
+			await auth.api.signUpEmail({
+				body: {
+					name: name || email.split('@')[0],
+					email,
+					password,
+					...(username ? { username } : {})
 				}
-
-				await auth.api.signInEmail({
-					body: { email: loginEmail, password }
-				});
-			} else {
-				await auth.api.signInUsername({
-					body: { username: identifier, password }
-				});
-			}
+			});
 		} catch (error) {
 			if (error instanceof APIError) {
-				return fail(400, { message: 'Invalid credentials.', identifier });
+				const msg = error.body?.message ?? error.message;
+				if (typeof msg === 'string' && msg.toLowerCase().includes('user already exists')) {
+					return fail(400, {
+						message: 'An account with this email already exists.',
+						name,
+						email,
+						username
+					});
+				}
+				if (typeof msg === 'string' && msg.toLowerCase().includes('username')) {
+					return fail(400, {
+						message: 'This username is already taken.',
+						name,
+						email,
+						username
+					});
+				}
+				return fail(400, {
+					message: typeof msg === 'string' ? msg : 'Could not create account.',
+					name,
+					email,
+					username
+				});
 			}
 			return fail(500, {
 				message: 'An unexpected error occurred. Please try again.',
-				identifier
+				name,
+				email,
+				username
 			});
 		}
 
@@ -101,13 +115,5 @@ export const actions: Actions = {
 
 	sendMagicLink: async (event) => {
 		return handleSendMagicLink(event);
-	},
-
-	signOut: async (event) => {
-		await auth.api.signOut({
-			headers: event.request.headers
-		});
-
-		redirect(302, '/');
 	}
 };

@@ -9,6 +9,7 @@ declare global {
 			session?: Session;
 			anonymousSessionId?: string;
 			magicLinkUrl?: string;
+			resetPasswordUrl?: string;
 		}
 
 		// interface Error {}
