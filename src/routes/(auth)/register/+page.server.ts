@@ -3,6 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth, getConfiguredSocialProviders } from '$lib/server/auth';
 import { sanitizeRedirectTo } from '$lib/server/services/sanitize-redirect';
 import { handleSendMagicLink } from '$lib/server/services/magic-link';
+import { syncSettingsOnSignup } from '$lib/server/services/settings';
+import { db } from '$lib/server/db';
 import { APIError } from 'better-auth';
 
 export const load: PageServerLoad = async (event) => {
@@ -43,8 +45,10 @@ export const actions: Actions = {
 			});
 		}
 
+		let userId: string | undefined;
+
 		try {
-			await auth.api.signUpEmail({
+			const result = await auth.api.signUpEmail({
 				body: {
 					name: name || email.split('@')[0],
 					email,
@@ -52,6 +56,7 @@ export const actions: Actions = {
 					...(username ? { username } : {})
 				}
 			});
+			userId = result.user?.id;
 		} catch (error) {
 			if (error instanceof APIError) {
 				const msg = error.body?.message ?? error.message;
@@ -84,6 +89,10 @@ export const actions: Actions = {
 				email,
 				username
 			});
+		}
+
+		if (userId) {
+			await syncSettingsOnSignup(db, userId, event.cookies);
 		}
 
 		redirect(302, redirectTo);

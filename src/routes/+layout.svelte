@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import favicon from '$lib/assets/favicon.ico';
 	import favicon96 from '$lib/assets/favicon-96.png';
 	import favicon64 from '$lib/assets/favicon-64.png';
@@ -7,10 +8,18 @@
 	import appleTouchIcon from '$lib/assets/apple-touch-icon.png';
 	import SiteHeader from '$lib/components/layout/site-header.svelte';
 	import Sidebar from '$lib/components/layout/sidebar.svelte';
+	import { applyThemeToDOM } from '$lib/settings-client';
 	import type { LayoutData } from './$types';
 	import './global.css';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+
+	// Sync theme to DOM after client-side navigations (e.g. login redirect via use:enhance)
+	$effect(() => {
+		if (browser) {
+			applyThemeToDOM(data.settings.theme ?? null);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -93,6 +102,13 @@
 	.main-content {
 		flex: 1;
 		min-width: 0;
+		padding: var(--content-padding);
+	}
+
+	@media (max-width: 600px) {
+		.main-content {
+			padding: 1.25rem 1rem;
+		}
 	}
 
 	/* ── Desktop: sidebar in-flow, visible by default, checkbox hides it ── */

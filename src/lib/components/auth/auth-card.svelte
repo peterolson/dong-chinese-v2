@@ -80,16 +80,24 @@
 
 	.auth-page {
 		display: flex;
-		padding: 2.5rem 1rem;
+		margin: calc(-1 * var(--content-padding));
+		padding: 2rem 1rem;
 		background: var(--surface);
 		min-height: calc(100vh - var(--header-height));
 		justify-content: center;
+	}
+
+	@media (max-width: 600px) {
+		.auth-page {
+			margin: -1.25rem -1rem;
+		}
 	}
 
 	.auth-card {
 		width: 100%;
 		max-width: 28rem;
 		background: var(--background);
+		border: 1px solid var(--border);
 		border-radius: 16px;
 		box-shadow:
 			0 1px 3px rgba(0, 0, 0, 0.04),
@@ -103,7 +111,7 @@
 	}
 
 	.card-body {
-		padding: 2.5rem;
+		padding: 1.5rem;
 	}
 
 	@media (max-width: 659px) {
@@ -216,6 +224,39 @@
 	}
 	.social-github:hover {
 		background: #2f363d;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:global(:root:not([data-theme='light']):not([data-theme='dark'])) .social-github {
+			background: #333a41;
+			border-color: #444c56;
+		}
+		:global(:root:not([data-theme='light']):not([data-theme='dark'])) .social-github:hover {
+			background: #3d444d;
+		}
+		:global(:root:not([data-theme='light']):not([data-theme='dark'])) .social-google {
+			background: var(--surface);
+			color: var(--foreground);
+			border-color: var(--border);
+		}
+		:global(:root:not([data-theme='light']):not([data-theme='dark'])) .social-google:hover {
+			background: var(--surface-hover);
+		}
+	}
+	:global([data-theme='dark']) .social-github {
+		background: #333a41;
+		border-color: #444c56;
+	}
+	:global([data-theme='dark']) .social-github:hover {
+		background: #3d444d;
+	}
+	:global([data-theme='dark']) .social-google {
+		background: var(--surface);
+		color: var(--foreground);
+		border-color: var(--border);
+	}
+	:global([data-theme='dark']) .social-google:hover {
+		background: var(--surface-hover);
 	}
 
 	/* ─── Column Divider ──────────────────────────── */

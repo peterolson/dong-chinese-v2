@@ -26,12 +26,13 @@
 		top: 0;
 		z-index: 30;
 		height: var(--header-height);
-		background: var(--primary);
+		background: var(--header-bg);
 		color: var(--primary-foreground);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 1rem;
+		border-bottom: 1px solid var(--border);
 		box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
 	}
 

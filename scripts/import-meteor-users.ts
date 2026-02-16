@@ -12,7 +12,18 @@
  */
 
 import { MongoClient } from 'mongodb';
-import postgres from 'postgres';
+import postgres, { type Row, type PendingQuery } from 'postgres';
+
+/**
+ * postgres.js TransactionSql loses its call signature due to TS Omit limitation.
+ * Re-add the template tag call signature so `tx\`...\`` works.
+ */
+type Tx = postgres.TransactionSql & {
+	<T extends readonly (object | undefined)[] = Row[]>(
+		template: TemplateStringsArray,
+		...parameters: readonly postgres.ParameterOrFragment<never>[]
+	): PendingQuery<T>;
+};
 
 // ---------------------------------------------------------------------------
 // Config
@@ -40,7 +51,7 @@ interface MeteorUser {
 	_id: string;
 	username?: string;
 	emails?: Array<{ address: string | null; verified?: boolean }>;
-	profile?: { name?: string };
+	profile?: { name?: string; darkMode?: boolean };
 	services?: {
 		password?: { bcrypt?: string };
 		google?: { id?: string; email?: string; name?: string; picture?: string };
@@ -193,6 +204,25 @@ function collectAllEmails(meteorUser: MeteorUser, primaryEmail: string): UserEma
 	return result;
 }
 
+/**
+ * Map Meteor profile fields to user_settings columns.
+ * Returns null if the user has no non-default settings.
+ * Add future setting mappings here.
+ */
+function resolveSettings(meteorUser: MeteorUser): Record<string, unknown> | null {
+	const settings: Record<string, unknown> = {};
+
+	if (meteorUser.profile?.darkMode) {
+		settings.theme = 'dark';
+	}
+
+	// Future examples:
+	// if (meteorUser.profile?.font) settings.font = meteorUser.profile.font;
+	// if (meteorUser.profile?.characterSet) settings.character_set = meteorUser.profile.characterSet;
+
+	return Object.keys(settings).length > 0 ? settings : null;
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -252,7 +282,7 @@ async function main() {
 }
 
 async function processBatch(
-	sql: postgres.Sql,
+	sql: ReturnType<typeof postgres>,
 	batch: MeteorUser[]
 ): Promise<{ imported: number; skipped: number; errors: number }> {
 	let imported = 0;
@@ -274,7 +304,7 @@ async function processBatch(
 }
 
 async function importUser(
-	sql: postgres.Sql,
+	sql: ReturnType<typeof postgres>,
 	meteorUser: MeteorUser
 ): Promise<'imported' | 'skipped'> {
 	const { email: primaryEmail, verified: primaryVerified } = resolvePrimaryEmail(meteorUser);
@@ -352,7 +382,8 @@ async function importUser(
 	// Insert in a transaction
 	let wasInserted = false;
 
-	await sql.begin(async (tx) => {
+	await sql.begin(async (_tx) => {
+		const tx = _tx as Tx;
 		// Insert user (ON CONFLICT DO NOTHING for idempotency)
 		const userResult = await tx`
 			INSERT INTO "user" (id, name, email, email_verified, image, username, display_username, created_at, updated_at)
@@ -372,6 +403,26 @@ async function importUser(
 		`;
 
 		wasInserted = userResult.length > 0;
+
+		// Upsert user settings (always runs, even for existing users)
+		const settings = resolveSettings(meteorUser);
+		if (settings) {
+			const settingKeys = Object.keys(settings);
+			const columns = ['user_id', 'created_at', 'updated_at', ...settingKeys];
+			const values: (string | Date)[] = [
+				meteorUser._id,
+				now,
+				now,
+				...(Object.values(settings) as (string | Date)[])
+			];
+			const updateSet = settingKeys.map((k, i) => `${k} = $${i + 4}`).join(', ');
+			await tx.unsafe(
+				`INSERT INTO user_settings (${columns.join(', ')})
+				VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')})
+				ON CONFLICT (user_id) DO UPDATE SET ${updateSet}, updated_at = $3`,
+				values
+			);
+		}
 
 		if (!wasInserted) return; // User already exists, skip accounts and emails
 

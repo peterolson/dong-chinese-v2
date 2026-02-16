@@ -1,6 +1,15 @@
 import { pgTable, uuid, timestamp, text, boolean, index } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 
+export const userSettings = pgTable('user_settings', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	theme: text('theme'),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export const anonymousSession = pgTable('anonymous_session', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
