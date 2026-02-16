@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx prettier --write $CLAUDE_TOOL_INPUTS"
+            "command": "node .claude/format.mjs"
           }
         ]
       }

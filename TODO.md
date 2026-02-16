@@ -16,6 +16,8 @@
 - [x] Login page uses new components — replaced inline `.error`/`.success` styles and raw `<button>` elements with `Alert`, `Button`, and `ProgressButton` components
 - [x] Auth pages redesign — Login page with two-column responsive layout (credentials left, social right on desktop, stacked on mobile), branded social buttons (Google white/colorful, Facebook blue, GitHub dark) ordered Google > Facebook > GitHub, magic link at bottom. Register page with full sign-up form (name, email, username, password, confirm) + social sign-up. Forgot-password page with email form and password reset email flow. Reset-password page with token-based new password form. All pages use consistent card styling with `SocialIcon` component. Stories for all pages.
 
+- [x] Dark mode + generalized user settings architecture (PR #11) — Single JSON `settings` cookie + `user_settings` DB table. Server hook injects `data-theme` on `<html>` via `transformPageChunk` (no flash). Works across anonymous/authenticated, JS/no-JS, online/offline. Settings page with `SegmentedControl` component. Login syncs DB→cookie, signup syncs cookie→DB. Dark mode CSS variables for all semantic tokens. Adapted header, sidebar, auth card for dark mode. Meteor import script imports `profile.darkMode`. 37 unit/integration tests.
+
 ## In Progress
 
 (nothing currently in progress)
