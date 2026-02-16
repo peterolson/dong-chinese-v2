@@ -409,7 +409,12 @@ async function importUser(
 		if (settings) {
 			const settingKeys = Object.keys(settings);
 			const columns = ['user_id', 'created_at', 'updated_at', ...settingKeys];
-			const values: (string | Date)[] = [meteorUser._id, now, now, ...(Object.values(settings) as (string | Date)[])];
+			const values: (string | Date)[] = [
+				meteorUser._id,
+				now,
+				now,
+				...(Object.values(settings) as (string | Date)[])
+			];
 			const updateSet = settingKeys.map((k, i) => `${k} = $${i + 4}`).join(', ');
 			await tx.unsafe(
 				`INSERT INTO user_settings (${columns.join(', ')})
