@@ -88,13 +88,13 @@
 
 	.nav-link:hover {
 		background: var(--surface);
-		color: var(--primary);
+		color: var(--primary-soft);
 		text-decoration: none;
 	}
 
 	.nav-link[aria-current='page'] {
 		background: color-mix(in srgb, var(--primary) 8%, transparent);
-		color: var(--primary);
+		color: var(--primary-soft);
 		font-weight: 600;
 	}
 
@@ -106,7 +106,7 @@
 
 	.nav-link:hover :global(.nav-icon),
 	.nav-link[aria-current='page'] :global(.nav-icon) {
-		color: var(--primary);
+		color: var(--primary-soft);
 	}
 
 	.nav-divider {

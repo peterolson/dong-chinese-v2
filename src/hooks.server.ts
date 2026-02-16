@@ -10,6 +10,8 @@ import {
 	createAnonymousSession,
 	validateAnonymousSession
 } from '$lib/server/services/anonymous-session';
+import { SETTINGS_COOKIE } from '$lib/settings';
+import type { UserSettings } from '$lib/settings';
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
@@ -70,5 +72,28 @@ const handleAnonymousSession: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-// Better Auth runs first (sets locals.user), then anonymous session logic
-export const handle: Handle = sequence(handleBetterAuth, handleAnonymousSession);
+const handleSettings: Handle = async ({ event, resolve }) => {
+	const raw = event.cookies.get(SETTINGS_COOKIE);
+	let settings: Partial<UserSettings> = {};
+	if (raw) {
+		try {
+			settings = JSON.parse(raw);
+		} catch {
+			// Invalid cookie, ignore
+		}
+	}
+	event.locals.settings = settings;
+
+	return resolve(event, {
+		transformPageChunk: ({ html }) => {
+			const theme = event.locals.settings.theme;
+			if (theme === 'light' || theme === 'dark') {
+				return html.replace('<html', `<html data-theme="${theme}"`);
+			}
+			return html;
+		}
+	});
+};
+
+// Better Auth runs first (sets locals.user), then anonymous session, then settings
+export const handle: Handle = sequence(handleBetterAuth, handleAnonymousSession, handleSettings);

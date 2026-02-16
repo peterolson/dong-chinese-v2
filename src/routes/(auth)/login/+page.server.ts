@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth, getConfiguredSocialProviders } from '$lib/server/auth';
 import { sanitizeRedirectTo } from '$lib/server/services/sanitize-redirect';
 import { handleSendMagicLink } from '$lib/server/services/magic-link';
+import { syncSettingsOnLogin } from '$lib/server/services/settings';
 import { APIError } from 'better-auth';
 import { db } from '$lib/server/db';
 import { userEmail } from '$lib/server/db/schema';
@@ -31,6 +32,8 @@ export const actions: Actions = {
 			return fail(400, { message: 'Email or username and password are required.', identifier });
 		}
 
+		let userId: string | undefined;
+
 		try {
 			if (identifier.includes('@')) {
 				// Look up user_email table to resolve secondary emails to the primary email
@@ -54,13 +57,15 @@ export const actions: Actions = {
 					}
 				}
 
-				await auth.api.signInEmail({
+				const result = await auth.api.signInEmail({
 					body: { email: loginEmail, password }
 				});
+				userId = result.user?.id;
 			} else {
-				await auth.api.signInUsername({
+				const result = await auth.api.signInUsername({
 					body: { username: identifier, password }
 				});
+				userId = result?.user?.id;
 			}
 		} catch (error) {
 			if (error instanceof APIError) {
@@ -70,6 +75,11 @@ export const actions: Actions = {
 				message: 'An unexpected error occurred. Please try again.',
 				identifier
 			});
+		}
+
+		if (userId) {
+			const isSecure = event.url.protocol === 'https:';
+			await syncSettingsOnLogin(db, userId, event.cookies, isSecure);
 		}
 
 		redirect(302, redirectTo);

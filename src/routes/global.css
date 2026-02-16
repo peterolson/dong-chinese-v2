@@ -1,10 +1,17 @@
 :root {
+	color-scheme: light;
+
 	/* Brand colors */
 	--primary: #ac0045;
+	--primary-soft: #ac0045;
 	--secondary: #0066ab;
+	--secondary-soft: #0066ab;
 	--tertiary: #009e7f;
 	--light-gray: #9b9b9b;
 	--dark-gray: #333333;
+
+	/* Header */
+	--header-bg: var(--primary);
 
 	/* Semantic colors */
 	--background: #ffffff;
@@ -16,10 +23,10 @@
 	--surface-hover: #eeeeee;
 
 	/* Alert colors */
-	--error: #c00;
-	--error-bg: #fdd;
-	--success: #080;
-	--success-bg: #dfd;
+	--error: #cc0000;
+	--error-bg: #ffdddd;
+	--success: #008800;
+	--success-bg: #ddffdd;
 	--warning: #a85d00;
 	--warning-bg: #fff3cd;
 	--info: #0066ab;
@@ -28,6 +35,7 @@
 	/* Layout */
 	--header-height: 56px;
 	--sidebar-width: 260px;
+	--content-padding: 2rem;
 
 	/* Typography */
 	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -35,6 +43,52 @@
 
 	/* Spacing */
 	--radius: 6px;
+}
+
+/* Explicit dark mode via data-theme attribute */
+[data-theme='dark'] {
+	color-scheme: dark;
+	--primary-soft: #e85a8a;
+	--secondary-soft: #64b5f6;
+	--header-bg: #1e1e1e;
+	--background: #121212;
+	--foreground: #e0e0e0;
+	--muted-foreground: #999999;
+	--border: #333333;
+	--surface: #1e1e1e;
+	--surface-hover: #2a2a2a;
+	--error: #ff6b6b;
+	--error-bg: #3d1515;
+	--success: #4caf50;
+	--success-bg: #1a3d1a;
+	--warning: #ffb74d;
+	--warning-bg: #3d2e15;
+	--info: #64b5f6;
+	--info-bg: #152a3d;
+}
+
+/* System preference dark mode (no explicit theme set) */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']):not([data-theme='dark']) {
+		color-scheme: dark;
+		--primary-soft: #e85a8a;
+		--secondary-soft: #64b5f6;
+		--header-bg: #1e1e1e;
+		--background: #121212;
+		--foreground: #e0e0e0;
+		--muted-foreground: #999999;
+		--border: #333333;
+		--surface: #1e1e1e;
+		--surface-hover: #2a2a2a;
+		--error: #ff6b6b;
+		--error-bg: #3d1515;
+		--success: #4caf50;
+		--success-bg: #1a3d1a;
+		--warning: #ffb74d;
+		--warning-bg: #3d2e15;
+		--info: #64b5f6;
+		--info-bg: #152a3d;
+	}
 }
 
 *,
@@ -108,7 +162,7 @@ p {
 }
 
 a {
-	color: var(--secondary);
+	color: var(--secondary-soft);
 	text-decoration: none;
 }
 
