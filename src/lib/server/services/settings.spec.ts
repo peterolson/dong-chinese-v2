@@ -20,8 +20,8 @@ function makeCookies(initial: Record<string, string> = {}) {
 	const jar = new Map(Object.entries(initial));
 	return {
 		get: (name: string) => jar.get(name),
-		set: (name: string, value: string, _opts?: unknown) => jar.set(name, value),
-		delete: (name: string, _opts?: unknown) => jar.delete(name),
+		set: (name: string, value: string) => jar.set(name, value),
+		delete: (name: string) => jar.delete(name),
 		/** Expose jar for assertions */
 		_jar: jar
 	} as unknown as import('@sveltejs/kit').Cookies;
