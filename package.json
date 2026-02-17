@@ -24,7 +24,10 @@
 		"auth:schema": "npx @better-auth/cli generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
-		"import:users": "tsx scripts/import-meteor-users.ts"
+		"import:users": "tsx scripts/import-meteor-users.ts",
+		"dictionary:import-unihan": "tsx scripts/dictionary/import-unihan.ts",
+		"dictionary:import-cedict": "tsx scripts/dictionary/import-cedict.ts",
+		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",

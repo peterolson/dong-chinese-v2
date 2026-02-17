@@ -33,3 +33,4 @@ export const userEmail = pgTable(
 );
 
 export * from './auth.schema';
+export * from './stage.schema';

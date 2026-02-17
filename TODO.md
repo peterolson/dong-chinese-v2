@@ -18,9 +18,40 @@
 
 - [x] Dark mode + generalized user settings architecture (PR #11) — Single JSON `settings` cookie + `user_settings` DB table. Server hook injects `data-theme` on `<html>` via `transformPageChunk` (no flash). Works across anonymous/authenticated, JS/no-JS, online/offline. Settings page with `SegmentedControl` component. Login syncs DB→cookie, signup syncs cookie→DB. Dark mode CSS variables for all semantic tokens. Adapted header, sidebar, auth card for dark mode. Meteor import script imports `profile.darkMode`. 37 unit/integration tests.
 
+- [x] Dictionary data ingestion pipeline (Phase A) — `stage` Postgres schema with `unihan_raw` (EAV, 1.56M rows across 103k codepoints × 99 fields), `cedict_raw` (124k entries), and `sync_metadata`. Import scripts with checksum-based idempotency and audit columns (`sync_version`, `is_current`, `created_at`, `updated_at`). After each import, scripts report new/changed/removed/unchanged counts. Rows absent from the latest source file get `is_current = false`; `updated_at` only changes when the actual value changes or `is_current` flips. Drizzle config updated with `schemaFilter: ['public', 'stage']`.
+  - **Files**: `src/lib/server/db/stage.schema.ts`, `scripts/dictionary/import-unihan.ts`, `scripts/dictionary/import-cedict.ts`
+  - **npm scripts**: `dictionary:import-unihan`, `dictionary:import-cedict`, `dictionary:sync`
+  - **Query patterns after import at version N** (use `last_download` from `stage.sync_metadata`):
+    - New: `is_current = true AND created_at >= last_download`
+    - Changed: `is_current = true AND updated_at >= last_download AND created_at < last_download`
+    - Removed: `is_current = false AND updated_at >= last_download`
+    - All active: `is_current = true`
+
 ## In Progress
 
-- [ ] Dictionary feature — planning & architecture (see Dictionary Deep Dive below)
+- [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
+
+### Phase B exploration queries to run
+
+```sql
+-- Unihan: which fields exist and how many codepoints have each?
+SELECT field, COUNT(*) FROM stage.unihan_raw WHERE is_current = true GROUP BY field ORDER BY count DESC;
+
+-- Unihan: spot-check key fields for common characters
+SELECT codepoint, field, value FROM stage.unihan_raw
+WHERE codepoint IN ('U+4F60', 'U+597D', 'U+4E2D', 'U+56FD')
+  AND field IN ('kMandarin', 'kDefinition', 'kTotalStrokes', 'kRSUnicode', 'kSimplifiedVariant', 'kTraditionalVariant', 'kFrequency', 'kGradeLevel')
+ORDER BY codepoint, field;
+
+-- CEDICT: sample multi-reading entries (same simplified, different pinyin)
+SELECT simplified, pinyin, definitions FROM stage.cedict_raw
+WHERE simplified IN (SELECT simplified FROM stage.cedict_raw WHERE is_current = true GROUP BY simplified HAVING COUNT(*) > 3)
+AND is_current = true ORDER BY simplified, pinyin LIMIT 30;
+
+-- CEDICT: entries with classifier markers (CL:)
+SELECT traditional, simplified, pinyin, definitions FROM stage.cedict_raw
+WHERE definitions LIKE '%CL:%' AND is_current = true LIMIT 10;
+```
 
 ## Up Next
 
@@ -186,20 +217,20 @@ Stroke data dominates the offline footprint. Options:
 #### Milestone 1: Data Exploration + Schema Design
 
 - [ ] Connect to MongoDB and explore `dictionary.char` and `dictionary.word` — document actual field names, types, value shapes, cardinality
-- [ ] Download and parse a CC-CEDICT snapshot — understand edge cases (multiple readings, classifier markers, etc.)
-- [ ] Download and parse Unihan.zip — understand which fields matter and their formats
+- [x] Download and parse a CC-CEDICT snapshot — 124,260 entries loaded into `stage.cedict_raw`
+- [x] Download and parse Unihan.zip — 1,555,629 rows (103k codepoints × 99 fields) loaded into `stage.unihan_raw`
 - [ ] Clone AnimCJK and examine SVG structure — measure raw vs compressed sizes, understand path format
-- [ ] Design Postgres schema informed by actual source data
-- [ ] Create Drizzle schema + run migrations
+- [x] Create stage schema (`stage.unihan_raw`, `stage.cedict_raw`, `stage.sync_metadata`) + push with drizzle-kit
+- [ ] Design materialized views (`source_character`, `source_word`) based on actual data — Phase B
 
 #### Milestone 2: Data Ingestion Scripts
 
-- [ ] Write `import-cedict.ts` — parse CC-CEDICT, insert ~124k words
-- [ ] Write `import-unihan.ts` — parse Unihan.zip, insert ~98k characters
+- [x] Write `import-unihan.ts` — parse Unihan.zip, upsert ~1.56M rows with checksum idempotency
+- [x] Write `import-cedict.ts` — parse CC-CEDICT, upsert ~124k entries with checksum idempotency
 - [ ] Write `import-wiki.ts` — read MongoDB collections, merge into Postgres
 - [ ] Write `import-animcjk.ts` — parse SVGs, insert stroke data
 - [ ] Write `sync-all.ts` orchestrator with checksum-based skip logic
-- [ ] Verify data integrity: spot-check entries, count totals, test indexes
+- [x] Verify data integrity: spot-checked entries (`你好`, kMandarin, kDefinition), verified row counts and sync metadata
 
 #### Milestone 3: Server-Side Search + API
 
