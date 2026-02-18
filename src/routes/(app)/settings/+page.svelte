@@ -7,6 +7,9 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const currentTheme = $derived(form?.settings?.theme ?? data.settings.theme ?? null);
+	const currentCharSet = $derived(
+		form?.settings?.characterSet ?? data.settings.characterSet ?? null
+	);
 
 	let formEl: HTMLFormElement | undefined = $state();
 
@@ -15,30 +18,39 @@
 		{ value: 'light', label: 'Light' },
 		{ value: 'dark', label: 'Dark' }
 	];
+
+	const charSetOptions = [
+		{ value: 'simplified', label: 'Simplified' },
+		{ value: 'traditional', label: 'Traditional' }
+	];
 </script>
 
 <h1>Settings</h1>
 
-<div class="settings-list">
-	<form
-		bind:this={formEl}
-		method="post"
-		action="?/updateSettings"
-		class="setting-row"
-		use:enhance={() => {
-			const formData = new FormData(formEl!);
-			const theme = formData.get('theme')?.toString() ?? '';
-			const value = theme === 'light' || theme === 'dark' ? theme : null;
+<form
+	bind:this={formEl}
+	method="post"
+	action="?/updateSettings"
+	class="settings-list"
+	use:enhance={() => {
+		const formData = new FormData(formEl!);
 
-			applyThemeToDOM(value);
-			const current = readSettings();
-			writeSettings({ ...current, theme: value });
+		const theme = formData.get('theme')?.toString() ?? '';
+		const themeValue = theme === 'light' || theme === 'dark' ? theme : null;
+		applyThemeToDOM(themeValue);
 
-			return async ({ update }) => {
-				await update({ reset: false });
-			};
-		}}
-	>
+		const charSet = formData.get('characterSet')?.toString() ?? '';
+		const charSetValue = charSet === 'simplified' || charSet === 'traditional' ? charSet : null;
+
+		const current = readSettings();
+		writeSettings({ ...current, theme: themeValue, characterSet: charSetValue });
+
+		return async ({ update }) => {
+			await update({ reset: false });
+		};
+	}}
+>
+	<div class="setting-row">
 		<span class="setting-label">Theme</span>
 		<SegmentedControl
 			name="theme"
@@ -46,11 +58,20 @@
 			selected={currentTheme ?? ''}
 			onchange={() => formEl?.requestSubmit()}
 		/>
-		<noscript>
-			<button type="submit">Save</button>
-		</noscript>
-	</form>
-</div>
+	</div>
+	<div class="setting-row">
+		<span class="setting-label">Character set</span>
+		<SegmentedControl
+			name="characterSet"
+			options={charSetOptions}
+			selected={currentCharSet ?? 'simplified'}
+			onchange={() => formEl?.requestSubmit()}
+		/>
+	</div>
+	<noscript>
+		<button type="submit">Save</button>
+	</noscript>
+</form>
 
 <style>
 	h1 {
@@ -75,8 +96,11 @@
 		white-space: nowrap;
 	}
 
+	noscript {
+		padding: 0.875rem 0;
+	}
+
 	noscript button {
-		margin-left: 0.5rem;
 		padding: 0.375rem 1rem;
 		background: var(--primary);
 		color: var(--primary-foreground);

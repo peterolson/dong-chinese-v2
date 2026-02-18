@@ -56,6 +56,9 @@ export async function readUserSettings(
 	if (row.theme === 'light' || row.theme === 'dark') {
 		result.theme = row.theme;
 	}
+	if (row.characterSet === 'simplified' || row.characterSet === 'traditional') {
+		result.characterSet = row.characterSet;
+	}
 	return result;
 }
 
@@ -66,16 +69,19 @@ export async function writeUserSettings(
 	partial: Partial<UserSettings>
 ): Promise<void> {
 	const theme = partial.theme ?? null;
+	const characterSet = partial.characterSet ?? null;
 	await db
 		.insert(userSettings)
 		.values({
 			userId,
-			theme
+			theme,
+			characterSet
 		})
 		.onConflictDoUpdate({
 			target: userSettings.userId,
 			set: {
 				theme,
+				characterSet,
 				updatedAt: new Date()
 			}
 		});
