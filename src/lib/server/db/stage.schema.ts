@@ -1,4 +1,12 @@
-import { pgSchema, text, integer, boolean, timestamp, primaryKey } from 'drizzle-orm/pg-core';
+import {
+	pgSchema,
+	text,
+	integer,
+	boolean,
+	timestamp,
+	primaryKey,
+	jsonb
+} from 'drizzle-orm/pg-core';
 
 export const stage = pgSchema('stage');
 
@@ -35,6 +43,32 @@ export const cedictRaw = stage.table(
 	},
 	(t) => [primaryKey({ columns: [t.traditional, t.simplified, t.pinyin] })]
 );
+
+// 说文解字 raw: one row per character entry from shuowenjiezi/shuowen GitHub repo
+// Source: https://github.com/shuowenjiezi/shuowen (Apache 2.0)
+// Stores the key parsed fields + full raw JSON for re-parsing
+export const shuowenRaw = stage.table('shuowen_raw', {
+	sourceId: integer('source_id').primaryKey(),
+	wordhead: text('wordhead').notNull(),
+	explanation: text('explanation').notNull(),
+	volume: text('volume').notNull(),
+	radical: text('radical').notNull(),
+	pronunciation: text('pronunciation').notNull(),
+	pinyin: text('pinyin').notNull(),
+	pinyinFull: text('pinyin_full').notNull(),
+	sealCharacter: text('seal_character').notNull().default(''),
+	components: jsonb('components').notNull().default([]),
+	variants: jsonb('variants').notNull().default([]),
+	indexes: jsonb('indexes').notNull().default([]),
+	xuanNote: text('xuan_note').notNull().default(''),
+	kaiNote: text('kai_note').notNull().default(''),
+	duanNotes: jsonb('duan_notes').notNull().default([]),
+	rawJson: text('raw_json').notNull(),
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
 
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {

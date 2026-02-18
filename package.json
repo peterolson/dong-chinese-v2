@@ -27,7 +27,8 @@
 		"import:users": "tsx scripts/import-meteor-users.ts",
 		"dictionary:import-unihan": "tsx scripts/dictionary/import-unihan.ts",
 		"dictionary:import-cedict": "tsx scripts/dictionary/import-cedict.ts",
-		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict"
+		"dictionary:import-shuowen": "tsx scripts/dictionary/import-shuowen.ts",
+		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",
