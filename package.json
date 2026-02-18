@@ -30,7 +30,9 @@
 		"dictionary:import-shuowen": "tsx scripts/dictionary/import-shuowen.ts",
 		"dictionary:import-animcjk": "tsx scripts/dictionary/import-animcjk.ts",
 		"dictionary:import-makemeahanzi": "tsx scripts/dictionary/import-makemeahanzi.ts",
-		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen && npm run dictionary:import-animcjk && npm run dictionary:import-makemeahanzi"
+		"dictionary:import-baxter-sagart": "tsx scripts/dictionary/import-baxter-sagart.ts",
+		"dictionary:import-zhengzhang": "tsx scripts/dictionary/import-zhengzhang.ts",
+		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen && npm run dictionary:import-animcjk && npm run dictionary:import-makemeahanzi && npm run dictionary:import-baxter-sagart && npm run dictionary:import-zhengzhang"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",

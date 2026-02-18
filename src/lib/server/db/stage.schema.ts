@@ -113,6 +113,47 @@ export const makemeahanziRaw = stage.table('makemeahanzi_raw', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// Baxter-Sagart Old Chinese reconstruction: one row per character-reading
+// Source: Wiktionary Module:zh/data/och-pron-BS (CC BY-SA 4.0)
+// Original data: Baxter & Sagart, "Old Chinese: A New Reconstruction" (2014)
+export const baxterSagartRaw = stage.table(
+	'baxter_sagart_raw',
+	{
+		character: text('character').notNull(),
+		pinyin: text('pinyin').notNull(),
+		middleChinese: text('middle_chinese').notNull(), // e.g. "xawX"
+		oldChinese: text('old_chinese').notNull(), // e.g. "*qʰˤuʔ"
+		gloss: text('gloss').notNull().default(''),
+		syncVersion: integer('sync_version').notNull().default(0),
+		isCurrent: boolean('is_current').notNull().default(true),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ columns: [t.character, t.middleChinese, t.oldChinese] })]
+);
+
+// Zhengzhang Shangfang Old Chinese reconstruction: one row per character-reading
+// Source: Wiktionary Module:zh/data/och-pron-ZS (CC BY-SA 4.0)
+// Original data: Zhengzhang Shangfang, "The Phonological System of Old Chinese" (2003)
+export const zhengzhangRaw = stage.table(
+	'zhengzhang_raw',
+	{
+		character: text('character').notNull(),
+		sourceId: text('source_id').notNull(), // unique ID from the source data
+		phoneticSeries: text('phonetic_series').notNull().default(''), // 諧聲系列
+		rhymeGroup: text('rhyme_group').notNull().default(''), // 韻部
+		readingNum: text('reading_num').notNull().default(''), // reading variant number
+		variant: text('variant').notNull().default(''), // variant character form
+		oldChinese: text('old_chinese').notNull(), // e.g. "qʰuːʔ"
+		notes: text('notes').notNull().default(''),
+		syncVersion: integer('sync_version').notNull().default(0),
+		isCurrent: boolean('is_current').notNull().default(true),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ columns: [t.character, t.sourceId] })]
+);
+
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {
 	source: text('source').primaryKey(),
