@@ -70,6 +70,49 @@ export const shuowenRaw = stage.table('shuowen_raw', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// AnimCJK raw: stroke order and dictionary data per (character, variant)
+// Source: https://github.com/parsimonhi/animCJK (Arphic PL / LGPL)
+// Merges graphicsZh{Hans,Hant}.txt + dictionaryZh{Hans,Hant}.txt by character
+export const animcjkRaw = stage.table(
+	'animcjk_raw',
+	{
+		character: text('character').notNull(),
+		variant: text('variant').notNull(), // 'simplified' or 'traditional'
+		strokes: jsonb('strokes'), // SVG path strings array (from graphics file)
+		medians: jsonb('medians'), // coordinate arrays (from graphics file)
+		definition: text('definition'),
+		pinyin: jsonb('pinyin'),
+		radical: text('radical'),
+		decomposition: text('decomposition'),
+		acjk: text('acjk'), // AnimCJK's own decomposition format
+		characterSet: jsonb('character_set'), // e.g. ["hsk31","frequent2500"]
+		syncVersion: integer('sync_version').notNull().default(0),
+		isCurrent: boolean('is_current').notNull().default(true),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ columns: [t.character, t.variant] })]
+);
+
+// MakeMeAHanzi raw: stroke order and dictionary data per character
+// Source: https://github.com/skishore/makemeahanzi (Arphic PL)
+// Merges graphics.txt + dictionary.txt by character
+export const makemeahanziRaw = stage.table('makemeahanzi_raw', {
+	character: text('character').primaryKey(),
+	strokes: jsonb('strokes'), // SVG path strings array
+	medians: jsonb('medians'), // coordinate arrays
+	definition: text('definition'),
+	pinyin: jsonb('pinyin'),
+	radical: text('radical'),
+	decomposition: text('decomposition'),
+	matches: jsonb('matches'), // stroke-to-component mappings
+	etymology: jsonb('etymology'), // { type, hint, ... }
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {
 	source: text('source').primaryKey(),
