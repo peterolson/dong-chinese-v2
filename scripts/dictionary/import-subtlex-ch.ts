@@ -74,19 +74,24 @@ async function downloadAndExtract(url: string, label: string): Promise<Buffer> {
 	const zipBuffer = Buffer.from(arrayBuffer);
 	console.log(`  Downloaded ${(zipBuffer.byteLength / 1024).toFixed(1)} KB`);
 
-	// Write zip to temp dir and extract with PowerShell
+	// Write zip to temp dir and extract
 	const tmpDir = mkdtempSync(join(tmpdir(), 'subtlex-'));
 	const zipPath = join(tmpDir, 'data.zip');
 	const extractDir = join(tmpDir, 'out');
-	const { writeFileSync } = await import('node:fs');
+	const { writeFileSync, mkdirSync, readdirSync } = await import('node:fs');
 	writeFileSync(zipPath, zipBuffer);
+	mkdirSync(extractDir, { recursive: true });
 
-	execSync(`powershell -command "Expand-Archive -Force '${zipPath}' '${extractDir}'"`, {
-		timeout: 15000
-	});
+	// Use unzip on Linux, PowerShell on Windows
+	if (process.platform === 'win32') {
+		execSync(`powershell -command "Expand-Archive -Force '${zipPath}' '${extractDir}'"`, {
+			timeout: 15000
+		});
+	} else {
+		execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { timeout: 15000 });
+	}
 
 	// Find the non-xlsx file (the plain text data file)
-	const { readdirSync } = await import('node:fs');
 	const files = readdirSync(extractDir);
 	const dataFile = files.find((f) => !f.endsWith('.xlsx'));
 	if (!dataFile) {
