@@ -27,6 +27,8 @@
     - Removed: `is_current = false AND updated_at >= last_download`
     - All active: `is_current = true`
 
+- [x] Production database sync workflows (PR #12) — 3 GitHub Actions workflows for automated imports against Supabase. Monthly cron for Unihan/CEDICT/AnimCJK, weekly cron for Meteor user import, manual dispatch with dropdown for one-time sources (Shuowen, MakeMeAHanzi, Baxter-Sagart, Zhengzhang) or full sync. All workflows create `stage` schema, run `drizzle-kit push --force`, then execute import scripts. Requires `SUPABASE_DATABASE_URL` and `MONGODB_URI` GitHub secrets.
+
 ## In Progress
 
 - [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
@@ -266,7 +268,7 @@ Stroke data dominates the offline footprint. Options:
 
 #### Milestone 7: Sync Automation
 
-- [ ] GitHub Action or cron for monthly `dictionary:sync`
+- [x] GitHub Actions cron for monthly dictionary sync + weekly Meteor user import + manual dispatch for one-time imports (PR #12)
 - [ ] Monitoring for upstream format changes or download failures
 - [ ] Admin page showing sync status, entry counts, last update times
 
