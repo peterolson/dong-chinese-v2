@@ -19,6 +19,7 @@ on:
           - zhengzhang
           - jun-da-char-freq
           - subtlex-ch
+          - dong-dictionary
 
 jobs:
   import:
@@ -26,6 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -67,3 +69,8 @@ jobs:
       - name: Import AnimCJK
         if: contains(fromJSON('["full-sync","animcjk"]'), github.event.inputs.import)
         run: npm run dictionary:import-animcjk
+
+      # Weekly imports (only in full-sync or individual)
+      - name: Import Dong Dictionary
+        if: contains(fromJSON('["full-sync","dong-dictionary"]'), github.event.inputs.import)
+        run: npm run dictionary:import-dong-dictionary

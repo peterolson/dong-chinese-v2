@@ -34,7 +34,8 @@
 		"dictionary:import-zhengzhang": "tsx scripts/dictionary/import-zhengzhang.ts",
 		"dictionary:import-jun-da-char-freq": "tsx scripts/dictionary/import-jun-da-char-freq.ts",
 		"dictionary:import-subtlex-ch": "tsx scripts/dictionary/import-subtlex-ch.ts",
-		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen && npm run dictionary:import-animcjk && npm run dictionary:import-makemeahanzi && npm run dictionary:import-baxter-sagart && npm run dictionary:import-zhengzhang && npm run dictionary:import-jun-da-char-freq && npm run dictionary:import-subtlex-ch"
+		"dictionary:import-dong-dictionary": "tsx scripts/dictionary/import-dong-dictionary.ts",
+		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen && npm run dictionary:import-animcjk && npm run dictionary:import-makemeahanzi && npm run dictionary:import-baxter-sagart && npm run dictionary:import-zhengzhang && npm run dictionary:import-jun-da-char-freq && npm run dictionary:import-subtlex-ch && npm run dictionary:import-dong-dictionary"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",
