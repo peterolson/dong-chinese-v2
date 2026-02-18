@@ -5,7 +5,8 @@ import {
 	boolean,
 	timestamp,
 	primaryKey,
-	jsonb
+	jsonb,
+	doublePrecision
 } from 'drizzle-orm/pg-core';
 
 export const stage = pgSchema('stage');
@@ -153,6 +154,56 @@ export const zhengzhangRaw = stage.table(
 	},
 	(t) => [primaryKey({ columns: [t.character, t.sourceId] })]
 );
+
+// Jun Da character frequency: one row per character
+// Source: https://lingua.mtsu.edu/chinese-computing/ (Jun Da, MTSU)
+// Corpus of ~193M characters of modern Chinese text
+export const junDaCharFreqRaw = stage.table('jun_da_char_freq_raw', {
+	character: text('character').primaryKey(),
+	rank: integer('rank').notNull(),
+	rawFrequency: integer('raw_frequency').notNull(),
+	cumulativePercent: text('cumulative_percent').notNull(),
+	pinyin: text('pinyin').notNull().default(''),
+	english: text('english').notNull().default(''),
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// SUBTLEX-CH character frequency: one row per character
+// Source: https://www.ugent.be/pp/experimentele-psychologie/en/research/documents/subtlexch
+// Corpus: 46.8M characters from 6,243 film subtitles
+export const subtlexChCharRaw = stage.table('subtlex_ch_char_raw', {
+	character: text('character').primaryKey(),
+	count: integer('count').notNull(),
+	perMillion: doublePrecision('per_million').notNull(),
+	logFreq: doublePrecision('log_freq').notNull(),
+	contextDiversity: integer('context_diversity').notNull(), // CHR-CD: number of films containing this char
+	contextDiversityPct: doublePrecision('context_diversity_pct').notNull(), // CHR-CD%
+	logContextDiversity: doublePrecision('log_context_diversity').notNull(), // logCHR-CD
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// SUBTLEX-CH word frequency: one row per word
+// Source: https://www.ugent.be/pp/experimentele-psychologie/en/research/documents/subtlexch
+// Corpus: 33.5M words from 6,243 film subtitles
+export const subtlexChWordRaw = stage.table('subtlex_ch_word_raw', {
+	word: text('word').primaryKey(),
+	count: integer('count').notNull(),
+	perMillion: doublePrecision('per_million').notNull(),
+	logFreq: doublePrecision('log_freq').notNull(),
+	contextDiversity: integer('context_diversity').notNull(), // W-CD: number of films containing this word
+	contextDiversityPct: doublePrecision('context_diversity_pct').notNull(), // W-CD%
+	logContextDiversity: doublePrecision('log_context_diversity').notNull(), // logW-CD
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
 
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {

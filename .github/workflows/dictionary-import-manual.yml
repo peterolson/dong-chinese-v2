@@ -17,6 +17,8 @@ on:
           - makemeahanzi
           - baxter-sagart
           - zhengzhang
+          - jun-da-char-freq
+          - subtlex-ch
 
 jobs:
   import:
@@ -48,6 +50,12 @@ jobs:
       - name: Import Zhengzhang
         if: contains(fromJSON('["all-one-time","full-sync","zhengzhang"]'), github.event.inputs.import)
         run: npm run dictionary:import-zhengzhang
+      - name: Import Jun Da Character Frequency
+        if: contains(fromJSON('["all-one-time","full-sync","jun-da-char-freq"]'), github.event.inputs.import)
+        run: npm run dictionary:import-jun-da-char-freq
+      - name: Import SUBTLEX-CH
+        if: contains(fromJSON('["all-one-time","full-sync","subtlex-ch"]'), github.event.inputs.import)
+        run: npm run dictionary:import-subtlex-ch
 
       # Monthly imports (only in full-sync or individual)
       - name: Import Unihan
