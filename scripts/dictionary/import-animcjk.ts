@@ -24,7 +24,6 @@
  */
 
 import { createHash } from 'node:crypto';
-import { Buffer } from 'node:buffer';
 import postgres, { type Row, type PendingQuery } from 'postgres';
 
 type Tx = postgres.TransactionSql & {
