@@ -205,6 +205,55 @@ export const subtlexChWordRaw = stage.table('subtlex_ch_word_raw', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// Dong Chinese dictionary character data: one row per character
+// Source: MongoDB dong-chinese.dictionary.char
+// Our own curated character dictionary with components, variants, etymology, etc.
+export const dongDictCharRaw = stage.table('dong_dict_char_raw', {
+	mongoId: text('mongo_id').primaryKey(), // MongoDB _id as hex string
+	char: text('char').notNull(),
+	codepoint: text('codepoint').notNull(),
+	strokeCount: integer('stroke_count'),
+	gloss: text('gloss'),
+	data: jsonb('data').notNull(), // full MongoDB document
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// Dong Chinese dictionary word data: one row per word
+// Source: MongoDB dong-chinese.dictionary.word
+// Our own curated word dictionary with definitions, pinyin, statistics, etc.
+export const dongDictWordRaw = stage.table('dong_dict_word_raw', {
+	mongoId: text('mongo_id').primaryKey(), // MongoDB _id as hex string
+	simp: text('simp').notNull(),
+	trad: text('trad').notNull(),
+	gloss: text('gloss'),
+	data: jsonb('data').notNull(), // full MongoDB document
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// Dong Chinese dictionary edit history: one row per edit
+// Source: MongoDB dong-chinese.dictionary.history
+// Consolidated history of edits to both char and word entries
+export const dongDictHistoryRaw = stage.table('dong_dict_history_raw', {
+	mongoId: text('mongo_id').primaryKey(), // MongoDB _id (Meteor string ID)
+	entryType: text('entry_type').notNull(), // 'char' or 'word'
+	entryKey: text('entry_key').notNull(), // char value or simp value
+	userId: text('user_id').notNull(),
+	timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+	comment: text('comment').notNull().default(''),
+	isApproved: boolean('is_approved'),
+	data: jsonb('data').notNull(), // full MongoDB document (includes changes + previous)
+	syncVersion: integer('sync_version').notNull().default(0),
+	isCurrent: boolean('is_current').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {
 	source: text('source').primaryKey(),
