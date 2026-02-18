@@ -1,0 +1,25 @@
+name: Meteor User Import (Weekly)
+
+on:
+  schedule:
+    - cron: '0 7 * * 1' # Monday 07:00 UTC
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - run: npm ci
+      - name: Create stage schema
+        run: node -e "import('postgres').then(m => m.default(process.env.DATABASE_URL)\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => process.exit(0)))"
+      - run: npx drizzle-kit push --force
+      - run: npm run import:users

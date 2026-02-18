@@ -1,0 +1,26 @@
+name: Dictionary Sync (Monthly)
+
+on:
+  schedule:
+    - cron: '0 6 1 * *' # 1st of each month, 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - run: npm ci
+      - name: Create stage schema
+        run: node -e "import('postgres').then(m => m.default(process.env.DATABASE_URL)\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => process.exit(0)))"
+      - run: npx drizzle-kit push --force
+      - run: npm run dictionary:import-unihan
+      - run: npm run dictionary:import-cedict
+      - run: npm run dictionary:import-animcjk

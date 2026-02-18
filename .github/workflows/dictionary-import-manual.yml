@@ -1,0 +1,61 @@
+name: Dictionary Import (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      import:
+        description: 'Which import to run'
+        required: true
+        type: choice
+        options:
+          - all-one-time
+          - full-sync
+          - unihan
+          - cedict
+          - shuowen
+          - animcjk
+          - makemeahanzi
+          - baxter-sagart
+          - zhengzhang
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - run: npm ci
+      - name: Create stage schema
+        run: node -e "import('postgres').then(m => m.default(process.env.DATABASE_URL)\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => process.exit(0)))"
+      - run: npx drizzle-kit push --force
+
+      # One-time imports
+      - name: Import Shuowen
+        if: contains(fromJSON('["all-one-time","full-sync","shuowen"]'), github.event.inputs.import)
+        run: npm run dictionary:import-shuowen
+      - name: Import MakeMeAHanzi
+        if: contains(fromJSON('["all-one-time","full-sync","makemeahanzi"]'), github.event.inputs.import)
+        run: npm run dictionary:import-makemeahanzi
+      - name: Import Baxter-Sagart
+        if: contains(fromJSON('["all-one-time","full-sync","baxter-sagart"]'), github.event.inputs.import)
+        run: npm run dictionary:import-baxter-sagart
+      - name: Import Zhengzhang
+        if: contains(fromJSON('["all-one-time","full-sync","zhengzhang"]'), github.event.inputs.import)
+        run: npm run dictionary:import-zhengzhang
+
+      # Monthly imports (only in full-sync or individual)
+      - name: Import Unihan
+        if: contains(fromJSON('["full-sync","unihan"]'), github.event.inputs.import)
+        run: npm run dictionary:import-unihan
+      - name: Import CEDICT
+        if: contains(fromJSON('["full-sync","cedict"]'), github.event.inputs.import)
+        run: npm run dictionary:import-cedict
+      - name: Import AnimCJK
+        if: contains(fromJSON('["full-sync","animcjk"]'), github.event.inputs.import)
+        run: npm run dictionary:import-animcjk
