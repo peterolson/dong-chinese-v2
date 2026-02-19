@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import type { ComponentData } from '$lib/types/dictionary';
 	import CharacterGlyph from './character-glyph.svelte';
-	import { getComponentTitle } from './component-colors';
+	import { getComponentColor, getComponentTitle } from './component-colors';
 
 	interface Props {
 		components: ComponentData[] | null;
@@ -49,7 +50,18 @@
 					>
 					{#if comp.type && comp.type.length > 0}
 						<span class="component-type">
-							{comp.type.map(getComponentTitle).join(', ')} component
+							{#each comp.type as t (t)}
+								<a
+									href="{resolve('/(app)/dictionary/explain/[type]', {
+										type: t
+									})}?from={encodeURIComponent(page.url.pathname)}"
+									class="component-type-link"
+									style:color={getComponentColor(t)}
+								>
+									{getComponentTitle(t)}
+								</a>
+							{/each}
+							component
 						</span>
 					{/if}
 					{#if comp.hint}
@@ -138,8 +150,21 @@
 	}
 
 	.component-type {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem;
 		font-size: 0.8125rem;
 		color: var(--muted-foreground);
+	}
+
+	.component-type-link {
+		color: var(--muted-foreground);
+		text-decoration: none;
+	}
+
+	.component-type-link:hover {
+		text-decoration: underline;
 	}
 
 	.component-hint {
