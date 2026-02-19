@@ -7,6 +7,7 @@
 	import CharacterGlyph from './character-glyph.svelte';
 	import HistoricalImages from './historical-images.svelte';
 	import HistoricalPronunciations from './historical-pronunciations.svelte';
+	import SpeakButton from '$lib/components/ui/speak-button.svelte';
 
 	interface Props {
 		character: CharacterData;
@@ -46,6 +47,7 @@
 			{#if strokeCount != null}
 				<span class="stroke-count">{strokeCount} strokes</span>
 			{/if}
+			<SpeakButton text={character.character} label="Listen to {character.character}" />
 		</div>
 
 		{#if strokeVariantData}
