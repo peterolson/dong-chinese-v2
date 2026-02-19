@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from 'svelte/reactivity';
 	import type { ComponentData } from '$lib/types/dictionary';
 	import { getAdjustedComponentColor } from './component-colors';
 
@@ -69,7 +70,7 @@
 
 	/** Collect all unique multi-type stripe patterns needed in this SVG */
 	let patterns = $derived.by(() => {
-		const map = new Map<string, string[]>();
+		const map = new SvelteMap<string, string[]>();
 		if (strokeFills) {
 			for (const colors of strokeFills) {
 				if (colors && colors.length > 1) map.set(colors.join('|'), colors);

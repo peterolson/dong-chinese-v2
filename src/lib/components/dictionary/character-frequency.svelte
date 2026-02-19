@@ -1,20 +1,16 @@
 <script lang="ts">
 	interface Props {
 		junDaRank: number | null;
-		junDaFrequency: number | null;
 		junDaPerMillion: number | null;
 		subtlexRank: number | null;
-		subtlexCount: number | null;
 		subtlexPerMillion: number | null;
 		subtlexContextDiversity: number | null;
 	}
 
 	let {
 		junDaRank,
-		junDaFrequency,
 		junDaPerMillion,
 		subtlexRank,
-		subtlexCount,
 		subtlexPerMillion,
 		subtlexContextDiversity
 	}: Props = $props();

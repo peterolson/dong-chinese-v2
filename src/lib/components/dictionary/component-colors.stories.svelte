@@ -107,7 +107,7 @@
 			<h2>Component Type Colors</h2>
 			<p class="subtitle">Base colors for each component type</p>
 			<div class="swatch-grid">
-				{#each allTypes as type}
+				{#each allTypes as type (type)}
 					<div class="swatch-item">
 						<div class="swatch" style:background={getComponentColor(type)}></div>
 						<span class="swatch-label">{componentTitles[type]}</span>
@@ -120,10 +120,10 @@
 			<h2>Same-Type Offset Variations</h2>
 			<p class="subtitle">Each row shows how a type shifts for duplicate components (offset 0–5)</p>
 			<div class="offset-grid">
-				{#each allTypes as type}
+				{#each allTypes as type (type)}
 					<div class="offset-row">
 						<span class="offset-type">{componentTitles[type]}</span>
-						{#each [0, 1, 2, 3, 4, 5] as offset}
+						{#each [0, 1, 2, 3, 4, 5] as offset (offset)}
 							<div class="swatch-item">
 								<div
 									class="swatch"

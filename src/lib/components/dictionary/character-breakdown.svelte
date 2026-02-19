@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ComponentData } from '$lib/types/dictionary';
 	import CharacterGlyph from './character-glyph.svelte';
 	import { getComponentTitle } from './component-colors';
@@ -42,7 +43,10 @@
 							/>
 						</span>
 					{/if}
-					<a href="/dictionary/{comp.character}" class="component-char">{comp.character}</a>
+					<a
+						href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
+						class="component-char">{comp.character}</a
+					>
 					{#if comp.type && comp.type.length > 0}
 						<span class="component-type">
 							{comp.type.map(getComponentTitle).join(', ')} component

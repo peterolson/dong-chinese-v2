@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { CharacterData } from '$lib/types/dictionary';
 	import StrokeAnimation from './stroke-animation.svelte';
 	import CharacterBreakdown from './character-breakdown.svelte';
@@ -79,7 +80,9 @@
 						<span class="variant-group">
 							<span class="label">Simplified:</span>
 							{#each character.simplifiedVariants as v (v)}
-								<a href="/dictionary/{v}" class="variant-link">{v}</a>
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: v })} class="variant-link"
+									>{v}</a
+								>
 							{/each}
 						</span>
 					{/if}
@@ -87,7 +90,9 @@
 						<span class="variant-group">
 							<span class="label">Traditional:</span>
 							{#each character.traditionalVariants as v (v)}
-								<a href="/dictionary/{v}" class="variant-link">{v}</a>
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: v })} class="variant-link"
+									>{v}</a
+								>
 							{/each}
 						</span>
 					{/if}
@@ -108,10 +113,8 @@
 
 		<CharacterFrequency
 			junDaRank={character.junDaRank}
-			junDaFrequency={character.junDaFrequency}
 			junDaPerMillion={character.junDaPerMillion}
 			subtlexRank={character.subtlexRank}
-			subtlexCount={character.subtlexCount}
 			subtlexPerMillion={character.subtlexPerMillion}
 			subtlexContextDiversity={character.subtlexContextDiversity}
 		/>

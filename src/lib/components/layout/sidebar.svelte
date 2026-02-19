@@ -6,20 +6,22 @@
 
 	let { currentPath }: { currentPath?: string } = $props();
 
-	type NavItem = {
-		route: RouteId;
+	type NavItem<R extends RouteId = RouteId> = {
+		route: R;
 		label: string;
 		icon: typeof House;
 	};
 
-	const mainNav: NavItem[] = [
+	const mainNav = [
 		{ route: '/', label: 'Home', icon: House },
 		{ route: '/(app)/lessons', label: 'Lessons', icon: BookOpen },
 		{ route: '/(app)/dictionary', label: 'Dictionary', icon: BookText },
 		{ route: '/(app)/media', label: 'Media', icon: Play }
-	];
+	] as const satisfies readonly NavItem[];
 
-	const secondaryNav: NavItem[] = [{ route: '/(app)/settings', label: 'Settings', icon: Settings }];
+	const secondaryNav = [
+		{ route: '/(app)/settings', label: 'Settings', icon: Settings }
+	] as const satisfies readonly NavItem[];
 
 	function isActive(href: string): boolean {
 		const pathname = currentPath ?? page.url.pathname;
