@@ -1,14 +1,18 @@
 <script lang="ts">
 	import type { ComponentData } from '$lib/types/dictionary';
+	import CharacterGlyph from './character-glyph.svelte';
+	import { getComponentTitle } from './component-colors';
 
 	interface Props {
 		components: ComponentData[] | null;
 		hint: string | null;
 		customSources: string[] | null;
 		isVerified: boolean | null;
+		strokes: string[] | null;
+		fragments: number[][] | null;
 	}
 
-	let { components, hint, customSources, isVerified }: Props = $props();
+	let { components, hint, customSources, isVerified, strokes, fragments }: Props = $props();
 </script>
 
 <section class="character-breakdown">
@@ -27,9 +31,22 @@
 		<ul class="component-list">
 			{#each components as comp, i (i)}
 				<li>
+					{#if strokes}
+						<span class="component-glyph">
+							<CharacterGlyph
+								character={comp.character}
+								{strokes}
+								{components}
+								allFragments={fragments}
+								highlightIndex={i}
+							/>
+						</span>
+					{/if}
 					<a href="/dictionary/{comp.character}" class="component-char">{comp.character}</a>
 					{#if comp.type && comp.type.length > 0}
-						<span class="component-type">({comp.type.join(', ')})</span>
+						<span class="component-type">
+							{comp.type.map(getComponentTitle).join(', ')} component
+						</span>
 					{/if}
 					{#if comp.hint}
 						<span class="component-hint">{comp.hint}</span>
@@ -102,6 +119,13 @@
 		bottom: 0;
 		width: 1px;
 		background: var(--border);
+	}
+
+	.component-glyph {
+		display: inline-block;
+		width: 92px;
+		height: 92px;
+		vertical-align: middle;
 	}
 
 	.component-char {

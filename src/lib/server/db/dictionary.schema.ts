@@ -23,7 +23,8 @@ export const charBase = dictionary.table(
 		gloss: text('gloss'),
 		hint: text('hint'),
 		originalMeaning: text('original_meaning'),
-		strokeCount: integer('stroke_count'),
+		strokeCountSimp: integer('stroke_count_simp'),
+		strokeCountTrad: integer('stroke_count_trad'),
 		isVerified: boolean('is_verified'),
 		components: jsonb('components'), // ComponentData[]
 		customSources: jsonb('custom_sources'), // Record<string, string>
@@ -43,8 +44,13 @@ export const charBase = dictionary.table(
 		subtlexPerMillion: doublePrecision('subtlex_per_million'),
 		subtlexContextDiversity: integer('subtlex_context_diversity'),
 
-		// Stroke order data: { simplified?: { strokes, medians, source }, traditional?: { ... } }
-		strokeData: jsonb('stroke_data'),
+		// Stroke order data per variant
+		strokeDataSimp: jsonb('stroke_data_simp'), // StrokeVariantData
+		strokeDataTrad: jsonb('stroke_data_trad'), // StrokeVariantData
+
+		// Fragment maps: how components connect to strokes
+		fragmentsSimp: jsonb('fragments_simp'),
+		fragmentsTrad: jsonb('fragments_trad'),
 
 		// Historical script images (oracle, bronze, seal, clerical) — excludes makemeahanzi
 		historicalImages: jsonb('historical_images'),
@@ -67,6 +73,7 @@ export const charBase = dictionary.table(
 	(t) => [
 		index('char_base_jun_da_rank_idx').on(t.junDaRank),
 		index('char_base_subtlex_rank_idx').on(t.subtlexRank),
-		index('char_base_stroke_count_idx').on(t.strokeCount)
+		index('char_base_stroke_count_simp_idx').on(t.strokeCountSimp),
+		index('char_base_stroke_count_trad_idx').on(t.strokeCountTrad)
 	]
 );

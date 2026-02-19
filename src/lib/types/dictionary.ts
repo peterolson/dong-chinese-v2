@@ -13,12 +13,6 @@ export interface StrokeVariantData {
 	source: 'animcjk' | 'makemeahanzi' | 'dong';
 }
 
-/** Stroke data keyed by variant */
-export interface StrokeData {
-	simplified?: StrokeVariantData;
-	traditional?: StrokeVariantData;
-}
-
 /** A historical script image (oracle, bronze, seal, clerical) */
 export interface HistoricalImage {
 	type: string; // e.g. "Oracle", "Bronze", "Seal", "Clerical"
@@ -54,7 +48,8 @@ export interface CharacterData {
 	gloss: string | null;
 	hint: string | null;
 	originalMeaning: string | null;
-	strokeCount: number | null;
+	strokeCountSimp: number | null;
+	strokeCountTrad: number | null;
 	isVerified: boolean | null;
 	components: ComponentData[] | null;
 	customSources: string[] | null;
@@ -74,8 +69,13 @@ export interface CharacterData {
 	subtlexPerMillion: number | null;
 	subtlexContextDiversity: number | null;
 
-	// Stroke order
-	strokeData: StrokeData | null;
+	// Stroke order per variant
+	strokeDataSimp: StrokeVariantData | null;
+	strokeDataTrad: StrokeVariantData | null;
+
+	// Fragment maps: how components connect to strokes
+	fragmentsSimp: number[][] | null;
+	fragmentsTrad: number[][] | null;
 
 	// Historical
 	historicalImages: HistoricalImage[] | null;

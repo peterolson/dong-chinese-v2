@@ -16,7 +16,34 @@ const preview: Preview = {
 			// 'off' - skip a11y checks entirely
 			test: 'todo'
 		}
-	}
+	},
+
+	globalTypes: {
+		theme: {
+			description: 'Color theme',
+			toolbar: {
+				title: 'Theme',
+				icon: 'paintbrush',
+				items: [
+					{ value: 'light', title: 'Light', icon: 'sun' },
+					{ value: 'dark', title: 'Dark', icon: 'moon' }
+				],
+				dynamicTitle: true
+			}
+		}
+	},
+
+	initialGlobals: {
+		theme: 'light'
+	},
+
+	decorators: [
+		(Story, { globals }) => {
+			const theme = globals.theme || 'light';
+			document.documentElement.setAttribute('data-theme', theme);
+			return Story();
+		}
+	]
 };
 
 export default preview;

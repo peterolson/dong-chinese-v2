@@ -85,10 +85,16 @@
 		width: 64px;
 		height: 64px;
 		object-fit: contain;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--surface);
-		padding: 4px;
+	}
+
+	:global([data-theme='dark']) .image-figure img {
+		filter: invert(1);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:global(:root:not([data-theme='light']):not([data-theme='dark'])) .image-figure img {
+			filter: invert(1);
+		}
 	}
 
 	figcaption {

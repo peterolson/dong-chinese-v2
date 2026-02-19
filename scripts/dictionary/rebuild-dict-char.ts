@@ -414,7 +414,8 @@ interface CharBaseRow {
 	gloss: string | null;
 	hint: string | null;
 	originalMeaning: string | null;
-	strokeCount: number | null;
+	strokeCountSimp: number | null;
+	strokeCountTrad: number | null;
 	isVerified: boolean | null;
 	components: unknown; // jsonb — parsed JS value
 	customSources: unknown; // jsonb — parsed JS value
@@ -427,7 +428,10 @@ interface CharBaseRow {
 	subtlexCount: number | null;
 	subtlexPerMillion: number | null;
 	subtlexContextDiversity: number | null;
-	strokeData: unknown; // jsonb — parsed JS value
+	strokeDataSimp: unknown; // jsonb — parsed JS value
+	strokeDataTrad: unknown; // jsonb — parsed JS value
+	fragmentsSimp: unknown; // jsonb — parsed JS value
+	fragmentsTrad: unknown; // jsonb — parsed JS value
 	historicalImages: unknown; // jsonb — parsed JS value
 	historicalPronunciations: unknown; // jsonb — parsed JS value
 	shuowenExplanation: string | null;
@@ -463,11 +467,12 @@ function buildRow(
 	const components = parseJsonField(dongData?.components);
 	const customSources = parseJsonField(dongData?.customSources);
 
-	// --- Stroke count: dong_dict > unihan kTotalStrokes ---
-	let strokeCount: number | null = dongChar?.strokeCount ?? null;
-	if (strokeCount == null && unihanCp?.kTotalStrokes) {
+	// --- Base stroke count: dong_dict > unihan kTotalStrokes ---
+	// This is the default; will be overridden per-variant below if stroke data is available.
+	let baseStrokeCount: number | null = dongChar?.strokeCount ?? null;
+	if (baseStrokeCount == null && unihanCp?.kTotalStrokes) {
 		const parsed = parseInt(unihanCp.kTotalStrokes, 10);
-		if (!isNaN(parsed)) strokeCount = parsed;
+		if (!isNaN(parsed)) baseStrokeCount = parsed;
 	}
 
 	// --- Variants: merge unihan + dong_dict ---
@@ -482,86 +487,72 @@ function buildRow(
 	const simplifiedVariants = [...new Set([...simpFromDong, ...simpFromUnihan])];
 	const traditionalVariants = [...new Set([...tradFromDong, ...tradFromUnihan])];
 
-	// --- Stroke data: animcjk > dong_dict makemeahanzi > makemeahanzi_raw ---
+	// --- Stroke data: dong_dict images > animcjk > makemeahanzi_raw ---
 	const animSimp = animcjk.simplified.get(char);
 	const animTrad = animcjk.traditional.get(char);
 	const mmah = makemeahanzi.get(char);
 
-	// Extract makemeahanzi data from dong_dict images array
-	let dongMmah: { strokes: string[]; medians: number[][][] } | null = null;
+	// Extract stroke data from dong_dict images array.
+	// The last entry with a `data` sub-object containing strokes/medians is dong's curated data.
+	// Fragments (how components map to strokes) live as a sibling of `data` on the same entry.
+	let dongStroke: { strokes: string[]; medians: number[][][]; fragments?: unknown } | null = null;
 	const dongImages = parseJsonField(dongData?.images);
 	if (dongImages && Array.isArray(dongImages)) {
-		const mmahEntry = (dongImages as Array<Record<string, unknown>>).find(
-			(img) => img.source === 'makemeahanzi'
-		);
-		if (mmahEntry?.strokes && mmahEntry?.medians) {
-			dongMmah = {
-				strokes: parseJsonField(mmahEntry.strokes) as string[],
-				medians: parseJsonField(mmahEntry.medians) as number[][][]
-			};
-		}
-	}
-
-	let strokeData: Record<string, unknown> | null = null;
-	if (animSimp || animTrad) {
-		strokeData = {};
-		if (animSimp)
-			strokeData.simplified = {
-				strokes: animSimp.strokes,
-				medians: animSimp.medians,
-				source: 'animcjk'
-			};
-		if (animTrad)
-			strokeData.traditional = {
-				strokes: animTrad.strokes,
-				medians: animTrad.medians,
-				source: 'animcjk'
-			};
-		// If only one variant from animcjk, fall back to other sources for the missing one
-		if (!animSimp) {
-			const fallback = dongMmah || mmah;
-			if (fallback)
-				strokeData.simplified = {
-					strokes: fallback.strokes,
-					medians: fallback.medians,
-					source: dongMmah ? 'dong' : 'makemeahanzi'
+		const imgArr = dongImages as Array<Record<string, unknown>>;
+		for (let i = imgArr.length - 1; i >= 0; i--) {
+			const img = imgArr[i];
+			const imgData = parseJsonField(img.data) as Record<string, unknown> | null;
+			if (imgData?.strokes && imgData?.medians) {
+				dongStroke = {
+					strokes: parseJsonField(imgData.strokes) as string[],
+					medians: parseJsonField(imgData.medians) as number[][][],
+					fragments: img.fragments ? parseJsonField(img.fragments) : undefined
 				};
-		}
-		if (!animTrad) {
-			const fallback = dongMmah || mmah;
-			if (fallback)
-				strokeData.traditional = {
-					strokes: fallback.strokes,
-					medians: fallback.medians,
-					source: dongMmah ? 'dong' : 'makemeahanzi'
-				};
-		}
-	} else if (dongMmah) {
-		strokeData = {
-			simplified: { strokes: dongMmah.strokes, medians: dongMmah.medians, source: 'dong' },
-			traditional: { strokes: dongMmah.strokes, medians: dongMmah.medians, source: 'dong' }
-		};
-	} else if (mmah) {
-		strokeData = {
-			simplified: {
-				strokes: mmah.strokes,
-				medians: mmah.medians,
-				source: 'makemeahanzi'
-			},
-			traditional: {
-				strokes: mmah.strokes,
-				medians: mmah.medians,
-				source: 'makemeahanzi'
+				break;
 			}
-		};
+		}
 	}
 
-	// --- Historical images: dong_dict images excluding makemeahanzi ---
+	// Priority chain: animcjk > dong_dict > makemeahanzi_raw
+	let strokeDataSimp: Record<string, unknown> | null = null;
+	if (animSimp) {
+		strokeDataSimp = { strokes: animSimp.strokes, medians: animSimp.medians, source: 'animcjk' };
+	} else if (dongStroke) {
+		strokeDataSimp = { strokes: dongStroke.strokes, medians: dongStroke.medians, source: 'dong' };
+	} else if (mmah) {
+		strokeDataSimp = { strokes: mmah.strokes, medians: mmah.medians, source: 'makemeahanzi' };
+	}
+
+	let strokeDataTrad: Record<string, unknown> | null = null;
+	if (animTrad) {
+		strokeDataTrad = { strokes: animTrad.strokes, medians: animTrad.medians, source: 'animcjk' };
+	} else if (dongStroke) {
+		strokeDataTrad = { strokes: dongStroke.strokes, medians: dongStroke.medians, source: 'dong' };
+	} else if (mmah) {
+		strokeDataTrad = { strokes: mmah.strokes, medians: mmah.medians, source: 'makemeahanzi' };
+	}
+
+	// --- Stroke counts: use medians/strokes length from stroke data if available, else base count ---
+	const strokeCountSimp =
+		(strokeDataSimp?.medians as number[][][] | null)?.length ??
+		(strokeDataSimp?.strokes as string[] | null)?.length ??
+		baseStrokeCount;
+	const strokeCountTrad =
+		(strokeDataTrad?.medians as number[][][] | null)?.length ??
+		(strokeDataTrad?.strokes as string[] | null)?.length ??
+		baseStrokeCount;
+
+	// --- Fragments: dong_dict curated data for simplified; no trad data yet ---
+	const fragmentsSimp = dongStroke?.fragments ?? null;
+	const fragmentsTrad = null;
+
+	// --- Historical images: dong_dict images excluding entries with stroke data ---
 	let historicalImages: unknown[] | null = null;
 	if (dongImages && Array.isArray(dongImages)) {
-		const filtered = (dongImages as Array<Record<string, unknown>>).filter(
-			(img) => img.source !== 'makemeahanzi'
-		);
+		const filtered = (dongImages as Array<Record<string, unknown>>).filter((img) => {
+			const imgData = parseJsonField(img.data) as Record<string, unknown> | null;
+			return !imgData?.strokes && !imgData?.medians;
+		});
 		if (filtered.length > 0) historicalImages = filtered;
 	}
 
@@ -624,7 +615,8 @@ function buildRow(
 		gloss,
 		hint,
 		originalMeaning,
-		strokeCount,
+		strokeCountSimp: strokeCountSimp,
+		strokeCountTrad: strokeCountTrad,
 		isVerified,
 		components,
 		customSources,
@@ -637,7 +629,10 @@ function buildRow(
 		subtlexCount: st?.count ?? null,
 		subtlexPerMillion: st?.perMillion ?? null,
 		subtlexContextDiversity: st?.contextDiversity ?? null,
-		strokeData: strokeData ?? null,
+		strokeDataSimp: strokeDataSimp ?? null,
+		strokeDataTrad: strokeDataTrad ?? null,
+		fragmentsSimp: fragmentsSimp ?? null,
+		fragmentsTrad: fragmentsTrad ?? null,
 		historicalImages: historicalImages ?? null,
 		historicalPronunciations: pronunciations.length > 0 ? pronunciations : null,
 		shuowenExplanation: sw?.explanation ?? null,
@@ -658,7 +653,8 @@ const COLUMNS = [
 	'gloss',
 	'hint',
 	'original_meaning',
-	'stroke_count',
+	'stroke_count_simp',
+	'stroke_count_trad',
 	'is_verified',
 	'components',
 	'custom_sources',
@@ -671,7 +667,10 @@ const COLUMNS = [
 	'subtlex_count',
 	'subtlex_per_million',
 	'subtlex_context_diversity',
-	'stroke_data',
+	'stroke_data_simp',
+	'stroke_data_trad',
+	'fragments_simp',
+	'fragments_trad',
 	'historical_images',
 	'historical_pronunciations',
 	'shuowen_explanation',
@@ -689,7 +688,8 @@ function toDbRow(r: CharBaseRow): Record<string, unknown> {
 		gloss: r.gloss,
 		hint: r.hint,
 		original_meaning: r.originalMeaning,
-		stroke_count: r.strokeCount,
+		stroke_count_simp: r.strokeCountSimp,
+		stroke_count_trad: r.strokeCountTrad,
 		is_verified: r.isVerified,
 		components: r.components,
 		custom_sources: r.customSources,
@@ -702,7 +702,10 @@ function toDbRow(r: CharBaseRow): Record<string, unknown> {
 		subtlex_count: r.subtlexCount,
 		subtlex_per_million: r.subtlexPerMillion,
 		subtlex_context_diversity: r.subtlexContextDiversity,
-		stroke_data: r.strokeData,
+		stroke_data_simp: r.strokeDataSimp,
+		stroke_data_trad: r.strokeDataTrad,
+		fragments_simp: r.fragmentsSimp,
+		fragments_trad: r.fragmentsTrad,
 		historical_images: r.historicalImages,
 		historical_pronunciations: r.historicalPronunciations,
 		shuowen_explanation: r.shuowenExplanation,
@@ -745,7 +748,8 @@ async function main() {
 				gloss text,
 				hint text,
 				original_meaning text,
-				stroke_count integer,
+				stroke_count_simp integer,
+				stroke_count_trad integer,
 				is_verified boolean,
 				components jsonb,
 				custom_sources jsonb,
@@ -758,7 +762,10 @@ async function main() {
 				subtlex_count integer,
 				subtlex_per_million double precision,
 				subtlex_context_diversity integer,
-				stroke_data jsonb,
+				stroke_data_simp jsonb,
+				stroke_data_trad jsonb,
+				fragments_simp jsonb,
+				fragments_trad jsonb,
 				historical_images jsonb,
 				historical_pronunciations jsonb,
 				shuowen_explanation text,

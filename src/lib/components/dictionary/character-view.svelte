@@ -3,6 +3,7 @@
 	import StrokeAnimation from './stroke-animation.svelte';
 	import CharacterBreakdown from './character-breakdown.svelte';
 	import CharacterFrequency from './character-frequency.svelte';
+	import CharacterGlyph from './character-glyph.svelte';
 	import HistoricalImages from './historical-images.svelte';
 	import HistoricalPronunciations from './historical-pronunciations.svelte';
 
@@ -14,45 +15,41 @@
 	let { character, characterSet = 'simplified' }: Props = $props();
 
 	let strokeVariantData = $derived(
-		character.strokeData
-			? (character.strokeData[characterSet] ??
-					character.strokeData.simplified ??
-					character.strokeData.traditional ??
-					null)
-			: null
+		characterSet === 'traditional'
+			? (character.strokeDataTrad ?? character.strokeDataSimp)
+			: (character.strokeDataSimp ?? character.strokeDataTrad)
+	);
+
+	let strokeCount = $derived(
+		characterSet === 'traditional'
+			? (character.strokeCountTrad ?? character.strokeCountSimp)
+			: (character.strokeCountSimp ?? character.strokeCountTrad)
+	);
+
+	let fragments = $derived(
+		characterSet === 'traditional'
+			? (character.fragmentsTrad ?? character.fragmentsSimp)
+			: (character.fragmentsSimp ?? character.fragmentsTrad)
 	);
 </script>
 
 <article class="character-view">
 	<header class="character-header">
 		<div class="char-display">
-			{#if strokeVariantData}
-				<svg viewBox="0 0 1024 1024" class="char-glyph" aria-label={character.character} role="img">
-					<g transform="translate(0, 900) scale(1, -1)">
-						{#each strokeVariantData.strokes as stroke, i (i)}
-							<path d={stroke} fill="var(--foreground)" />
-						{/each}
-					</g>
-					<text
-						x="512"
-						y="512"
-						text-anchor="middle"
-						dominant-baseline="central"
-						font-size="800"
-						fill="transparent">{character.character}</text
-					>
-				</svg>
-			{:else}
-				<span class="main-char">{character.character}</span>
-			{/if}
-			{#if character.strokeCount != null}
-				<span class="stroke-count">{character.strokeCount} strokes</span>
+			<CharacterGlyph
+				character={character.character}
+				strokes={strokeVariantData?.strokes ?? null}
+				components={character.components}
+				allFragments={fragments}
+			/>
+			{#if strokeCount != null}
+				<span class="stroke-count">{strokeCount} strokes</span>
 			{/if}
 		</div>
 
-		{#if character.strokeData}
+		{#if strokeVariantData}
 			<div class="char-animation">
-				<StrokeAnimation strokeData={character.strokeData} variant={characterSet} />
+				<StrokeAnimation strokeData={strokeVariantData} />
 			</div>
 		{/if}
 
@@ -105,6 +102,8 @@
 			hint={character.hint}
 			customSources={character.customSources}
 			isVerified={character.isVerified}
+			strokes={strokeVariantData?.strokes ?? null}
+			{fragments}
 		/>
 
 		<CharacterFrequency
@@ -163,16 +162,8 @@
 		align-items: center;
 		gap: 0.25rem;
 		flex-shrink: 0;
-	}
-
-	.char-glyph {
-		width: 120px;
-		height: 120px;
-	}
-
-	.main-char {
+		width: 92px;
 		font-size: 5rem;
-		line-height: 1;
 	}
 
 	.stroke-count {
@@ -181,8 +172,8 @@
 	}
 
 	.char-animation {
-		width: 120px;
-		height: 120px;
+		width: 92px;
+		height: 92px;
 		flex-shrink: 0;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
