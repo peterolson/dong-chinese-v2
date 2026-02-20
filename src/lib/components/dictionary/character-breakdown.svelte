@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import type { ComponentData } from '$lib/types/dictionary';
-	import CharacterGlyph from './character-glyph.svelte';
+	import { SvelteMap } from 'svelte/reactivity';
+	import type { ComponentData, CharacterData } from '$lib/types/dictionary';
 	import { getComponentColor, getComponentTitle } from './component-colors';
+	import CharacterGlyph from './character-glyph.svelte';
+	import Modal from '$lib/components/ui/modal.svelte';
+	import ComponentTypeExplanation from './component-type-explanation.svelte';
 
 	interface Props {
 		components: ComponentData[] | null;
@@ -12,9 +15,47 @@
 		isVerified: boolean | null;
 		strokes: string[] | null;
 		fragments: number[][] | null;
+		characterSet?: 'simplified' | 'traditional';
 	}
 
-	let { components, hint, customSources, isVerified, strokes, fragments }: Props = $props();
+	let { components, hint, customSources, isVerified, strokes, fragments, characterSet }: Props =
+		$props();
+
+	// Modal state
+	let modalOpen = $state(false);
+	let modalType = $state('');
+	let modalCharacters: Record<string, CharacterData> = $state({});
+	let modalLoading = $state(false);
+
+	// Client-side cache for fetched explain data
+	const explainCache = new SvelteMap<string, Record<string, CharacterData>>();
+
+	async function openExplainModal(e: MouseEvent, type: string) {
+		// Let modifier clicks through for new-tab behavior
+		if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+		e.preventDefault();
+		modalType = type;
+		modalOpen = true;
+
+		const cached = explainCache.get(type);
+		if (cached) {
+			modalCharacters = cached;
+			return;
+		}
+
+		modalLoading = true;
+		try {
+			const res = await fetch(`/api/dictionary/explain/${encodeURIComponent(type)}`);
+			if (res.ok) {
+				const data: { characters: Record<string, CharacterData> } = await res.json();
+				explainCache.set(type, data.characters);
+				modalCharacters = data.characters;
+			}
+		} finally {
+			modalLoading = false;
+		}
+	}
 </script>
 
 <section class="character-breakdown">
@@ -57,6 +98,7 @@
 									})}?from={encodeURIComponent(page.url.pathname)}"
 									class="component-type-link"
 									style:color={getComponentColor(t)}
+									onclick={(e) => openExplainModal(e, t)}
 								>
 									{getComponentTitle(t)}
 								</a>
@@ -85,6 +127,16 @@
 		</div>
 	{/if}
 </section>
+
+{#if modalType}
+	<Modal bind:open={modalOpen} title="{getComponentTitle(modalType)} component">
+		{#if modalLoading}
+			<p>Loading...</p>
+		{:else}
+			<ComponentTypeExplanation type={modalType} characters={modalCharacters} {characterSet} />
+		{/if}
+	</Modal>
+{/if}
 
 <style>
 	.character-breakdown {

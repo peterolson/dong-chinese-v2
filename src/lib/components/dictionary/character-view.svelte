@@ -111,6 +111,7 @@
 			isVerified={character.isVerified}
 			strokes={strokeVariantData?.strokes ?? null}
 			{fragments}
+			{characterSet}
 		/>
 
 		<CharacterFrequency

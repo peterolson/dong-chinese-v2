@@ -1,10 +1,10 @@
-import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { getCharacterData } from '$lib/server/services/dictionary';
 import { exampleChars, validTypes } from '$lib/data/component-type-info';
 import type { CharacterData } from '$lib/types/dictionary';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { type } = params;
 
 	if (!validTypes.has(type)) {
@@ -26,5 +26,12 @@ export const load: PageServerLoad = async ({ params }) => {
 		if (data) characters[char] = data;
 	}
 
-	return { type, characters };
+	return json(
+		{ characters },
+		{
+			headers: {
+				'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400'
+			}
+		}
+	);
 };
