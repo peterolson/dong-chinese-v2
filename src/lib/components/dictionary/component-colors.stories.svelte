@@ -179,7 +179,6 @@
 			<CharacterBreakdown
 				components={xueComponents}
 				hint="Depicts two hands (𦥑) teaching a child (子) under a roof (宀). 爻 represents the sound."
-				customSources={null}
 				isVerified={true}
 				strokes={xueStrokes}
 				fragments={xueFragments}
@@ -276,7 +275,6 @@
 			<CharacterBreakdown
 				components={multiTypeComponents}
 				hint="Same 學 fragments but with multi-type assignments for testing."
-				customSources={null}
 				isVerified={false}
 				strokes={xueStrokes}
 				fragments={xueFragments}

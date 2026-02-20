@@ -11,15 +11,13 @@
 	interface Props {
 		components: ComponentData[] | null;
 		hint: string | null;
-		customSources: string[] | null;
 		isVerified: boolean | null;
 		strokes: string[] | null;
 		fragments: number[][] | null;
 		characterSet?: 'simplified' | 'traditional';
 	}
 
-	let { components, hint, customSources, isVerified, strokes, fragments, characterSet }: Props =
-		$props();
+	let { components, hint, isVerified, strokes, fragments, characterSet }: Props = $props();
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -108,17 +106,6 @@
 	{:else}
 		<p class="no-data">No component breakdown available.</p>
 	{/if}
-
-	{#if customSources && customSources.length > 0}
-		<div class="custom-sources">
-			<h3>Sources</h3>
-			<ul class="source-list">
-				{#each customSources as source, i (i)}
-					<li>{source}</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
 </section>
 
 {#if modalType}
@@ -198,20 +185,5 @@
 
 	.no-data {
 		color: var(--muted-foreground);
-	}
-
-	.custom-sources {
-		margin-top: 1rem;
-	}
-
-	.custom-sources h3 {
-		font-size: 0.875rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.source-list {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
-		padding-left: 1.25rem;
 	}
 </style>

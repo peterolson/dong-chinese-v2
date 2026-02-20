@@ -8,6 +8,8 @@
 	import HistoricalImages from './historical-images.svelte';
 	import HistoricalPronunciations from './historical-pronunciations.svelte';
 	import SpeakButton from '$lib/components/ui/speak-button.svelte';
+	import SourceList from './source-list.svelte';
+	import { detectSources } from '$lib/data/source-info';
 
 	interface Props {
 		character: CharacterData;
@@ -32,6 +34,18 @@
 		characterSet === 'traditional'
 			? (character.fragmentsTrad ?? character.fragmentsSimp)
 			: (character.fragmentsSimp ?? character.fragmentsTrad)
+	);
+
+	let sourceGroups = $derived(
+		detectSources(character, {
+			hasCustomSources: (character.customSources?.length ?? 0) > 0
+		})
+	);
+
+	let audioAttribution = $derived(
+		character.pinyinFrequencies && character.pinyinFrequencies.length > 0
+			? ('allset' as const)
+			: null
 	);
 </script>
 
@@ -107,7 +121,6 @@
 		<CharacterBreakdown
 			components={character.components}
 			hint={character.hint}
-			customSources={character.customSources}
 			isVerified={character.isVerified}
 			strokes={strokeVariantData?.strokes ?? null}
 			{fragments}
@@ -145,6 +158,8 @@
 		{#if character.historicalPronunciations && character.historicalPronunciations.length > 0}
 			<HistoricalPronunciations pronunciations={character.historicalPronunciations} />
 		{/if}
+
+		<SourceList {sourceGroups} customSources={character.customSources} {audioAttribution} />
 	</div>
 </article>
 
