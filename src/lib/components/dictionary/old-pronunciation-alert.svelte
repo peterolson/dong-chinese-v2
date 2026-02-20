@@ -6,8 +6,8 @@
 	interface Props {
 		character: string;
 		compCharacter: string;
-		charPronunciations: HistoricalPronunciation[] | null;
-		compPronunciations: HistoricalPronunciation[] | null;
+		charPronunciations: HistoricalPronunciation[] | null | undefined;
+		compPronunciations: HistoricalPronunciation[] | null | undefined;
 	}
 
 	let { character, compCharacter, charPronunciations, compPronunciations }: Props = $props();

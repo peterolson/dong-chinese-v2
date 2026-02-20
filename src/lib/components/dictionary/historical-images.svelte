@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import type { HistoricalImage } from '$lib/types/dictionary';
 
 	interface Props {
@@ -27,8 +28,8 @@
 			return images.map((img) => ({ ...img, extra: false }));
 		}
 
-		const repIndices = new Set<number>();
-		const seenTypes = new Map<string, number>();
+		const repIndices = new SvelteSet<number>();
+		const seenTypes = new SvelteMap<string, number>();
 
 		for (let i = 0; i < images.length; i++) {
 			const img = images[i];

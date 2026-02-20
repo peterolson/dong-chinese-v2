@@ -97,7 +97,6 @@
 			components={character.components}
 			hint={character.hint}
 			originalMeaning={character.originalMeaning}
-			isVerified={character.isVerified}
 			strokes={strokeVariantData?.strokes ?? null}
 			historicalPronunciations={character.historicalPronunciations}
 			{fragments}

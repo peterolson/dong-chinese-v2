@@ -20,7 +20,6 @@
 		components: ComponentData[] | null;
 		hint: string | null;
 		originalMeaning: string | null;
-		isVerified: boolean | null;
 		strokes: string[] | null;
 		fragments: number[][] | null;
 		historicalPronunciations: HistoricalPronunciation[] | null;
@@ -32,7 +31,6 @@
 		components,
 		hint,
 		originalMeaning,
-		isVerified,
 		strokes,
 		fragments,
 		historicalPronunciations,

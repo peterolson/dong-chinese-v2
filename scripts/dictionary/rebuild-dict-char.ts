@@ -665,7 +665,7 @@ function buildRow(
 			const seen = new Set<string>();
 			const result: string[] = [];
 			for (const p of wp) {
-				const clean = p.replace(/[\u200B\u200C\u200D\uFEFF]/g, '').toLowerCase();
+				const clean = p.replace(/\u200B|\u200C|\u200D|\uFEFF/g, '').toLowerCase();
 				if (clean && !seen.has(clean)) {
 					seen.add(clean);
 					result.push(clean);

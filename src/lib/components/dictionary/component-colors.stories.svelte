@@ -177,9 +177,11 @@
 		<section>
 			<h2>學 — Full Breakdown Component</h2>
 			<CharacterBreakdown
+				character="學"
 				components={xueComponents}
 				hint="Depicts two hands (𦥑) teaching a child (子) under a roof (宀). 爻 represents the sound."
-				isVerified={true}
+				originalMeaning={null}
+				historicalPronunciations={null}
 				strokes={xueStrokes}
 				fragments={xueFragments}
 			/>
@@ -273,9 +275,11 @@
 
 			<h3>Full Breakdown with Multi-Type</h3>
 			<CharacterBreakdown
+				character="學"
 				components={multiTypeComponents}
 				hint="Same 學 fragments but with multi-type assignments for testing."
-				isVerified={false}
+				originalMeaning={null}
+				historicalPronunciations={null}
 				strokes={xueStrokes}
 				fragments={xueFragments}
 			/>

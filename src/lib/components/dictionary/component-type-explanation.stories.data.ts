@@ -1,6 +1,5 @@
 import type { CharacterData } from '$lib/types/dictionary';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 	meaning: {
 		妈: {

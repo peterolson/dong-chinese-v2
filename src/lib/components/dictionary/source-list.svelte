@@ -17,6 +17,7 @@
 			{#each sourceGroups as group (group.label)}
 				<div class="source-group">
 					<dt>{group.label}</dt>
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- external URLs, not app routes -->
 					<dd>
 						{#each group.keys as key (key)}
 							{@const entry = sourceData[key]}
@@ -37,6 +38,7 @@
 							{/each}
 						{/if}
 					</dd>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				</div>
 			{/each}
 		</dl>
