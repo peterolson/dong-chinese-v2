@@ -72,7 +72,7 @@ export function detectSources(
 	// Readings & variants
 	const readings: string[] = [];
 	if (
-		character.pinyinFrequencies != null ||
+		character.pinyin != null ||
 		character.simplifiedVariants != null ||
 		character.traditionalVariants != null ||
 		character.historicalPronunciations?.some((p) => p.source === 'tang')

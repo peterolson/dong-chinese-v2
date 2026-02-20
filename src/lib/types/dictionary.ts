@@ -4,6 +4,12 @@ export interface ComponentData {
 	type?: string[];
 	hint?: string | null;
 	isOldPronunciation?: boolean;
+	isFromOriginalMeaning?: boolean;
+	isGlyphChanged?: boolean;
+	// Populated at query time from char_base
+	pinyin?: string[] | null;
+	gloss?: string | null;
+	historicalPronunciations?: HistoricalPronunciation[] | null;
 }
 
 /** Stroke order data for one variant (simplified or traditional) */
@@ -88,4 +94,7 @@ export interface CharacterData {
 
 	// Pinyin frequencies
 	pinyinFrequencies: PinyinFrequency[] | null;
+
+	// Deduplicated pinyin readings from all sources (frequency-ordered)
+	pinyin: string[] | null;
 }

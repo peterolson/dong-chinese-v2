@@ -66,6 +66,9 @@ export const charBase = dictionary.table(
 		// Pinyin frequencies from Unihan kHanyuPinlu
 		pinyinFrequencies: jsonb('pinyin_frequencies'), // PinyinFrequency[]
 
+		// Deduplicated pinyin readings from all sources
+		pinyin: text('pinyin').array(),
+
 		// Audit
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()

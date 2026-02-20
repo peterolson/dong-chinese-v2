@@ -68,7 +68,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		媽: {
 			character: '媽',
@@ -149,7 +150,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		女: {
 			character: '女',
@@ -196,7 +198,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		问: {
 			character: '问',
@@ -263,7 +266,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		問: {
 			character: '問',
@@ -340,7 +344,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		口: {
 			character: '口',
@@ -387,7 +392,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		想: {
 			character: '想',
@@ -468,7 +474,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		心: {
 			character: '心',
@@ -517,7 +524,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		错: {
 			character: '错',
@@ -599,7 +607,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		錯: {
 			character: '錯',
@@ -687,7 +696,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		金: {
 			character: '金',
@@ -764,7 +774,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	sound: {
@@ -833,7 +844,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		媽: {
 			character: '媽',
@@ -914,7 +926,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		马: {
 			character: '马',
@@ -957,7 +970,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		馬: {
 			character: '馬',
@@ -1007,7 +1021,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		问: {
 			character: '问',
@@ -1074,7 +1089,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		問: {
 			character: '問',
@@ -1151,7 +1167,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		门: {
 			character: '门',
@@ -1198,7 +1215,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		門: {
 			character: '門',
@@ -1255,7 +1273,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		想: {
 			character: '想',
@@ -1336,7 +1355,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		相: {
 			character: '相',
@@ -1409,7 +1429,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		他: {
 			character: '他',
@@ -1475,7 +1496,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		也: {
 			character: '也',
@@ -1522,7 +1544,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	iconic: {
@@ -1595,7 +1618,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		木: {
 			character: '木',
@@ -1644,7 +1668,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		旦: {
 			character: '旦',
@@ -1706,7 +1731,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		日: {
 			character: '日',
@@ -1755,7 +1781,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		有: {
 			character: '有',
@@ -1824,7 +1851,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		又: {
 			character: '又',
@@ -1869,7 +1897,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	unknown: {
@@ -1944,7 +1973,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		止: {
 			character: '止',
@@ -1993,7 +2023,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	simplified: {
@@ -2070,7 +2101,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		難: {
 			character: '難',
@@ -2164,7 +2196,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		点: {
 			character: '点',
@@ -2238,7 +2271,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		點: {
 			character: '點',
@@ -2310,7 +2344,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		还: {
 			character: '还',
@@ -2379,7 +2414,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		還: {
 			character: '還',
@@ -2468,7 +2504,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	deleted: {
@@ -2535,7 +2572,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		開: {
 			character: '開',
@@ -2616,7 +2654,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	remnant: {
@@ -2687,7 +2726,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		老: {
 			character: '老',
@@ -2744,7 +2784,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	},
 	distinguishing: {
@@ -2795,7 +2836,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		},
 		玉: {
 			character: '玉',
@@ -2856,7 +2898,8 @@ export const explainStoryData: Record<string, Record<string, CharacterData>> = {
 			shuowenExplanation: null,
 			shuowenPronunciation: null,
 			shuowenPinyin: null,
-			pinyinFrequencies: null
+			pinyinFrequencies: null,
+			pinyin: null
 		}
 	}
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

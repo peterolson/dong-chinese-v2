@@ -290,6 +290,36 @@ async function loadSubtlex(sql: postgres.Sql): Promise<Map<string, SubtlexData>>
 	return map;
 }
 
+async function loadWordPinyin(sql: postgres.Sql): Promise<Map<string, string[]>> {
+	console.log('Loading dong_dict_word_raw (single-char pinyin)...');
+	const rows = await sql`
+		SELECT simp, data
+		FROM stage.dong_dict_word_raw
+		WHERE is_current = true AND LENGTH(simp) = 1
+	`;
+	const map = new Map<string, string[]>();
+	for (const r of rows) {
+		const char = r.simp as string;
+		const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+		const items = data?.items as Array<{ pinyin?: string; definitions?: unknown[] }> | undefined;
+		if (!items) continue;
+		// Count definitions per pinyin reading
+		const defCounts = new Map<string, number>();
+		for (const item of items) {
+			if (!item.pinyin) continue;
+			const lower = item.pinyin.toLowerCase();
+			defCounts.set(lower, (defCounts.get(lower) ?? 0) + (item.definitions?.length ?? 0));
+		}
+		if (defCounts.size > 0) {
+			// Sort by definition count descending
+			const sorted = [...defCounts.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => p);
+			map.set(char, sorted);
+		}
+	}
+	console.log(`  ${map.size.toLocaleString()} characters with word pinyin`);
+	return map;
+}
+
 async function loadUnihanFields(sql: postgres.Sql): Promise<Map<string, UnihanFieldMap>> {
 	console.log('Loading unihan_raw (selected fields)...');
 	const rows = await sql`
@@ -438,6 +468,7 @@ interface CharBaseRow {
 	shuowenPronunciation: string | null;
 	shuowenPinyin: string | null;
 	pinyinFrequencies: unknown; // jsonb — parsed JS value
+	pinyin: string[] | null;
 	updatedAt: Date;
 }
 
@@ -452,6 +483,7 @@ function buildRow(
 	junDa: Map<string, JunDaData>,
 	subtlex: Map<string, SubtlexData>,
 	unihanFields: Map<string, UnihanFieldMap>,
+	wordPinyin: Map<string, string[]>,
 	updatedAtMap: UpdatedAtMap
 ): CharBaseRow {
 	const dongChar = dong.get(char);
@@ -609,6 +641,40 @@ function buildRow(
 		if (parsed.length > 0) pinyinFrequencies = parsed;
 	}
 
+	// --- Deduplicated pinyin readings ---
+	// If pinyin frequency data exists (kHanyuPinlu), use only those readings.
+	// Otherwise fall back to word pinyin (sorted by definition count).
+	// Cap at 3 readings to avoid clutter.
+	let pinyin: string[] | null = null;
+	if (pinyinFrequencies) {
+		const seen = new Set<string>();
+		const result: string[] = [];
+		for (const pf of pinyinFrequencies) {
+			if (pf.pinyin) {
+				const lower = pf.pinyin.toLowerCase();
+				if (!seen.has(lower)) {
+					seen.add(lower);
+					result.push(lower);
+				}
+			}
+		}
+		pinyin = result.length > 0 ? result.slice(0, 3) : null;
+	} else {
+		const wp = wordPinyin.get(char);
+		if (wp) {
+			const seen = new Set<string>();
+			const result: string[] = [];
+			for (const p of wp) {
+				const clean = p.replace(/[\u200B\u200C\u200D\uFEFF]/g, '').toLowerCase();
+				if (clean && !seen.has(clean)) {
+					seen.add(clean);
+					result.push(clean);
+				}
+			}
+			pinyin = result.length > 0 ? result.slice(0, 3) : null;
+		}
+	}
+
 	return {
 		character: char,
 		codepoint: cp || null,
@@ -639,6 +705,7 @@ function buildRow(
 		shuowenPronunciation: sw?.pronunciation ?? null,
 		shuowenPinyin: sw?.pinyin ?? null,
 		pinyinFrequencies: pinyinFrequencies ?? null,
+		pinyin,
 		updatedAt: updatedAtMap.get(char) ?? new Date()
 	};
 }
@@ -677,6 +744,7 @@ const COLUMNS = [
 	'shuowen_pronunciation',
 	'shuowen_pinyin',
 	'pinyin_frequencies',
+	'pinyin',
 	'updated_at'
 ] as const;
 
@@ -712,6 +780,7 @@ function toDbRow(r: CharBaseRow): Record<string, unknown> {
 		shuowen_pronunciation: r.shuowenPronunciation,
 		shuowen_pinyin: r.shuowenPinyin,
 		pinyin_frequencies: r.pinyinFrequencies,
+		pinyin: r.pinyin,
 		updated_at: r.updatedAt
 	};
 }
@@ -772,6 +841,7 @@ async function main() {
 				shuowen_pronunciation text,
 				shuowen_pinyin text,
 				pinyin_frequencies jsonb,
+				pinyin text[],
 				created_at timestamptz NOT NULL DEFAULT NOW(),
 				updated_at timestamptz NOT NULL DEFAULT NOW()
 			)
@@ -794,6 +864,7 @@ async function main() {
 			junDa,
 			subtlex,
 			unihanFields,
+			wordPinyin,
 			updatedAtMap
 		] = await Promise.all([
 			loadDongChars(sql),
@@ -805,6 +876,7 @@ async function main() {
 			loadJunDa(sql),
 			loadSubtlex(sql),
 			loadUnihanFields(sql),
+			loadWordPinyin(sql),
 			loadUpdatedAtMap(sql)
 		]);
 
@@ -850,6 +922,7 @@ async function main() {
 					junDa,
 					subtlex,
 					unihanFields,
+					wordPinyin,
 					updatedAtMap
 				)
 			);

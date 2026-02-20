@@ -2,22 +2,42 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { SvelteMap } from 'svelte/reactivity';
-	import type { ComponentData, CharacterData } from '$lib/types/dictionary';
+	import type {
+		ComponentData,
+		CharacterData,
+		HistoricalPronunciation
+	} from '$lib/types/dictionary';
 	import { getComponentColor, getComponentTitle } from './component-colors';
 	import CharacterGlyph from './character-glyph.svelte';
+	import CjkLinkedText from './cjk-linked-text.svelte';
+	import Alert from '$lib/components/ui/alert.svelte';
 	import Modal from '$lib/components/ui/modal.svelte';
 	import ComponentTypeExplanation from './component-type-explanation.svelte';
+	import OldPronunciationAlert from './old-pronunciation-alert.svelte';
 
 	interface Props {
+		character: string;
 		components: ComponentData[] | null;
 		hint: string | null;
+		originalMeaning: string | null;
 		isVerified: boolean | null;
 		strokes: string[] | null;
 		fragments: number[][] | null;
+		historicalPronunciations: HistoricalPronunciation[] | null;
 		characterSet?: 'simplified' | 'traditional';
 	}
 
-	let { components, hint, isVerified, strokes, fragments, characterSet }: Props = $props();
+	let {
+		character,
+		components,
+		hint,
+		originalMeaning,
+		isVerified,
+		strokes,
+		fragments,
+		historicalPronunciations,
+		characterSet
+	}: Props = $props();
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -57,16 +77,27 @@
 </script>
 
 <section class="character-breakdown">
-	{#if hint}
-		<p class="hint">{hint}</p>
+	{#if hint || originalMeaning}
+		<div class="etymology">
+			{#if originalMeaning}
+				<p class="original-meaning">
+					<span class="label">Original meaning:</span>
+					{originalMeaning}
+				</p>
+			{/if}
+			{#if hint}
+				<p class="hint"><CjkLinkedText text={hint} /></p>
+			{/if}
+		</div>
 	{/if}
 
 	{#if components && components.length > 0}
-		<ul class="component-list">
+		<h2>Components</h2>
+		<div class="component-grid">
 			{#each components as comp, i (i)}
-				<li>
+				<div class="component-card">
 					{#if strokes}
-						<span class="component-glyph">
+						<div class="component-glyph">
 							<CharacterGlyph
 								character={comp.character}
 								{strokes}
@@ -74,35 +105,77 @@
 								allFragments={fragments}
 								highlightIndex={i}
 							/>
-						</span>
+						</div>
 					{/if}
-					<a
-						href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-						class="component-char">{comp.character}</a
-					>
-					{#if comp.type && comp.type.length > 0}
-						<span class="component-type">
-							{#each comp.type as t (t)}
-								<a
-									href="{resolve('/(app)/dictionary/explain/[type]', {
-										type: t
-									})}?from={encodeURIComponent(page.url.pathname)}"
-									class="component-type-link"
-									style:color={getComponentColor(t)}
-									onclick={(e) => openExplainModal(e, t)}
+					<div class="component-details">
+						<div class="component-header">
+							<a
+								href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
+								class="component-char">{comp.character}</a
+							>
+							{#if comp.type && comp.type.length > 0}
+								<span class="component-type">
+									{#each comp.type as t (t)}
+										<a
+											href="{resolve('/(app)/dictionary/explain/[type]', {
+												type: t
+											})}?from={encodeURIComponent(page.url.pathname)}"
+											class="component-type-link"
+											style:color={getComponentColor(t)}
+											onclick={(e) => openExplainModal(e, t)}
+										>
+											{getComponentTitle(t)}
+										</a>
+									{/each}
+									component
+								</span>
+							{/if}
+						</div>
+						{#if comp.pinyin?.length || comp.gloss}
+							<div class="component-meta">
+								{#if comp.pinyin && comp.pinyin.length > 0}
+									<span class="component-pinyin">{comp.pinyin.join(', ')}</span>
+								{/if}
+								{#if comp.gloss}
+									<span class="component-gloss">{comp.gloss}</span>
+								{/if}
+							</div>
+						{/if}
+						{#if comp.hint}
+							<p class="component-hint"><CjkLinkedText text={comp.hint} /></p>
+						{/if}
+						{#if comp.isFromOriginalMeaning && originalMeaning}
+							<Alert variant="info">
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
+									>{comp.character}</a
 								>
-									{getComponentTitle(t)}
-								</a>
-							{/each}
-							component
-						</span>
-					{/if}
-					{#if comp.hint}
-						<span class="component-hint">{comp.hint}</span>
-					{/if}
-				</li>
+								hints at the original meaning of
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a
+								>, "{originalMeaning}", which is no longer the most common meaning of
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a> in
+								modern Mandarin.
+							</Alert>
+						{/if}
+						{#if comp.isOldPronunciation}
+							<OldPronunciationAlert
+								{character}
+								compCharacter={comp.character}
+								charPronunciations={historicalPronunciations}
+								compPronunciations={comp.historicalPronunciations}
+							/>
+						{/if}
+						{#if comp.isGlyphChanged}
+							<Alert variant="info">
+								Due to historical stylistic changes, this component is less similar to
+								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
+									>{comp.character}</a
+								> than it was in ancient scripts.
+							</Alert>
+						{/if}
+					</div>
+				</div>
 			{/each}
-		</ul>
+		</div>
 	{/if}
 </section>
 
@@ -121,36 +194,69 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.hint {
-		margin-bottom: 0.75rem;
+	.etymology {
+		margin-bottom: 1rem;
+	}
+
+	.original-meaning {
+		font-size: 0.875rem;
 		color: var(--muted-foreground);
 	}
 
-	.component-list {
-		list-style: none;
-		padding-left: 1.25rem;
+	.label {
+		font-weight: 600;
 	}
 
-	.component-list li {
-		padding: 0.25rem 0;
-		position: relative;
+	.hint {
+		color: var(--muted-foreground);
 	}
 
-	.component-list li::before {
+	.character-breakdown h2 {
+		font-size: 1rem;
+		margin-bottom: 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: var(--muted-foreground);
+		font-weight: 500;
+	}
+
+	.character-breakdown h2::after {
 		content: '';
-		position: absolute;
-		left: -1rem;
-		top: 0;
-		bottom: 0;
-		width: 1px;
+		flex: 1;
+		height: 1px;
 		background: var(--border);
 	}
 
+	.component-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 1rem;
+	}
+
+	.component-card {
+		display: flex;
+		gap: 0.75rem;
+		align-items: flex-start;
+	}
+
 	.component-glyph {
-		display: inline-block;
 		width: 92px;
 		height: 92px;
-		vertical-align: middle;
+		flex-shrink: 0;
+	}
+
+	.component-details {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 0;
+	}
+
+	.component-header {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
 	}
 
 	.component-char {
@@ -168,7 +274,7 @@
 	}
 
 	.component-type-link {
-		color: var(--muted-foreground);
+		font-weight: 600;
 		text-decoration: none;
 	}
 
@@ -176,8 +282,23 @@
 		text-decoration: underline;
 	}
 
-	.component-hint {
+	.component-meta {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
 		font-size: 0.875rem;
+	}
+
+	.component-pinyin {
+		color: var(--foreground);
+	}
+
+	.component-gloss {
+		color: var(--muted-foreground);
+	}
+
+	.component-hint {
+		font-size: 0.8125rem;
 		color: var(--muted-foreground);
 	}
 </style>

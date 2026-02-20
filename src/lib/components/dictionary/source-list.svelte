@@ -140,7 +140,7 @@
 		margin-top: 0.75rem;
 	}
 
-	@media (max-width: 400px) {
+	@media (max-width: 480px) {
 		dl {
 			grid-template-columns: 1fr;
 			gap: 0.5rem;
@@ -152,8 +152,12 @@
 			gap: 0;
 		}
 
+		dt {
+			font-weight: 500;
+		}
+
 		dd {
-			text-align: right;
+			padding-left: 0.75rem;
 		}
 	}
 </style>

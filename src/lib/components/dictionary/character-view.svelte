@@ -51,9 +51,7 @@
 	);
 
 	let audioAttribution = $derived(
-		character.pinyinFrequencies && character.pinyinFrequencies.length > 0
-			? ('allset' as const)
-			: null
+		character.pinyin && character.pinyin.length > 0 ? ('allset' as const) : null
 	);
 </script>
 
@@ -66,44 +64,42 @@
 				components={character.components}
 				allFragments={fragments}
 			/>
-			<SpeakButton text={character.character} label="Listen to {character.character}" />
 		</div>
 
 		{#if strokeVariantData}
 			<div class="char-animation">
-				<StrokeAnimation strokeData={strokeVariantData} />
+				{#key character.character + '-' + characterSet}
+					<StrokeAnimation strokeData={strokeVariantData} />
+				{/key}
 			</div>
 		{/if}
 
 		<div class="char-info">
-			{#if character.gloss}
-				<p class="gloss">{character.gloss}</p>
-			{/if}
-			{#if character.originalMeaning}
-				<p class="original-meaning">
-					<span class="label">Original meaning:</span>
-					{character.originalMeaning}
-				</p>
-			{/if}
-			{#if character.pinyinFrequencies && character.pinyinFrequencies.length > 0}
-				<div class="pinyin-readings">
-					{#each character.pinyinFrequencies as pf (pf.pinyin)}
-						<span class="pinyin-reading">
-							{pf.pinyin}
-							<span class="pinyin-count">({pf.count.toLocaleString()})</span>
-						</span>
-					{/each}
-				</div>
-			{/if}
+			<SpeakButton text={character.character} label="Listen to {character.character}" />
+			<div class="char-text">
+				{#if character.pinyin && character.pinyin.length > 0}
+					<div class="pinyin-readings">
+						{#each character.pinyin as p (p)}
+							<span class="pinyin-reading">{p}</span>
+						{/each}
+					</div>
+				{/if}
+				{#if character.gloss}
+					<p class="gloss">{character.gloss}</p>
+				{/if}
+			</div>
 		</div>
 	</header>
 
 	<div class="character-body">
 		<CharacterBreakdown
+			character={character.character}
 			components={character.components}
 			hint={character.hint}
+			originalMeaning={character.originalMeaning}
 			isVerified={character.isVerified}
 			strokes={strokeVariantData?.strokes ?? null}
+			historicalPronunciations={character.historicalPronunciations}
 			{fragments}
 			{characterSet}
 		/>
@@ -193,18 +189,13 @@
 
 	.character-header {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 1.5rem;
-		align-items: flex-start;
-		margin-bottom: 2rem;
-		padding-bottom: 1.5rem;
-		border-bottom: 1px solid var(--border);
+		align-items: center;
+		margin-bottom: 1rem;
 	}
 
 	.char-display {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
 		flex-shrink: 0;
 		width: 92px;
 		font-size: 5rem;
@@ -220,47 +211,30 @@
 	}
 
 	.char-info {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 		flex: 1;
+		min-width: 200px;
+	}
+
+	.char-text {
 		min-width: 0;
 	}
 
 	.gloss {
 		font-size: 1.25rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.original-meaning {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
-		margin-bottom: 0.5rem;
-	}
-
-	.label {
-		font-weight: 600;
+		margin-bottom: 0.25rem;
 	}
 
 	.pinyin-readings {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-		margin-bottom: 0.5rem;
 	}
 
 	.pinyin-reading {
 		font-size: 1.125rem;
-	}
-
-	.pinyin-count {
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
-	}
-
-	@media (max-width: 600px) {
-		.character-header {
-			flex-direction: column;
-			align-items: center;
-			text-align: center;
-		}
 	}
 
 	.details {

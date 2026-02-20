@@ -35,9 +35,9 @@
 	title={playing ? 'Stop' : label}
 >
 	{#if playing}
-		<Square size={16} />
+		<Square size={20} />
 	{:else}
-		<Volume2 size={16} />
+		<Volume2 size={20} />
 	{/if}
 </button>
 
@@ -46,7 +46,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0.25rem;
+		padding: 0.375rem;
 		border: none;
 		border-radius: var(--radius);
 		background: transparent;
