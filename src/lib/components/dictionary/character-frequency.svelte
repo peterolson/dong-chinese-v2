@@ -1,4 +1,7 @@
 <script lang="ts">
+	/** Total number of films in the SUBTLEX-CH corpus */
+	const SUBTLEX_FILM_COUNT = 6243;
+
 	interface Props {
 		junDaRank: number | null;
 		junDaPerMillion: number | null;
@@ -17,51 +20,62 @@
 
 	let hasData = $derived(junDaRank != null || subtlexRank != null);
 
-	function formatNumber(n: number | null): string {
-		if (n == null) return '—';
-		return n.toLocaleString();
+	function ordinal(n: number): string {
+		const mod100 = n % 100;
+		if (mod100 >= 11 && mod100 <= 13) return 'th';
+		switch (n % 10) {
+			case 1:
+				return 'st';
+			case 2:
+				return 'nd';
+			case 3:
+				return 'rd';
+			default:
+				return 'th';
+		}
 	}
 
 	function formatPerMillion(n: number | null): string {
 		if (n == null) return '—';
-		if (n >= 100) return n.toFixed(0);
+		if (n >= 100) return n.toFixed(1);
 		if (n >= 10) return n.toFixed(1);
 		if (n >= 1) return n.toFixed(2);
 		return n.toFixed(3);
 	}
+
+	let contextDiversityPct = $derived(
+		subtlexContextDiversity != null
+			? Math.round((subtlexContextDiversity / SUBTLEX_FILM_COUNT) * 100)
+			: null
+	);
 </script>
 
 {#if hasData}
 	<section class="character-frequency">
 		<h2>Frequency</h2>
-		<div class="freq-grid">
+		<dl>
 			{#if junDaRank != null}
-				<div class="freq-card">
-					<div class="freq-label">Book Rank</div>
-					<div class="freq-rank">#{formatNumber(junDaRank)}</div>
-					<div class="freq-detail">
-						{formatPerMillion(junDaPerMillion)} per million
-					</div>
-					<div class="freq-source">Jun Da corpus</div>
+				<div class="freq-row">
+					<dt>Written text</dt>
+					<dd>
+						{junDaRank.toLocaleString()}{ordinal(junDaRank)} most common
+						<span class="detail">{formatPerMillion(junDaPerMillion)} per million</span>
+					</dd>
 				</div>
 			{/if}
-
 			{#if subtlexRank != null}
-				<div class="freq-card">
-					<div class="freq-label">Subtitle Rank</div>
-					<div class="freq-rank">#{formatNumber(subtlexRank)}</div>
-					<div class="freq-detail">
-						{formatPerMillion(subtlexPerMillion)} per million
-					</div>
-					{#if subtlexContextDiversity != null}
-						<div class="freq-detail">
-							{formatNumber(subtlexContextDiversity)} films
-						</div>
-					{/if}
-					<div class="freq-source">SUBTLEX-CH</div>
+				<div class="freq-row">
+					<dt>Movie subtitles</dt>
+					<dd>
+						{subtlexRank.toLocaleString()}{ordinal(subtlexRank)} most common
+						<span class="detail">{formatPerMillion(subtlexPerMillion)} per million</span>
+						{#if contextDiversityPct != null}
+							<span class="detail">appears in {contextDiversityPct}% of films</span>
+						{/if}
+					</dd>
 				</div>
 			{/if}
-		</div>
+		</dl>
 	</section>
 {/if}
 
@@ -71,46 +85,46 @@
 	}
 
 	h2 {
-		margin-bottom: 0.75rem;
-	}
-
-	.freq-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		font-size: 1rem;
+		margin-bottom: 0.5rem;
+		display: flex;
+		align-items: center;
 		gap: 0.75rem;
-	}
-
-	.freq-card {
-		padding: 0.75rem 1rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--surface);
-	}
-
-	.freq-label {
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
 		color: var(--muted-foreground);
-		margin-bottom: 0.25rem;
+		font-weight: 500;
 	}
 
-	.freq-rank {
-		font-size: 1.5rem;
-		font-weight: 700;
-		line-height: 1.2;
+	h2::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
 	}
 
-	.freq-detail {
-		font-size: 0.8125rem;
+	dl {
+		font-size: 0.875rem;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.25rem 1rem;
+	}
+
+	.freq-row {
+		display: grid;
+		grid-template-columns: subgrid;
+		grid-column: 1 / -1;
+	}
+
+	dt {
 		color: var(--muted-foreground);
 	}
 
-	.freq-source {
-		font-size: 0.6875rem;
+	dd {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.detail {
 		color: var(--muted-foreground);
-		margin-top: 0.25rem;
-		opacity: 0.7;
 	}
 </style>

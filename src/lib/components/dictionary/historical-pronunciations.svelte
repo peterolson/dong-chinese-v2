@@ -7,80 +7,82 @@
 
 	let { pronunciations }: Props = $props();
 
-	let baxterSagart = $derived(pronunciations.filter((p) => p.source === 'baxter-sagart'));
-	let zhengzhang = $derived(pronunciations.filter((p) => p.source === 'zhengzhang'));
-	let tang = $derived(pronunciations.filter((p) => p.source === 'tang'));
+	interface TableRow {
+		source: string;
+		middleChinese: string | null;
+		oldChinese: string | null;
+		gloss: string | null;
+	}
+
+	let rows = $derived.by(() => {
+		const result: TableRow[] = [];
+
+		for (const p of pronunciations) {
+			if (p.source === 'baxter-sagart') {
+				result.push({
+					source: 'Baxter-Sagart',
+					middleChinese: p.middleChinese ?? null,
+					oldChinese: p.oldChinese ?? null,
+					gloss: p.gloss ?? null
+				});
+			} else if (p.source === 'zhengzhang') {
+				result.push({
+					source: 'Zhengzhang',
+					middleChinese: null,
+					oldChinese: p.oldChinese ?? null,
+					gloss: null
+				});
+			} else if (p.source === 'tang') {
+				result.push({
+					source: 'Unicode',
+					middleChinese: p.middleChinese ?? null,
+					oldChinese: null,
+					gloss: null
+				});
+			}
+		}
+
+		return result;
+	});
+
+	function formatReconstruction(s: string): string[] {
+		const stripped = s.startsWith('*') ? s.slice(1) : s;
+		return stripped.split(/(?= \(~)/);
+	}
+
+	let hasMiddleChinese = $derived(rows.some((r) => r.middleChinese));
+	let hasOldChinese = $derived(rows.some((r) => r.oldChinese));
+	let hasGloss = $derived(rows.some((r) => r.gloss));
 </script>
 
 <section class="historical-pronunciations">
 	<h2>Historical Pronunciations</h2>
-
-	{#if baxterSagart.length > 0}
-		<div class="pron-section">
-			<h3>Baxter-Sagart (2014)</h3>
-			<table>
-				<thead>
-					<tr>
-						<th>Pinyin</th>
-						<th>Middle Chinese</th>
-						<th>Old Chinese</th>
-						<th>Gloss</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each baxterSagart as p, i (i)}
-						<tr>
-							<td>{p.pinyin ?? '—'}</td>
-							<td class="ipa">{p.middleChinese ?? '—'}</td>
-							<td class="ipa">{p.oldChinese ?? '—'}</td>
-							<td>{p.gloss ?? '—'}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
-
-	{#if zhengzhang.length > 0}
-		<div class="pron-section">
-			<h3>Zhengzhang Shangfang (2003)</h3>
-			<table>
-				<thead>
-					<tr>
-						<th>Old Chinese</th>
-						<th>Phonetic Series</th>
-						<th>Rhyme Group</th>
-						{#if zhengzhang.some((p) => p.notes)}
-							<th>Notes</th>
-						{/if}
-					</tr>
-				</thead>
-				<tbody>
-					{#each zhengzhang as p, i (i)}
-						<tr>
-							<td class="ipa">{p.oldChinese ?? '—'}</td>
-							<td>{p.phoneticSeries ?? '—'}</td>
-							<td>{p.rhymeGroup ?? '—'}</td>
-							{#if zhengzhang.some((q) => q.notes)}
-								<td>{p.notes ?? '—'}</td>
-							{/if}
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
-
-	{#if tang.length > 0}
-		<div class="pron-section">
-			<h3>Tang Dynasty Reading</h3>
-			<ul class="tang-list">
-				{#each tang as p, i (i)}
-					<li class="ipa">{p.middleChinese}</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
+	<table>
+		<thead>
+			<tr>
+				<th></th>
+				{#if hasMiddleChinese}<th>Middle Chinese</th>{/if}
+				{#if hasOldChinese}<th>Old Chinese</th>{/if}
+				{#if hasGloss}<th>Gloss</th>{/if}
+			</tr>
+		</thead>
+		<tbody>
+			{#each rows as row, i (i)}
+				<tr>
+					<td class="source">{i === 0 || rows[i - 1].source !== row.source ? row.source : ''}</td>
+					{#if hasMiddleChinese}<td class="ipa"
+							>{#if row.middleChinese}{#each formatReconstruction(row.middleChinese) as part, j (j)}{#if j > 0}<br
+										/>{/if}{part}{/each}{/if}</td
+						>{/if}
+					{#if hasOldChinese}<td class="ipa"
+							>{#if row.oldChinese}{#each formatReconstruction(row.oldChinese) as part, j (j)}{#if j > 0}<br
+										/>{/if}{part}{/each}{/if}</td
+						>{/if}
+					{#if hasGloss}<td>{row.gloss ?? ''}</td>{/if}
+				</tr>
+			{/each}
+		</tbody>
+	</table>
 </section>
 
 <style>
@@ -89,55 +91,44 @@
 	}
 
 	h2 {
-		margin-bottom: 0.75rem;
-	}
-
-	.pron-section {
-		margin-bottom: 1rem;
-	}
-
-	.pron-section h3 {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
+		font-size: 1rem;
 		margin-bottom: 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: var(--muted-foreground);
+		font-weight: 500;
+	}
+
+	h2::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
 	}
 
 	table {
-		border-collapse: collapse;
-		width: 100%;
 		font-size: 0.875rem;
+		border-collapse: collapse;
 	}
 
 	th {
 		text-align: left;
-		padding: 0.375rem 0.75rem;
-		border-bottom: 2px solid var(--border);
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		font-weight: 500;
 		color: var(--muted-foreground);
+		padding: 0.25rem 0.75rem 0.25rem 0;
 	}
 
 	td {
-		padding: 0.375rem 0.75rem;
-		border-bottom: 1px solid var(--border);
+		padding: 0.125rem 0.75rem 0.125rem 0;
+		vertical-align: top;
+	}
+
+	.source {
+		color: var(--muted-foreground);
 	}
 
 	.ipa {
 		font-family: var(--font-mono);
-	}
-
-	.tang-list {
-		list-style: none;
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.tang-list li {
-		padding: 0.25rem 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--surface);
 	}
 </style>

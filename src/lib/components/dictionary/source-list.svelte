@@ -82,13 +82,23 @@
 <style>
 	.sources {
 		margin-top: 1.5rem;
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--border);
 	}
 
 	.sources h2 {
 		font-size: 1rem;
 		margin-bottom: 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: var(--muted-foreground);
+		font-weight: 500;
+	}
+
+	.sources h2::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
 	}
 
 	dl {
@@ -128,5 +138,22 @@
 		font-size: 0.8125rem;
 		color: var(--muted-foreground);
 		margin-top: 0.75rem;
+	}
+
+	@media (max-width: 400px) {
+		dl {
+			grid-template-columns: 1fr;
+			gap: 0.5rem;
+		}
+
+		.source-group {
+			display: flex;
+			flex-direction: column;
+			gap: 0;
+		}
+
+		dd {
+			text-align: right;
+		}
 	}
 </style>

@@ -36,6 +36,14 @@
 			: (character.fragmentsSimp ?? character.fragmentsTrad)
 	);
 
+	let simplifiedVariants = $derived(
+		character.simplifiedVariants?.filter((v) => v !== character.character) ?? []
+	);
+
+	let traditionalVariants = $derived(
+		character.traditionalVariants?.filter((v) => v !== character.character) ?? []
+	);
+
 	let sourceGroups = $derived(
 		detectSources(character, {
 			hasCustomSources: (character.customSources?.length ?? 0) > 0
@@ -58,9 +66,6 @@
 				components={character.components}
 				allFragments={fragments}
 			/>
-			{#if strokeCount != null}
-				<span class="stroke-count">{strokeCount} strokes</span>
-			{/if}
 			<SpeakButton text={character.character} label="Listen to {character.character}" />
 		</div>
 
@@ -90,30 +95,6 @@
 					{/each}
 				</div>
 			{/if}
-			{#if (character.simplifiedVariants && character.simplifiedVariants.length > 0) || (character.traditionalVariants && character.traditionalVariants.length > 0)}
-				<div class="variants">
-					{#if character.simplifiedVariants && character.simplifiedVariants.length > 0}
-						<span class="variant-group">
-							<span class="label">Simplified:</span>
-							{#each character.simplifiedVariants as v (v)}
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: v })} class="variant-link"
-									>{v}</a
-								>
-							{/each}
-						</span>
-					{/if}
-					{#if character.traditionalVariants && character.traditionalVariants.length > 0}
-						<span class="variant-group">
-							<span class="label">Traditional:</span>
-							{#each character.traditionalVariants as v (v)}
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: v })} class="variant-link"
-									>{v}</a
-								>
-							{/each}
-						</span>
-					{/if}
-				</div>
-			{/if}
 		</div>
 	</header>
 
@@ -127,6 +108,18 @@
 			{characterSet}
 		/>
 
+		{#if character.historicalImages && character.historicalImages.length > 0}
+			<HistoricalImages
+				images={character.historicalImages}
+				strokes={strokeVariantData?.strokes ?? null}
+				character={character.character}
+			/>
+		{/if}
+
+		{#if character.historicalPronunciations && character.historicalPronunciations.length > 0}
+			<HistoricalPronunciations pronunciations={character.historicalPronunciations} />
+		{/if}
+
 		<CharacterFrequency
 			junDaRank={character.junDaRank}
 			junDaPerMillion={character.junDaPerMillion}
@@ -135,28 +128,58 @@
 			subtlexContextDiversity={character.subtlexContextDiversity}
 		/>
 
-		{#if character.shuowenExplanation}
-			<section class="shuowen">
-				<h2>說文解字 (Shuowen Jiezi)</h2>
-				<p class="shuowen-text">{character.shuowenExplanation}</p>
-				{#if character.shuowenPronunciation}
-					<p class="shuowen-pron">
-						<span class="label">Pronunciation:</span>
-						{character.shuowenPronunciation}
-						{#if character.shuowenPinyin}
-							({character.shuowenPinyin})
-						{/if}
-					</p>
-				{/if}
+		{#if strokeCount != null || simplifiedVariants.length > 0 || traditionalVariants.length > 0 || character.shuowenExplanation || character.codepoint}
+			<section class="details">
+				<h2>Details</h2>
+				<dl>
+					{#if strokeCount != null}
+						<div class="details-row">
+							<dt>Strokes</dt>
+							<dd>{strokeCount}</dd>
+						</div>
+					{/if}
+					{#if simplifiedVariants.length > 0}
+						<div class="details-row">
+							<dt>Simplified</dt>
+							<dd>
+								{#each simplifiedVariants as v (v)}
+									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+								{/each}
+							</dd>
+						</div>
+					{/if}
+					{#if traditionalVariants.length > 0}
+						<div class="details-row">
+							<dt>Traditional</dt>
+							<dd>
+								{#each traditionalVariants as v (v)}
+									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+								{/each}
+							</dd>
+						</div>
+					{/if}
+					{#if character.shuowenExplanation}
+						<div class="details-row">
+							<dt>說文解字</dt>
+							<dd>
+								<span class="shuowen-text">{character.shuowenExplanation}</span>
+								{#if character.shuowenPronunciation}
+									<span class="shuowen-pron">
+										{character.shuowenPronunciation}
+										{#if character.shuowenPinyin}({character.shuowenPinyin}){/if}
+									</span>
+								{/if}
+							</dd>
+						</div>
+					{/if}
+					{#if character.codepoint}
+						<div class="details-row">
+							<dt>Unicode</dt>
+							<dd>{character.codepoint}</dd>
+						</div>
+					{/if}
+				</dl>
 			</section>
-		{/if}
-
-		{#if character.historicalImages && character.historicalImages.length > 0}
-			<HistoricalImages images={character.historicalImages} />
-		{/if}
-
-		{#if character.historicalPronunciations && character.historicalPronunciations.length > 0}
-			<HistoricalPronunciations pronunciations={character.historicalPronunciations} />
 		{/if}
 
 		<SourceList {sourceGroups} customSources={character.customSources} {audioAttribution} />
@@ -185,11 +208,6 @@
 		flex-shrink: 0;
 		width: 92px;
 		font-size: 5rem;
-	}
-
-	.stroke-count {
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
 	}
 
 	.char-animation {
@@ -237,18 +255,6 @@
 		color: var(--muted-foreground);
 	}
 
-	.variants {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-		font-size: 0.875rem;
-	}
-
-	.variant-link {
-		font-size: 1.125rem;
-		margin-left: 0.25rem;
-	}
-
 	@media (max-width: 600px) {
 		.character-header {
 			flex-direction: column;
@@ -257,22 +263,60 @@
 		}
 	}
 
-	.shuowen {
+	.details {
 		margin-bottom: 1.5rem;
 	}
 
-	.shuowen h2 {
-		margin-bottom: 0.75rem;
+	.details h2 {
+		font-size: 1rem;
+		margin-bottom: 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: var(--muted-foreground);
+		font-weight: 500;
+	}
+
+	.details h2::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
+	}
+
+	.details dl {
+		font-size: 0.875rem;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.25rem 1rem;
+	}
+
+	.details-row {
+		display: grid;
+		grid-template-columns: subgrid;
+		grid-column: 1 / -1;
+	}
+
+	.details dt {
+		color: var(--muted-foreground);
+	}
+
+	.details dd {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.details dd a {
+		font-size: 1.125rem;
+		line-height: 1;
 	}
 
 	.shuowen-text {
-		font-size: 1.125rem;
 		line-height: 1.8;
-		margin-bottom: 0.5rem;
 	}
 
 	.shuowen-pron {
-		font-size: 0.875rem;
 		color: var(--muted-foreground);
 	}
 </style>

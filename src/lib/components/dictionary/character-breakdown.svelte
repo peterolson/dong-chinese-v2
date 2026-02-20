@@ -103,8 +103,6 @@
 				</li>
 			{/each}
 		</ul>
-	{:else}
-		<p class="no-data">No component breakdown available.</p>
 	{/if}
 </section>
 
@@ -180,10 +178,6 @@
 
 	.component-hint {
 		font-size: 0.875rem;
-		color: var(--muted-foreground);
-	}
-
-	.no-data {
 		color: var(--muted-foreground);
 	}
 </style>
