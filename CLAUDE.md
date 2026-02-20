@@ -16,6 +16,7 @@ Every feature MUST work without JavaScript enabled. This is the single most impo
 - Client-side JS is layered on top via `use:enhance` and Svelte reactivity for a smoother experience
 - Never build a feature that only works with JS — always start with the server-rendered, no-JS version first
 - Navigation uses real `<a>` tags and full page loads as the baseline; client-side routing is an enhancement
+- Modals and overlays are progressive enhancements — they must have a full-page fallback (see dictionary explain modal pattern)
 
 ### Local-First (JS Enhancement Layer)
 
@@ -36,106 +37,179 @@ When JavaScript IS available, the app should feel instant:
 ### Anonymous-First Authentication
 
 - Users can use the app without creating an account
-- An anonymous session (cookie-based) is created on first visit
+- An anonymous session (cookie-based) is created on first visit via server hook
 - Progress is tracked against the session ID
 - When the user creates an account or logs in, all progress from the current anonymous session is merged into their user account
-- Progress merge is additive: all rows from the anonymous session are re-assigned to the user account. Progress data is structured so that combining rows from multiple sessions is always safe (no conflicts, no "best wins" logic needed — just include everything).
+- Progress merge is additive: all rows from the anonymous session are re-assigned to the user account
 - After merge, anonymous progress rows are deleted in the same transaction
-- If a user logs in on a second device that has its own anonymous session, that session's progress is also merged additively into their account at login time
 - If they never create an account, anonymous session data expires after a configurable period (default: 30 days)
-- The prompt to create an account should appear when the user has meaningful progress worth saving, not on first visit
-- Better Auth's anonymous plugin should be evaluated for this purpose. If it doesn't fit, implement anonymous sessions manually (cookie + DB row) and use Better Auth only for real authentication.
+- Better Auth's anonymous plugin was evaluated and **rejected** — it creates fake user records, has no transactional merge, and requires explicit client calls. Custom cookie + DB row approach is used instead.
 
 ## Tech Stack
 
-This project was scaffolded with `npx sv create` using the following configuration:
+| Layer                | Technology                         | Notes                                                                                                |
+| -------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Framework            | SvelteKit (Svelte 5)               | TypeScript throughout, adapter-node for deployment                                                   |
+| Database             | PostgreSQL                         | Docker Compose for local dev (port 5434), Supabase for prod                                          |
+| ORM                  | Drizzle ORM                        | postgres.js client. 3 schemas: `public`, `stage`, `dictionary`. `drizzle-kit push` for dev.          |
+| Auth                 | Better Auth                        | bcrypt-compatible with Meteor hashes. Email/password + GitHub/Google/Facebook OAuth + magic links.   |
+| Styling              | Vanilla CSS with custom properties | No Tailwind. Dark mode via `data-theme` attribute on `<html>`. CSS custom properties for all tokens. |
+| Testing - Unit       | Vitest                             | 3 projects: client (browser), server (node), storybook (browser)                                     |
+| Testing - E2E        | Playwright                         | Test both with-JS and without-JS scenarios                                                           |
+| Testing - Components | Storybook 10                       | Svelte CSF with `defineMeta` + `<Story>` pattern. Play functions auto-run as Vitest tests.           |
+| Mobile               | Capacitor                          | For Android initially. iOS as PWA first, native later.                                               |
+| CI/CD                | GitHub Actions                     | Lint, type-check, unit tests, Playwright with Postgres service container. Dictionary sync crons.     |
+| Linting/Formatting   | ESLint + Prettier                  | Flat config with Svelte and Storybook plugins                                                        |
+| TTS                  | Azure Speech Services              | Token endpoint at `/api/tts/token`, browser SpeechSynthesis as fallback                              |
+
+## Project Structure
 
 ```
-npx sv create --template minimal --types ts --add prettier eslint vitest="usages:component,unit" playwright sveltekit-adapter="adapter:node" devtools-json drizzle="database:postgresql+postgresql:postgres.js+docker:yes" better-auth="demo:password,github" storybook mcp="ide:claude-code,vscode+setup:remote" --install npm .
+src/
+├── lib/
+│   ├── assets/                    # Binary assets (fonts, images)
+│   ├── components/
+│   │   ├── auth/                  # Auth UI (auth-card, social-icon, password-input, magic-link-form)
+│   │   ├── dictionary/            # Dictionary UI (character-view, breakdown, glyph, stroke-animation, etc.)
+│   │   ├── layout/                # App shell (site-header, sidebar, auth-status)
+│   │   └── ui/                    # Reusable primitives (alert, button, modal, segmented-control, speak-button)
+│   ├── data/                      # Static data modules (component-type-info.ts)
+│   ├── server/
+│   │   ├── db/
+│   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings)
+│   │   │   ├── stage.schema.ts    # Stage schema (unihan_raw, cedict_raw, sync_metadata)
+│   │   │   ├── dictionary.schema.ts # Dictionary schema (dict_char, dict_word, stroke_data, etc.)
+│   │   │   ├── auth.schema.ts     # Auto-generated Better Auth schema
+│   │   │   └── index.ts           # DB connection + exports
+│   │   ├── services/
+│   │   │   ├── anonymous-session.ts # Cookie + DB row anonymous sessions
+│   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search)
+│   │   │   ├── email.ts           # Nodemailer email service
+│   │   │   ├── magic-link.ts      # Magic link generation + verification
+│   │   │   ├── sanitize-redirect.ts # Open redirect prevention
+│   │   │   └── settings.ts        # User settings persistence (JSON cookie + DB)
+│   │   └── auth.ts                # Better Auth config (bcrypt override, OAuth providers, plugins)
+│   ├── types/
+│   │   └── dictionary.ts          # CharacterData, ComponentData, WordData, etc.
+│   ├── pinyin.ts                  # Pinyin parsing/formatting utilities
+│   ├── settings.ts                # Shared settings types + defaults
+│   ├── settings-client.svelte.ts  # Client-side settings (reactive Svelte state)
+│   └── speech.ts                  # TTS with Azure Speech + browser fallback
+├── routes/
+│   ├── (app)/
+│   │   ├── dictionary/            # Dictionary pages
+│   │   │   ├── [entry]/           # Character/word detail view
+│   │   │   └── explain/[type]/    # Component type explanation pages
+│   │   ├── settings/              # User settings page
+│   │   ├── +layout.svelte         # App shell (header, sidebar)
+│   │   └── +page.svelte           # Home/dashboard
+│   ├── (auth)/
+│   │   ├── login/                 # Login (email/password + OAuth + magic link)
+│   │   ├── register/              # Sign up
+│   │   ├── forgot-password/       # Password reset request
+│   │   └── reset-password/        # Password reset with token
+│   ├── api/
+│   │   ├── dictionary/explain/[type]/ # JSON API for component explanations
+│   │   └── tts/token/             # Azure TTS auth token
+│   └── demo/better-auth/          # Auth demo page (dev only)
+├── hooks.server.ts                # Server hooks: Better Auth → anonymous session → settings
+└── app.html                       # HTML template with data-theme injection
+scripts/
+├── import-meteor-users.ts         # Migrate users from MongoDB
+└── dictionary/
+    ├── import-unihan.ts           # Unicode Unihan (1.56M rows)
+    ├── import-cedict.ts           # CC-CEDICT (124k entries)
+    ├── import-dong-dictionary.ts  # Dong Chinese MongoDB wiki
+    ├── import-animcjk.ts          # Stroke order SVGs
+    ├── import-makemeahanzi.ts     # Character decomposition
+    ├── import-shuowen.ts          # Etymology data
+    ├── import-baxter-sagart.ts    # Old Chinese reconstructions
+    ├── import-zhengzhang.ts       # Zhengzhang historical phonology
+    ├── import-jun-da-char-freq.ts # Character frequency corpus
+    ├── import-subtlex-ch.ts       # Subtitle frequency corpus
+    └── rebuild-dict-char.ts       # Rebuild denormalized char cache
+.storybook/
+├── main.ts                        # Config with viteFinal aliases for $app/paths and $env/dynamic/public
+├── preview.ts                     # Preview config
+├── vitest.setup.ts                # Storybook vitest integration
+└── mocks/
+    ├── app-paths.ts               # Mock $app/paths (resolve strips route groups)
+    └── env-dynamic-public.ts      # Mock $env/dynamic/public
 ```
 
-| Layer                | Technology                         | Notes                                                                                                                 |
-| -------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Framework            | SvelteKit                          | TypeScript throughout, adapter-node for deployment                                                                    |
-| Database             | PostgreSQL                         | Docker Compose for local dev, Neon or RDS for prod                                                                    |
-| ORM                  | Drizzle ORM                        | postgres.js client. Use drizzle-kit for migrations. Schema defined in TypeScript.                                     |
-| Auth                 | Better Auth                        | With anonymous plugin. Must be bcrypt-compatible with existing Meteor password hashes. Email/password + GitHub OAuth. |
-| Styling              | Vanilla CSS with custom properties | No Tailwind. Keep CSS minimal and fast. No runtime CSS-in-JS.                                                         |
-| Testing - Unit       | Vitest                             |                                                                                                                       |
-| Testing - E2E        | Playwright                         | Test both with-JS and without-JS scenarios                                                                            |
-| Testing - Components | Storybook 10                       | Every component needs stories for both JS-enabled and JS-disabled states                                              |
-| Mobile               | Capacitor                          | For Android initially. iOS as PWA first, native later.                                                                |
-| IaC                  | SST (Ion)                          | AWS deployment                                                                                                        |
-| CI/CD                | GitHub Actions                     | All tests must pass before merging to main                                                                            |
-| Linting/Formatting   | ESLint + Prettier                  | Already configured via sv create                                                                                      |
+## Getting Started
 
-## Getting Started (Post-Scaffold)
-
-The project is already scaffolded. To get the dev environment running:
-
-1. `npm run db:start` — start the Postgres Docker container
-2. `npm run auth:schema` — generate the Better Auth schema
-3. `npm run db:push` — push the schema to the database
-4. Set up `.env` — check ORIGIN, BETTER_AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+1. `npm install` — install dependencies
+2. `npm run db:start` — start the Postgres Docker container (port 5434)
+3. `npm run db:push` — push Drizzle schema to the database (use `--force` if schema is out of sync)
+4. Copy `.env.example` to `.env` and fill in secrets (DATABASE_URL must use port 5434)
 5. `npm run dev` — start the dev server
-6. Visit `/demo/better-auth` to verify auth is working
 
-Organize application code as follows:
+For dictionary data: `npm run dictionary:sync` runs all import scripts. Individual scripts: `npm run dictionary:import-unihan`, etc.
 
-- `src/lib/server/db/` — Drizzle schema, connection, migration runner
-- `src/lib/server/auth/` — Auth customizations (Meteor bcrypt compatibility, anonymous session merge logic)
-- `src/lib/server/services/` — Business logic
-- `src/lib/components/` — Svelte UI components
-- `src/routes/(app)/` — Main app routes (lesson content, progress, dictionary, etc.)
-- `src/routes/(auth)/` — Login, signup routes
-- `src/routes/(marketing)/` — Public pages (landing, about, pricing)
-- `scripts/` — One-off scripts (e.g., Meteor user migration)
+For Storybook: `npm run storybook` (port 6006). If Playwright browsers are missing: `npx playwright install chromium`.
 
-## Database Schema Guidelines
+## Database Schemas
 
-- All tables use `snake_case` naming
-- Primary keys are UUIDs (use `gen_random_uuid()`)
-- All tables include `created_at` and `updated_at` timestamps
-- Better Auth manages its own tables (user, session, account, verification). Extend these as needed but don't fight the library's conventions.
-- The `progress` table has a `session_id` (always set) and a nullable `user_id` (set when authenticated)
-- Foreign keys and indexes should be explicit — don't rely on ORM magic
+The project uses 3 Postgres schemas:
 
-## Auth Implementation Details
+- **`public`** — Auth tables (Better Auth managed), `anonymous_session`, `user_settings`, progress tables
+- **`stage`** — Raw imported data: `unihan_raw` (EAV, 1.56M rows), `cedict_raw` (124k entries), `sync_metadata`. Used for data exploration and materialized view generation.
+- **`dictionary`** — Denormalized dictionary data: `dict_char`, `dict_word`, `stroke_data`, etc. Serves the actual app queries.
 
-### Better Auth Configuration
+Drizzle config (`drizzle.config.ts`) has `schemaFilter: ['public', 'stage']`.
 
-Better Auth is the auth library. It handles sessions, email/password, and OAuth (GitHub). Key customization points:
+## Auth Implementation
 
-- **Anonymous plugin**: Use Better Auth's anonymous plugin for unauthenticated sessions. The `onLinkAccount` callback handles merging progress when an anonymous user signs up or links an account.
-- **OAuth**: Google/Facebook/GitHub OAuth flows are server-side redirects — they work without JS by default.
-- **Form actions**: Email/password login and signup must work via SvelteKit form actions (no-JS baseline). Use Better Auth's server-side API (`auth.api`) in form actions rather than relying on the client SDK.
+### Architecture
 
-### Meteor Compatibility
+Auth is configured in `src/lib/server/auth.ts`. Server hooks in `hooks.server.ts` run in sequence:
 
-The existing Meteor app stores passwords using bcrypt. The migration script must:
+1. **Better Auth handler** — sessions, OAuth callbacks
+2. **Anonymous session** — creates/validates cookie + DB row for unauthenticated visitors
+3. **Settings injection** — loads user settings from DB (authenticated) or cookie (anonymous)
 
-1. Export users from Meteor's MongoDB `users` collection
-2. Preserve the bcrypt hash exactly as-is (Meteor uses `$2a$` or `$2b$` prefix bcrypt hashes)
-3. Insert into the new Postgres users table
-4. Verify that Better Auth's password checking is compatible with these hashes, or add a custom verification hook
+### Key Decisions
+
+- **No anonymous plugin** — custom `anonymous_session` table with cookie-based tracking
+- **Meteor bcrypt compatibility** — custom password hash/verify override in Better Auth config. Meteor's `$2a$`/`$2b$` bcrypt hashes work as-is.
+- **Multi-email login** — `user_email` table maps secondary emails to primary. Login resolves secondary → primary before auth check.
+- **Magic links** — form action sends magic link email, works without JS
+- **OAuth** — GitHub, Google, Facebook conditionally configured via env vars. Server-side redirects work without JS.
+- **Username support** — Better Auth `username` plugin. Login field detects email vs username by presence of `@`.
+
+### Meteor User Migration
+
+Import script at `scripts/import-meteor-users.ts` (`npm run import:users`). Migrates ~24k users from MongoDB preserving bcrypt hashes and OAuth provider IDs.
+
+## Storybook Conventions
+
+- **Svelte CSF** with `@storybook/addon-svelte-csf` — use `defineMeta` + `<Story>` pattern, NOT CSF3 JS format
+- Story files: `*.stories.svelte` alongside their components
+- **Cannot use `+` prefix** in story filenames (reserved by SvelteKit) — route page stories go in `src/lib/components/` instead
+- Play functions auto-run as Vitest tests via `@storybook/addon-vitest`
+- `use:enhance` and SvelteKit actions are auto-mocked by `@storybook/sveltekit`
+- Custom Vite aliases in `.storybook/main.ts` mock `$app/paths` and `$env/dynamic/public`
 
 ## Code Style & Conventions
 
 - TypeScript strict mode, no `any` types
 - Prefer `const` over `let`
-- Use named exports, not default exports (except where SvelteKit requires default exports like `+page.svelte`)
+- Use named exports, not default exports (except where SvelteKit requires default exports)
 - Error handling: use explicit error types, not thrown strings. Prefer Result pattern where practical.
 - SQL: Drizzle's query builder for simple queries, `sql` template tag for complex ones. No raw string concatenation.
 - Components: one component per file, props typed with TypeScript interfaces
 - File naming: `kebab-case` for files, `PascalCase` for components
+- CSS: vanilla CSS with custom properties, dark mode via CSS custom properties (`--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground`, etc.)
 
-## Testing Requirements
+## Testing
 
-- Every new feature needs tests before it's considered done
-- E2E tests (Playwright): test the critical user flows in BOTH JS-enabled and JS-disabled modes
-- Unit tests (Vitest): test business logic, auth, data transformations
-- Storybook: every UI component must have stories showing all states
-- CI must run all tests. PRs cannot merge with failing tests.
+- **Vitest**: 3 test projects configured in `vite.config.ts`:
+  - `client` (browser environment) — component and client-side logic tests
+  - `server` (node environment) — service, auth, and server-side tests
+  - `storybook` (browser) — auto-runs all story play functions
+- **Playwright**: E2E tests in `e2e/` directory, tests both JS-enabled and JS-disabled modes
+- **CI**: GitHub Actions runs lint, type-check, Vitest, and Playwright on every push/PR to master
 
 ## What NOT to Do
 

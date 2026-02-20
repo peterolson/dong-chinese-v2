@@ -59,13 +59,6 @@
 </script>
 
 <section class="character-breakdown">
-	<h2>
-		Breakdown
-		{#if isVerified}
-			<span class="verified-badge" title="Verified">&#10003;</span>
-		{/if}
-	</h2>
-
 	{#if hint}
 		<p class="hint">{hint}</p>
 	{/if}
@@ -143,30 +136,9 @@
 		margin-bottom: 1.5rem;
 	}
 
-	h2 {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.verified-badge {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.25rem;
-		height: 1.25rem;
-		border-radius: 50%;
-		background: var(--success);
-		color: white;
-		font-size: 0.75rem;
-		font-weight: bold;
-	}
-
 	.hint {
 		margin-bottom: 0.75rem;
 		color: var(--muted-foreground);
-		font-style: italic;
 	}
 
 	.component-list {
