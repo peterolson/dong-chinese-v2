@@ -52,6 +52,7 @@
 
 		e.preventDefault();
 		modalType = type;
+		modalCharacters = {};
 		modalOpen = true;
 
 		const cached = explainCache.get(type);

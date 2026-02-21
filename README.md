@@ -37,7 +37,7 @@ The dictionary is built from 10+ external sources (Unicode Unihan, CC-CEDICT, An
 
 ```sh
 npm run dictionary:sync     # Run all imports
-npm run dictionary:rebuild  # Materialize dictionary tables from staged data
+npm run dictionary:rebuild-char  # Materialize dictionary tables from staged data
 ```
 
 ### Storybook

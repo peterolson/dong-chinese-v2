@@ -8,7 +8,12 @@
 	let { data }: { data: PageData } = $props();
 
 	let title = $derived(getComponentTitle(data.type));
-	let backHref = $derived(page.url.searchParams.get('from') || resolve('/(app)/dictionary'));
+	let backHref = $derived.by(() => {
+		const from = page.url.searchParams.get('from');
+		// Sanitize: only allow relative paths (no javascript:, //, or absolute URLs)
+		if (from && from.startsWith('/') && !from.startsWith('//')) return from;
+		return resolve('/(app)/dictionary');
+	});
 </script>
 
 <svelte:head>

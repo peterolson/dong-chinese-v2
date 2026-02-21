@@ -14,7 +14,8 @@
 	let dialogEl: HTMLDialogElement | undefined = $state();
 	let bodyEl: HTMLDivElement | undefined = $state();
 
-	const titleId = 'modal-title';
+	const id = $props.id();
+	const titleId = `${id}-title`;
 
 	$effect(() => {
 		if (!dialogEl) return;

@@ -10,6 +10,9 @@
 
 	let { images, strokes, character }: Props = $props();
 
+	const id = $props.id();
+	const evoToggleId = `${id}-toggle`;
+
 	const typeLabels: Record<string, string> = {
 		Oracle: 'Oracle Bone Script',
 		Bronze: 'Bronze Script',
@@ -54,7 +57,7 @@
 	<h2>Character Evolution</h2>
 
 	{#if hasExtras}
-		<input type="checkbox" id="evo-toggle" class="evo-toggle" aria-hidden="true" tabindex="-1" />
+		<input type="checkbox" id={evoToggleId} class="evo-toggle" aria-hidden="true" tabindex="-1" />
 	{/if}
 
 	<div class="image-row">
@@ -85,7 +88,7 @@
 		{/if}
 
 		{#if hasExtras}
-			<label for="evo-toggle" class="toggle-cell">
+			<label for={evoToggleId} class="toggle-cell">
 				<span class="toggle-more">▼ More</span>
 				<span class="toggle-less">▲ Less</span>
 			</label>

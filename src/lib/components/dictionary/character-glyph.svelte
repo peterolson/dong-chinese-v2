@@ -28,7 +28,7 @@
 		stripeWidth = 100
 	}: Props = $props();
 
-	const uid = `g${Math.random().toString(36).slice(2, 8)}`;
+	const id = $props.id();
 
 	/** Per-component color arrays with same-type offset tracking */
 	let componentColorSets = $derived.by(() => {
@@ -79,7 +79,7 @@
 			map.set(highlightColors.join('|'), highlightColors);
 		}
 		return Array.from(map.entries()).map(([key, colors], i) => ({
-			id: `${uid}-p${i}`,
+			id: `${id}-p${i}`,
 			key,
 			colors
 		}));

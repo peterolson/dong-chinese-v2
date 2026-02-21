@@ -7,6 +7,8 @@
 
 	let { strokeData }: Props = $props();
 
+	const id = $props.id();
+
 	let totalStrokes = $derived(strokeData.strokes.length);
 
 	// ── Tuning constants ──
@@ -34,10 +36,10 @@
 				const startPct = ((GAP_MS + i * STEP) / cycle) * 100;
 				const endPct = ((GAP_MS + i * STEP + DRAW_MS) / cycle) * 100;
 				return (
-					`.stroke-anim .m${i}{` +
+					`.stroke-anim .m${id}-${i}{` +
 					`stroke-dasharray:1;stroke-dashoffset:1;` +
-					`animation:sa${i} ${cycle}ms ${EASING} infinite}` +
-					`@keyframes sa${i}{` +
+					`animation:${id}-${i} ${cycle}ms ${EASING} infinite}` +
+					`@keyframes ${id}-${i}{` +
 					`0%,${startPct.toFixed(2)}%{stroke-dashoffset:1}` +
 					`${endPct.toFixed(2)}%,99.9%{stroke-dashoffset:0}` +
 					`100%{stroke-dashoffset:1}}`
@@ -52,7 +54,7 @@
 <svg viewBox="0 0 1024 1024" class="stroke-anim" aria-hidden="true">
 	<defs>
 		{#each strokeData.medians as median, i (i)}
-			<mask id="sm{i}">
+			<mask id="sm{id}-{i}">
 				<path
 					d={medianToPath(median)}
 					pathLength="1"
@@ -61,7 +63,7 @@
 					stroke-linecap="round"
 					stroke-linejoin="round"
 					fill="none"
-					class="m{i}"
+					class="m{id}-{i}"
 				/>
 			</mask>
 		{/each}
@@ -82,7 +84,7 @@
 	<!-- Animated strokes (revealed via mask drawing along median) -->
 	<g transform="translate(0, 900) scale(1, -1)">
 		{#each strokeData.strokes as stroke, i (i)}
-			<path d={stroke} class="stroke" mask="url(#sm{i})" />
+			<path d={stroke} class="stroke" mask="url(#sm{id}-{i})" />
 		{/each}
 	</g>
 </svg>
