@@ -111,7 +111,6 @@ src/
 │   ├── api/
 │   │   ├── dictionary/explain/[type]/ # JSON API for component explanations
 │   │   └── tts/token/             # Azure TTS auth token
-│   └── demo/better-auth/          # Auth demo page (dev only)
 ├── hooks.server.ts                # Server hooks: Better Auth → anonymous session → settings
 └── app.html                       # HTML template with data-theme injection
 scripts/
@@ -231,6 +230,26 @@ Maintain a `TODO.md` file in the project root. After completing any feature or t
 - **Up Next**: The prioritized backlog of features to implement
 
 When starting a new session, read TODO.md first to understand the current state of the project. When finishing a task, update TODO.md before moving on.
+
+## Keeping Documentation Up to Date
+
+This project has documentation at multiple levels. When making changes, update the relevant docs as part of the same commit — don't leave them to go stale.
+
+### What to update and when
+
+- **This file (`CLAUDE.md`)**: Update when architecture decisions change, new technologies are added, conventions are established, or the project structure changes significantly (new top-level directories, new route groups, new DB schemas).
+- **Subdirectory `CLAUDE.md` files**: Update when adding, removing, or significantly changing components/services/routes in that directory. These live in `src/lib/components/`, `src/lib/server/`, `src/routes/`, `scripts/`, and `e2e/`.
+- **`TODO.md`**: Update after completing any feature or task (move to Done, update In Progress/Up Next).
+- **`README.md`**: Update when setup steps change, new npm scripts are added, or the tech stack changes.
+- **Project Structure tree** (above): Update when top-level files or directories are added/removed.
+
+### Rules
+
+- If you add a new route, component, service, or script, add it to the relevant `CLAUDE.md`.
+- If you delete a file or directory, remove references to it from all docs.
+- If you change a DB schema, update both this file and `src/lib/server/CLAUDE.md`.
+- If you add a new npm script, make sure it's documented in `scripts/CLAUDE.md` or `README.md` as appropriate.
+- Keep descriptions concise — a table row or one-liner is enough. Don't duplicate implementation details that are clear from reading the code.
 
 ## MCP
 
