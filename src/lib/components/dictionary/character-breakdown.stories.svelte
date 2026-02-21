@@ -2,7 +2,13 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { expect, within } from 'storybook/test';
 	import CharacterBreakdown from './character-breakdown.svelte';
-	import { xueStrokesSimp, xueFragments, xueCharacterData, maCharacterData } from './stories.data';
+	import {
+		xueStrokesSimp,
+		xueFragments,
+		xueCharacterData,
+		maCharacterData,
+		specialFlagsCharacterData
+	} from './stories.data';
 
 	const { Story } = defineMeta({
 		title: 'Dictionary/Character Breakdown',
@@ -85,5 +91,60 @@
 		strokes={null}
 		fragments={null}
 		historicalPronunciations={null}
+	/>
+</Story>
+
+<Story
+	name="isFromOriginalMeaning Alert"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText(/original meaning/)).toBeInTheDocument();
+		await expect(canvas.getByText(/inlay with gold/)).toBeInTheDocument();
+	}}
+>
+	<CharacterBreakdown
+		character={specialFlagsCharacterData.character}
+		components={specialFlagsCharacterData.components}
+		hint={specialFlagsCharacterData.hint}
+		originalMeaning={specialFlagsCharacterData.originalMeaning}
+		strokes={null}
+		fragments={null}
+		historicalPronunciations={specialFlagsCharacterData.historicalPronunciations}
+	/>
+</Story>
+
+<Story
+	name="isOldPronunciation Alert"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText(/don't sound similar/)).toBeInTheDocument();
+	}}
+>
+	<CharacterBreakdown
+		character={specialFlagsCharacterData.character}
+		components={specialFlagsCharacterData.components}
+		hint={specialFlagsCharacterData.hint}
+		originalMeaning={null}
+		strokes={null}
+		fragments={null}
+		historicalPronunciations={specialFlagsCharacterData.historicalPronunciations}
+	/>
+</Story>
+
+<Story
+	name="isGlyphChanged Alert"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText(/historical stylistic changes/)).toBeInTheDocument();
+	}}
+>
+	<CharacterBreakdown
+		character={specialFlagsCharacterData.character}
+		components={specialFlagsCharacterData.components}
+		hint={specialFlagsCharacterData.hint}
+		originalMeaning={null}
+		strokes={null}
+		fragments={null}
+		historicalPronunciations={specialFlagsCharacterData.historicalPronunciations}
 	/>
 </Story>

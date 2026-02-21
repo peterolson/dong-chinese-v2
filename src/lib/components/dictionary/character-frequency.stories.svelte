@@ -86,3 +86,37 @@
 		subtlexContextDiversity={42}
 	/>
 </Story>
+
+<Story
+	name="Ordinal Edge Cases"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText(/11th most common/)).toBeInTheDocument();
+		await expect(canvas.getByText(/22nd most common/)).toBeInTheDocument();
+	}}
+>
+	<CharacterFrequency
+		junDaRank={11}
+		junDaPerMillion={5.42}
+		subtlexRank={22}
+		subtlexPerMillion={3.21}
+		subtlexContextDiversity={null}
+	/>
+</Story>
+
+<Story
+	name="No Context Diversity"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText('Movie subtitles')).toBeInTheDocument();
+		await expect(canvas.queryByText(/% of films/)).not.toBeInTheDocument();
+	}}
+>
+	<CharacterFrequency
+		junDaRank={null}
+		junDaPerMillion={null}
+		subtlexRank={100}
+		subtlexPerMillion={50.5}
+		subtlexContextDiversity={null}
+	/>
+</Story>

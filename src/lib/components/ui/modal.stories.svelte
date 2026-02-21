@@ -30,7 +30,7 @@
 
 <Story name="Long Content">
 	<Modal open={true} title="Scrollable Content">
-		{#each { length: 20 } as _v, i (i)}
+		{#each Array.from({ length: 20 }, (_, i) => i) as i (i)}
 			<p>
 				Paragraph {i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
 				tempor incididunt ut labore et dolore magna aliqua.

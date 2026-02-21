@@ -4,3 +4,7 @@ ignore:
   - 'src/lib/server/db/auth.schema.ts'
   - 'src/lib/server/services/email.ts'
   - 'src/hooks.server.ts'
+  - 'src/lib/server/services/dictionary.ts'
+  - 'src/routes/api/tts/token/+server.ts'
+  - 'src/routes/(app)/dictionary/explain/[type]/+page.server.ts'
+  - 'src/routes/api/dictionary/explain/[type]/+server.ts'

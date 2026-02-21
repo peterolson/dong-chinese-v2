@@ -333,6 +333,135 @@ export const sampleHistoricalImages: HistoricalImage[] = [
 	}
 ];
 
+/** Character with all special component flags for coverage */
+export const specialFlagsCharacterData: CharacterData = {
+	character: '错',
+	codepoint: 'U+9519',
+	gloss: 'wrong; mistake',
+	hint: '金 (metal) + 昔 (the past) as a sound component.',
+	originalMeaning: 'to inlay with gold or silver',
+	strokeCountSimp: 13,
+	strokeCountTrad: 16,
+	isVerified: true,
+	components: [
+		{
+			character: '钅',
+			type: ['meaning'],
+			hint: 'Simplified form of 金, meaning metal.',
+			pinyin: null,
+			gloss: 'metal',
+			isFromOriginalMeaning: true
+		},
+		{
+			character: '昔',
+			type: ['sound'],
+			hint: null,
+			pinyin: ['xī'],
+			gloss: 'the past',
+			isOldPronunciation: true,
+			historicalPronunciations: [
+				{ source: 'baxter-sagart', oldChinese: '*s-qAk', middleChinese: 'sjæk', gloss: 'formerly' }
+			]
+		},
+		{
+			character: '龶',
+			type: ['iconic'],
+			hint: null,
+			pinyin: null,
+			gloss: null,
+			isGlyphChanged: true
+		}
+	],
+	customSources: null,
+	simplifiedVariants: null,
+	traditionalVariants: ['錯'],
+	junDaRank: 500,
+	junDaFrequency: 30000,
+	junDaPerMillion: 312.41,
+	subtlexRank: 200,
+	subtlexCount: 18000,
+	subtlexPerMillion: 592.88,
+	subtlexContextDiversity: 5000,
+	strokeDataSimp: null,
+	strokeDataTrad: null,
+	fragmentsSimp: null,
+	fragmentsTrad: null,
+	historicalImages: null,
+	historicalPronunciations: [
+		{
+			source: 'baxter-sagart',
+			oldChinese: '*[ts]ʰˤAk',
+			middleChinese: 'tshak',
+			gloss: 'inlay'
+		}
+	],
+	shuowenExplanation: null,
+	shuowenPronunciation: null,
+	shuowenPinyin: null,
+	pinyinFrequencies: [{ pinyin: 'cuò', count: 80 }],
+	pinyin: ['cuò']
+};
+
+/** Character with traditional stroke data and simplified variants */
+export const traditionalCharacterData: CharacterData = {
+	character: '學',
+	codepoint: 'U+5B78',
+	gloss: 'to study; to learn',
+	hint: 'Two hands (𦥑) teaching a child (子) under a roof (宀).',
+	originalMeaning: null,
+	strokeCountSimp: 8,
+	strokeCountTrad: 16,
+	isVerified: true,
+	components: [
+		{
+			character: '𦥑',
+			type: ['iconic'],
+			hint: 'Two hands.',
+			pinyin: null,
+			gloss: 'two hands'
+		},
+		{
+			character: '冖',
+			type: ['iconic'],
+			hint: 'A cover or roof.',
+			pinyin: null,
+			gloss: 'cover'
+		},
+		{
+			character: '子',
+			type: ['iconic'],
+			hint: 'A child.',
+			pinyin: ['zǐ'],
+			gloss: 'child'
+		}
+	],
+	customSources: null,
+	simplifiedVariants: ['学'],
+	traditionalVariants: null,
+	junDaRank: 125,
+	junDaFrequency: 80621,
+	junDaPerMillion: 839.68,
+	subtlexRank: 130,
+	subtlexCount: 25103,
+	subtlexPerMillion: 826.59,
+	subtlexContextDiversity: 5842,
+	strokeDataSimp: null,
+	strokeDataTrad: {
+		strokes: xueStrokesSimp,
+		medians: xueMedians,
+		source: 'animcjk'
+	},
+	fragmentsSimp: null,
+	fragmentsTrad: xueFragments,
+	historicalImages: null,
+	historicalPronunciations: null,
+	shuowenExplanation: '覺悟也。从教从冖。',
+	shuowenPronunciation: '胡覺切',
+	shuowenPinyin: 'xué',
+	pinyinFrequencies: [{ pinyin: 'xué', count: 97 }],
+	pinyin: ['xué']
+};
+
 /** Many images to test the expand/collapse toggle */
 export const manyHistoricalImages: HistoricalImage[] = [
 	{
