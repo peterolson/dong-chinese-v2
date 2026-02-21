@@ -6,6 +6,7 @@ export const userSettings = pgTable('user_settings', {
 		.primaryKey()
 		.references(() => user.id, { onDelete: 'cascade' }),
 	theme: text('theme'),
+	characterSet: text('character_set'),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -34,3 +35,4 @@ export const userEmail = pgTable(
 
 export * from './auth.schema';
 export * from './stage.schema';
+export * from './dictionary.schema';

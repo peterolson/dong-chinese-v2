@@ -51,7 +51,7 @@ interface MeteorUser {
 	_id: string;
 	username?: string;
 	emails?: Array<{ address: string | null; verified?: boolean }>;
-	profile?: { name?: string; darkMode?: boolean };
+	profile?: { name?: string; darkMode?: boolean; isTraditional?: boolean };
 	services?: {
 		password?: { bcrypt?: string };
 		google?: { id?: string; email?: string; name?: string; picture?: string };
@@ -216,9 +216,9 @@ function resolveSettings(meteorUser: MeteorUser): Record<string, unknown> | null
 		settings.theme = 'dark';
 	}
 
-	// Future examples:
-	// if (meteorUser.profile?.font) settings.font = meteorUser.profile.font;
-	// if (meteorUser.profile?.characterSet) settings.character_set = meteorUser.profile.characterSet;
+	if (meteorUser.profile?.isTraditional) {
+		settings.character_set = 'traditional';
+	}
 
 	return Object.keys(settings).length > 0 ? settings : null;
 }

@@ -1,6 +1,20 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+    patch:
+      default:
+        target: 70%
+
 ignore:
   - 'src/lib/server/auth.ts'
   - 'src/lib/server/db/index.ts'
   - 'src/lib/server/db/auth.schema.ts'
   - 'src/lib/server/services/email.ts'
   - 'src/hooks.server.ts'
+  - 'src/lib/server/services/dictionary.ts'
+  - 'src/routes/api/tts/**'
+  - 'src/routes/api/dictionary/**'
+  - 'src/routes/*/dictionary/*/+page.server.ts'
+  - 'src/routes/*/dictionary/explain/**'

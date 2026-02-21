@@ -1,0 +1,80 @@
+# Components
+
+Four subdirectories of Svelte 5 components. All use runes (`$state`, `$derived`, `$effect`), vanilla CSS with custom properties, and have co-located Storybook stories (`*.stories.svelte`).
+
+## ui/ — Reusable Primitives
+
+| Component                  | Notes                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `button.svelte`            | Polymorphic (renders `<a>` or `<button>`). Variants: primary, secondary, tertiary, outline. |
+| `modal.svelte`             | Native `<dialog>`, backdrop click-to-close, CSS animations. Controlled via `open` prop.     |
+| `alert.svelte`             | Variants: error, success, warning, info. Renders Lucide icons.                              |
+| `segmented-control.svelte` | Accessible radio group styled as toggle buttons.                                            |
+| `speak-button.svelte`      | Plays TTS via `speech.ts`. Shows loading state while synthesizing.                          |
+| `progress-button.svelte`   | Button with a loading spinner.                                                              |
+
+## auth/ — Authentication Forms
+
+Built for **progressive enhancement** — all forms work without JS via SvelteKit form actions.
+
+| Component                | Notes                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| `auth-card.svelte`       | Two-column layout: credentials (left) + social providers (right). Wraps all auth pages. |
+| `magic-link-form.svelte` | Email-only passwordless sign-in. Uses form action, not client API.                      |
+| `password-input.svelte`  | Password field with show/hide toggle.                                                   |
+| `social-icon.svelte`     | SVG icons for GitHub, Google, Facebook.                                                 |
+
+Stories simulate full auth page layouts (login, register, forgot-password, reset-password).
+
+## layout/ — App Shell
+
+| Component            | Notes                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `site-header.svelte` | Sticky header with logo and hamburger toggle.                                                          |
+| `sidebar.svelte`     | Nav links with `aria-current` active state. CSS-only responsive (overlay on mobile, fixed on desktop). |
+| `auth-status.svelte` | Shows user name or login link. Server-rendered.                                                        |
+
+## dictionary/ — Character & Word Views
+
+The largest and most complex component area. Renders the dictionary detail page for a single character.
+
+### Core Components
+
+| Component                    | Notes                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| `character-view.svelte`      | Main orchestrator — composes all sub-components for a character page.                 |
+| `character-breakdown.svelte` | Decomposition tree showing semantic/phonetic components. Links to explanation modals. |
+| `character-glyph.svelte`     | Renders the character with color-coded component stroke highlights.                   |
+| `stroke-animation.svelte`    | Animated stroke-by-stroke SVG drawing using CSS keyframes + SVG masking.              |
+| `character-frequency.svelte` | Jun Da & SUBTLEX-CH frequency comparison bars.                                        |
+| `cjk-linked-text.svelte`     | Auto-links CJK characters to their dictionary pages.                                  |
+| `source-list.svelte`         | Groups and displays data source attribution.                                          |
+
+### Historical/Linguistic
+
+| Component                          | Notes                                                                |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| `historical-images.svelte`         | Oracle bone, bronze, seal, clerical script image gallery with modal. |
+| `historical-pronunciations.svelte` | Baxter-Sagart, Zhengzhang, Tang reconstructions.                     |
+| `old-pronunciation-alert.svelte`   | Alert when a component's pronunciation has shifted historically.     |
+
+### Component Type Explanation
+
+| Component                           | Notes                                                                                                                                         |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `component-type-explanation.svelte` | Modal/page explaining the 8 component types (meaning, sound, iconic, etc.). Fetches example characters from `/api/dictionary/explain/[type]`. |
+
+### Supporting Modules
+
+| File                                         | Notes                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------- |
+| `component-colors.ts`                        | Maps component types → CSS custom properties. OKLCH color space for duplicates. |
+| `stories.data.ts`                            | Shared fixture data for Storybook stories.                                      |
+| `component-type-explanation.stories.data.ts` | Large (206K) fixture with full CharacterData for all 8 types.                   |
+
+## Conventions
+
+- **Storybook stories** use Svelte CSF (`defineMeta` + `<Story>`) with auto-running play functions (tested via Vitest).
+- **No Tailwind** — vanilla CSS with `--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground` etc.
+- **Dark mode** via `data-theme="dark"` on `<html>`, using CSS custom properties.
+- **Icons** from `lucide-svelte`.

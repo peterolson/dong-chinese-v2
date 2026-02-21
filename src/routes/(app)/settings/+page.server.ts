@@ -16,7 +16,11 @@ export const actions: Actions = {
 		const theme: UserSettings['theme'] =
 			themeRaw === 'light' || themeRaw === 'dark' ? themeRaw : null;
 
-		const settings: Partial<UserSettings> = { ...event.locals.settings, theme };
+		const charSetRaw = formData.get('characterSet')?.toString() ?? '';
+		const characterSet: UserSettings['characterSet'] =
+			charSetRaw === 'simplified' || charSetRaw === 'traditional' ? charSetRaw : null;
+
+		const settings: Partial<UserSettings> = { ...event.locals.settings, theme, characterSet };
 		const isSecure = event.url.protocol === 'https:';
 		const userId = event.locals.user?.id;
 

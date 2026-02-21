@@ -28,10 +28,11 @@
 <style>
 	.alert {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 0.5rem;
 		border-radius: var(--radius);
-		padding: 0.5rem 0.75rem;
+		padding: 0.375rem 0.5rem;
+		font-size: 0.8125rem;
 	}
 
 	.alert :global(svg) {
@@ -42,24 +43,20 @@
 	.error {
 		color: var(--error);
 		background: var(--error-bg);
-		border: 1px solid var(--error);
 	}
 
 	.success {
 		color: var(--success);
 		background: var(--success-bg);
-		border: 1px solid var(--success);
 	}
 
 	.warning {
 		color: var(--warning);
 		background: var(--warning-bg);
-		border: 1px solid var(--warning);
 	}
 
 	.info {
 		color: var(--info);
 		background: var(--info-bg);
-		border: 1px solid var(--info);
 	}
 </style>

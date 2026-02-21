@@ -52,7 +52,10 @@
 		<Sidebar />
 	</div>
 
-	<main class="main-content">
+	<main
+		class="main-content"
+		lang={data.settings.characterSet === 'traditional' ? 'zh-Hant' : 'zh-Hans'}
+	>
 		{@render children()}
 	</main>
 </div>
