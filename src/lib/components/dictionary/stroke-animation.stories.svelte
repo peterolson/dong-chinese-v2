@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
+	import { expect } from 'storybook/test';
 	import StrokeAnimation from './stroke-animation.svelte';
 	import { xueStrokesSimp, xueMedians } from './stories.data';
 	import type { StrokeVariantData } from '$lib/types/dictionary';
@@ -36,7 +36,6 @@
 <Story
 	name="Multi-Stroke (学)"
 	play={async ({ canvasElement }) => {
-		const canvas = within(canvasElement);
 		const svg = canvasElement.querySelector('svg.stroke-anim');
 		await expect(svg).toBeInTheDocument();
 	}}

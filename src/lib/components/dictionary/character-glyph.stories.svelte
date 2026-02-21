@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
+	import { expect } from 'storybook/test';
 	import CharacterGlyph from './character-glyph.svelte';
 	import { xueStrokesSimp, xueFragments, xueCharacterData } from './stories.data';
 

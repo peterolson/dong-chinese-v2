@@ -23,7 +23,7 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		await expect(canvas.getByText(/don't sound similar/)).toBeInTheDocument();
-		await expect(canvas.getByText(/Old Chinese/)).toBeInTheDocument();
+		await expect(canvas.getByText(/Chinese/)).toBeInTheDocument();
 	}}
 >
 	<OldPronunciationAlert
