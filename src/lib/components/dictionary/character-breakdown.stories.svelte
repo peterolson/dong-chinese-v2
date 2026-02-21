@@ -98,8 +98,8 @@
 	name="isFromOriginalMeaning Alert"
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.getByText(/original meaning/)).toBeInTheDocument();
-		await expect(canvas.getByText(/inlay with gold/)).toBeInTheDocument();
+		await expect(canvas.getByText(/Original meaning/)).toBeInTheDocument();
+		await expect(canvas.getByText(/hints at the original meaning/)).toBeInTheDocument();
 	}}
 >
 	<CharacterBreakdown
