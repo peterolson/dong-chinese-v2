@@ -49,7 +49,7 @@ Every import script follows the same pattern:
 
 ```bash
 npm run dictionary:sync        # Run all dictionary imports
-npm run dictionary:rebuild     # Rebuild dict_char from stage tables
+npm run dictionary:rebuild-char # Rebuild dict_char from stage tables
 npm run import:users           # Migrate Meteor users (requires MONGODB_URI)
 ```
 
