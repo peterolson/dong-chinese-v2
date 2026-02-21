@@ -71,7 +71,10 @@ for (const jsEnabled of [true, false]) {
 			const firstId = cookie!.value;
 
 			// Navigate to a different page
-			const [response] = await Promise.all([page.waitForResponse('**/demo'), page.goto('/demo')]);
+			const [response] = await Promise.all([
+				page.waitForResponse('**/settings'),
+				page.goto('/settings')
+			]);
 
 			const setCookieHeaders = response?.headers()['set-cookie'] ?? '';
 			expect(setCookieHeaders).not.toContain(COOKIE_NAME);

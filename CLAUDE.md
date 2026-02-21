@@ -157,7 +157,7 @@ The project uses 3 Postgres schemas:
 - **`stage`** — Raw imported data: `unihan_raw` (EAV, 1.56M rows), `cedict_raw` (124k entries), `sync_metadata`. Used for data exploration and materialized view generation.
 - **`dictionary`** — Denormalized dictionary data: `dict_char`, `dict_word`, `stroke_data`, etc. Serves the actual app queries.
 
-Drizzle config (`drizzle.config.ts`) has `schemaFilter: ['public', 'stage']`.
+Drizzle config (`drizzle.config.ts`) has `schemaFilter: ['public', 'stage', 'dictionary']`.
 
 ## Auth Implementation
 

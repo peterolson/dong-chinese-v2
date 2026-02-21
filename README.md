@@ -3,45 +3,66 @@
 
 # Dong Chinese
 
-Hello there. This project is still under construction.
+A Chinese language learning app at [dong-chinese.com](https://dong-chinese.com). This is a ground-up rebuild of the existing Meteor.js application using SvelteKit and PostgreSQL.
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+## Tech Stack
 
-## Creating a project
+- **Framework**: SvelteKit (Svelte 5) with TypeScript
+- **Database**: PostgreSQL (Drizzle ORM)
+- **Auth**: Better Auth (bcrypt-compatible with Meteor password hashes)
+- **Styling**: Vanilla CSS with custom properties (no Tailwind)
+- **Testing**: Vitest + Storybook 10 + Playwright
+- **Mobile**: Capacitor (planned)
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Getting Started
 
-```sh
-# create a new project
-npx sv create my-app
-```
+### Prerequisites
 
-To recreate this project with the same configuration:
+- Node.js v25+
+- Docker (for local Postgres)
 
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --add prettier eslint vitest="usages:component,unit" playwright sveltekit-adapter="adapter:node" devtools-json drizzle="database:postgresql+postgresql:postgres.js+docker:yes" better-auth="demo:password,github" storybook mcp="ide:claude-code,vscode+setup:remote" --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Setup
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+npm install
+npm run db:start          # Start Postgres on port 5434
+npm run db:push           # Push Drizzle schema
+cp .env.example .env      # Configure environment variables
+npm run dev               # Start dev server at localhost:5173
 ```
 
-## Building
+### Dictionary Data
 
-To create a production version of your app:
+The dictionary is built from 10+ external sources (Unicode Unihan, CC-CEDICT, AnimCJK stroke data, historical pronunciations, frequency corpora, etc.). Import scripts live in `scripts/dictionary/`.
 
 ```sh
-npm run build
+npm run dictionary:sync     # Run all imports
+npm run dictionary:rebuild  # Materialize dictionary tables from staged data
 ```
 
-You can preview the production build with `npm run preview`.
+### Storybook
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+npm run storybook           # Start at localhost:6006
+```
+
+### Testing
+
+```sh
+npm run test                # Vitest (unit + component + storybook)
+npx playwright test         # E2E (requires build first)
+```
+
+## Architecture
+
+See [CLAUDE.md](CLAUDE.md) for the full project guide, including architecture principles, database schema design, auth implementation details, and code conventions.
+
+Key design principles:
+
+- **Progressive enhancement**: Every feature works without JavaScript. Forms use SvelteKit actions as the baseline; client-side JS is layered on top.
+- **Anonymous-first auth**: Users can use the app without an account. Progress merges when they sign up.
+- **3-schema database**: `public` (app/auth), `stage` (raw imports), `dictionary` (denormalized queries).
+
+## Project Status
+
+This is an active rebuild. Auth, settings, and the dictionary data pipeline are complete. See [TODO.md](TODO.md) for current progress and next steps.
