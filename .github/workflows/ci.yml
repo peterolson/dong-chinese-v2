@@ -60,7 +60,12 @@ jobs:
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      - name: Create schemas
+        run: |
+          node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
       - run: npx drizzle-kit push --force
+      - name: Create char view
+        run: npm run dictionary:create-char-view
       - run: npm run test:coverage
       - name: Upload coverage to Codecov
         if: always()

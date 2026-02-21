@@ -29,15 +29,17 @@ Every import script follows the same pattern:
 
 ## Materialization
 
-| Script                 | Purpose                                                                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rebuild-dict-char.ts` | Builds `dictionary.char_base` from all stage tables. Loads everything into memory maps, merges with priority chains, batch upserts. Run after any import. |
+| Script                 | Purpose                                                                                                                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rebuild-dict-char.ts` | Builds `dictionary.char_base` from all stage tables. Loads everything into memory maps, merges with priority chains, batch upserts. Atomically re-creates the `dictionary.char` view on swap. |
+| `create-char-view.ts`  | Creates/replaces the `dictionary.char` view (overlays approved `char_manual` edits on `char_base`). Idempotent via `CREATE OR REPLACE`. Run after initial schema push.                        |
 
 ## Shared Utilities
 
 | File                                   | Purpose                                                                                              |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `dictionary/wiktionary-lua-modules.ts` | Fetches + parses Wiktionary Lua tables. Handles pagination and 429 rate-limit backoff (500ms delay). |
+| `dictionary/char-view-sql.ts`          | Shared `CHAR_VIEW_SQL` constant used by both `rebuild-dict-char.ts` and `create-char-view.ts`.       |
 
 ## User Migration
 
@@ -45,12 +47,20 @@ Every import script follows the same pattern:
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | `import-meteor-users.ts` | Migrates ~24k users from Meteor MongoDB. Preserves bcrypt hashes + OAuth provider IDs. Batch of 100, `ON CONFLICT DO NOTHING`. |
 
+## Permissions Import
+
+| Script                  | Purpose                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `import-permissions.ts` | Imports `wikiEdit` permissions from MongoDB `dong-chinese.permissions` collection. Matches by Meteor user ID. `ON CONFLICT DO NOTHING`. |
+
 ## Running
 
 ```bash
-npm run dictionary:sync        # Run all dictionary imports
-npm run dictionary:rebuild-char # Rebuild dict_char from stage tables
-npm run import:users           # Migrate Meteor users (requires MONGODB_URI)
+npm run dictionary:sync             # Run all dictionary imports
+npm run dictionary:rebuild-char     # Rebuild dict_char from stage tables (re-creates char view)
+npm run dictionary:create-char-view # Create/replace the dictionary.char view
+npm run import:users                # Migrate Meteor users (requires MONGODB_URI)
+npm run import:permissions          # Import wikiEdit permissions (requires MONGODB_URI)
 ```
 
 Individual imports: `npm run dictionary:import-unihan`, `npm run dictionary:import-cedict`, etc.
