@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, text, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, text, boolean, index, unique } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 
 export const userSettings = pgTable('user_settings', {
@@ -31,6 +31,23 @@ export const userEmail = pgTable(
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(table) => [index('user_email_user_id_idx').on(table.userId)]
+);
+
+export const userPermission = pgTable(
+	'user_permission',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		permission: text('permission').notNull(),
+		grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+		grantedBy: text('granted_by') // user.id of admin who granted, null for imports
+	},
+	(table) => [
+		unique('user_permission_user_id_permission_unique').on(table.userId, table.permission),
+		index('user_permission_user_id_idx').on(table.userId)
+	]
 );
 
 export * from './auth.schema';

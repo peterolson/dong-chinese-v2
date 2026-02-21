@@ -6,13 +6,14 @@ import {
 	timestamp,
 	jsonb,
 	doublePrecision,
-	index
+	index,
+	uuid
 } from 'drizzle-orm/pg-core';
 
 export const dictionary = pgSchema('dictionary');
 
 // Materialized character data — combines all stage.* sources into one row per character.
-// This is the "base" layer. Later, dictionary.char will overlay manual overrides on top.
+// This is the "base" layer. The dictionary.char view overlays approved char_manual edits on top.
 export const charBase = dictionary.table(
 	'char_base',
 	{
@@ -78,5 +79,63 @@ export const charBase = dictionary.table(
 		index('char_base_subtlex_rank_idx').on(t.subtlexRank),
 		index('char_base_stroke_count_simp_idx').on(t.strokeCountSimp),
 		index('char_base_stroke_count_trad_idx').on(t.strokeCountTrad)
+	]
+);
+
+// Manual character edits — append-only revision log.
+// Each row is a full snapshot of the character data at the time of the edit.
+// The dictionary.char view layers the most recent approved edit on top of char_base.
+export const charManual = dictionary.table(
+	'char_manual',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		character: text('character').notNull(),
+
+		// All data columns from char_base (nullable — full-row snapshot)
+		codepoint: text('codepoint'),
+		gloss: text('gloss'),
+		hint: text('hint'),
+		originalMeaning: text('original_meaning'),
+		strokeCountSimp: integer('stroke_count_simp'),
+		strokeCountTrad: integer('stroke_count_trad'),
+		isVerified: boolean('is_verified'),
+		components: jsonb('components'),
+		customSources: jsonb('custom_sources'),
+		simplifiedVariants: jsonb('simplified_variants'),
+		traditionalVariants: jsonb('traditional_variants'),
+		junDaRank: integer('jun_da_rank'),
+		junDaFrequency: integer('jun_da_frequency'),
+		junDaPerMillion: doublePrecision('jun_da_per_million'),
+		subtlexRank: integer('subtlex_rank'),
+		subtlexCount: integer('subtlex_count'),
+		subtlexPerMillion: doublePrecision('subtlex_per_million'),
+		subtlexContextDiversity: integer('subtlex_context_diversity'),
+		strokeDataSimp: jsonb('stroke_data_simp'),
+		strokeDataTrad: jsonb('stroke_data_trad'),
+		fragmentsSimp: jsonb('fragments_simp'),
+		fragmentsTrad: jsonb('fragments_trad'),
+		historicalImages: jsonb('historical_images'),
+		historicalPronunciations: jsonb('historical_pronunciations'),
+		shuowenExplanation: text('shuowen_explanation'),
+		shuowenPronunciation: text('shuowen_pronunciation'),
+		shuowenPinyin: text('shuowen_pinyin'),
+		pinyinFrequencies: jsonb('pinyin_frequencies'),
+		pinyin: text('pinyin').array(),
+
+		// Status / review
+		status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+		reviewedBy: text('reviewed_by'),
+		reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+
+		// Audit
+		editedBy: text('edited_by'), // user.id, null for anonymous
+		anonymousSessionId: uuid('anonymous_session_id'), // for unauthenticated users
+		editComment: text('edit_comment').notNull().default(''),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		index('char_manual_character_status_created_idx').on(t.character, t.status, t.createdAt),
+		index('char_manual_edited_by_idx').on(t.editedBy),
+		index('char_manual_status_idx').on(t.status)
 	]
 );
