@@ -16,6 +16,7 @@
  */
 
 import postgres, { type Row, type PendingQuery } from 'postgres';
+import { CHAR_VIEW_SQL } from './char-view-sql.js';
 
 type Tx = postgres.TransactionSql & {
 	<T extends readonly (object | undefined)[] = Row[]>(
@@ -947,15 +948,18 @@ async function main() {
 			}
 		}
 
-		// Atomic swap: rename tables in a single transaction
-		// Readers see either the old or new table — never an empty one
+		// Atomic swap: rename tables and re-create the char view in a single transaction.
+		// The view references char_base by OID, so after the rename + drop the old OID is gone.
+		// Re-creating the view inside the same transaction rebinds it to the new table.
+		// Readers see either the old or new state — never a broken intermediate.
 		console.log('\nSwapping tables...');
 		await sql.begin(async (tx) => {
 			await tx`ALTER TABLE dictionary.char_base RENAME TO char_base_old`;
 			await tx`ALTER TABLE dictionary.char_base_new RENAME TO char_base`;
+			await tx.unsafe(CHAR_VIEW_SQL);
 			await tx`DROP TABLE dictionary.char_base_old`;
 		});
-		console.log('Swap complete');
+		console.log('Swap complete (view re-created)');
 
 		// Summary
 		const countResult = await sql`SELECT COUNT(*) AS total FROM dictionary.char_base`;

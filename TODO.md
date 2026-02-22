@@ -29,6 +29,8 @@
 
 - [x] Production database sync workflows (PR #12) — 3 GitHub Actions workflows for automated imports against Supabase. Monthly cron for Unihan/CEDICT/AnimCJK, weekly cron for Meteor user import, manual dispatch with dropdown for one-time sources (Shuowen, MakeMeAHanzi, Baxter-Sagart, Zhengzhang) or full sync. All workflows create `stage` schema, run `drizzle-kit push --force`, then execute import scripts. Requires `SUPABASE_DATABASE_URL` and `MONGODB_URI` GitHub secrets.
 
+- [x] Editable character dictionary — `char_manual` table (append-only edit log with pending/approved/rejected status), `user_permission` table, `dictionary.char` Postgres view overlaying approved edits on `char_base`. Suggestion/approval workflow: anyone can suggest edits, `wikiEdit` users auto-approve and can review others. Backend services for permissions and char editing. Import script for legacy MongoDB permissions. Rebuild script atomically re-creates view during table swap.
+
 ## In Progress
 
 - [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).

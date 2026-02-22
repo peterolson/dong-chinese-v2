@@ -1,14 +1,14 @@
 import { db } from '$lib/server/db';
-import { charBase } from '$lib/server/db/dictionary.schema';
+import { charView } from '$lib/server/db/dictionary.views';
 import { eq, inArray } from 'drizzle-orm';
 import type { CharacterData, ComponentData, HistoricalPronunciation } from '$lib/types/dictionary';
 
 /**
- * Look up a single character's data from dictionary.char_base.
- * Later this will read from dictionary.char (with manual overrides layered on top).
+ * Look up a single character's data from the dictionary.char view.
+ * The view layers approved manual edits (char_manual) on top of the base data (char_base).
  */
 export async function getCharacterData(char: string): Promise<CharacterData | null> {
-	const rows = await db.select().from(charBase).where(eq(charBase.character, char)).limit(1);
+	const rows = await db.select().from(charView).where(eq(charView.character, char)).limit(1);
 
 	if (rows.length === 0) return null;
 
@@ -23,13 +23,13 @@ export async function getCharacterData(char: string): Promise<CharacterData | nu
 		);
 		const compRows = await db
 			.select({
-				character: charBase.character,
-				pinyin: charBase.pinyin,
-				gloss: charBase.gloss,
-				historicalPronunciations: charBase.historicalPronunciations
+				character: charView.character,
+				pinyin: charView.pinyin,
+				gloss: charView.gloss,
+				historicalPronunciations: charView.historicalPronunciations
 			})
-			.from(charBase)
-			.where(inArray(charBase.character, compChars));
+			.from(charView)
+			.where(inArray(charView.character, compChars));
 
 		const compMap = new Map(compRows.map((r) => [r.character, r]));
 		for (const comp of components) {

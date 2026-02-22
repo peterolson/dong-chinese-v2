@@ -13,6 +13,7 @@ App-level tables alongside Better Auth's auto-generated tables:
 - `anonymous_session` — Cookie-based anonymous tracking (custom, NOT Better Auth plugin)
 - `user_settings` — Persisted settings for authenticated users (theme, characterSet)
 - `user_email` — Maps secondary emails → primary user ID (for Meteor migration multi-email login)
+- `user_permission` — Permission grants per user (e.g. `wikiEdit`). Unique on (userId, permission).
 
 ### `stage` schema (`stage.schema.ts`)
 
@@ -27,11 +28,13 @@ Raw imported data from external sources. Never queried by the app directly — u
 - `jun_da`, `subtlex_ch` — Character/word frequency corpora
 - `sync_metadata` — Tracks import checksums for idempotency
 
-### `dictionary` schema (`dictionary.schema.ts`)
+### `dictionary` schema (`dictionary.schema.ts` + `dictionary.views.ts`)
 
 Denormalized data serving app queries:
 
-- `char_base` — Main character table, materialized from all stage sources by `scripts/dictionary/rebuild-dict-char.ts`
+- `char_base` — Base character table, materialized from all stage sources by `scripts/dictionary/rebuild-dict-char.ts`
+- `char_manual` — Append-only edit log. Full-row snapshots with `status` (pending/approved/rejected), reviewer info, and audit columns. Anyone can suggest edits; `wikiEdit` users get auto-approved and can approve/reject others.
+- `char` (view) — Overlays the latest approved `char_manual` edit on top of `char_base` via COALESCE. Declared in `dictionary.views.ts` with `.existing()` (not managed by drizzle-kit). Created by `scripts/dictionary/create-char-view.ts`.
 
 ### `auth.schema.ts`
 
@@ -43,14 +46,16 @@ Creates the Drizzle `db` instance using `postgres.js` driver and re-exports all 
 
 ## services/ — Business Logic
 
-| Service                | Purpose                                                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `anonymous-session.ts` | Create/validate/delete anonymous sessions. Custom cookie + DB row.                                               |
-| `dictionary.ts`        | `getCharacterData()` loads a character + batch-loads component data. Main dictionary query.                      |
-| `email.ts`             | Nodemailer wrapper. Logs to console when MAIL_URL not set (dev mode).                                            |
-| `magic-link.ts`        | Generates + verifies magic links. Resolves secondary emails.                                                     |
-| `sanitize-redirect.ts` | Prevents open redirects — only allows relative paths.                                                            |
-| `settings.ts`          | Read/write settings from JSON cookie + DB. `applySettings()`, `syncSettingsOnLogin()`, `syncSettingsOnSignup()`. |
+| Service                | Purpose                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `anonymous-session.ts` | Create/validate/delete anonymous sessions. Custom cookie + DB row.                                                                               |
+| `char-edit.ts`         | Submit/approve/reject character edits. `submitCharEdit()`, `approveCharEdit()`, `rejectCharEdit()`, `getPendingEdits()`, `getCharEditHistory()`. |
+| `dictionary.ts`        | `getCharacterData()` loads a character from the `dictionary.char` view + batch-loads component data.                                             |
+| `email.ts`             | Nodemailer wrapper. Logs to console when MAIL_URL not set (dev mode).                                                                            |
+| `magic-link.ts`        | Generates + verifies magic links. Resolves secondary emails.                                                                                     |
+| `permissions.ts`       | `hasPermission()`, `getUserPermissions()` — queries `user_permission` table.                                                                     |
+| `sanitize-redirect.ts` | Prevents open redirects — only allows relative paths.                                                                                            |
+| `settings.ts`          | Read/write settings from JSON cookie + DB. `applySettings()`, `syncSettingsOnLogin()`, `syncSettingsOnSignup()`.                                 |
 
 ## auth.ts — Better Auth Configuration
 

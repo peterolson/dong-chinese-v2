@@ -76,16 +76,19 @@ src/
 │   ├── data/                      # Static data modules (component-type-info.ts)
 │   ├── server/
 │   │   ├── db/
-│   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings)
+│   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings, permissions)
 │   │   │   ├── stage.schema.ts    # Stage schema (unihan_raw, cedict_raw, sync_metadata)
-│   │   │   ├── dictionary.schema.ts # Dictionary schema (dict_char, dict_word, stroke_data, etc.)
+│   │   │   ├── dictionary.schema.ts # Dictionary schema (char_base, char_manual)
+│   │   │   ├── dictionary.views.ts # Drizzle view declarations (charView — .existing(), not managed by drizzle-kit)
 │   │   │   ├── auth.schema.ts     # Auto-generated Better Auth schema
 │   │   │   └── index.ts           # DB connection + exports
 │   │   ├── services/
 │   │   │   ├── anonymous-session.ts # Cookie + DB row anonymous sessions
+│   │   │   ├── char-edit.ts       # Submit/approve/reject character edits
 │   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search)
 │   │   │   ├── email.ts           # Nodemailer email service
 │   │   │   ├── magic-link.ts      # Magic link generation + verification
+│   │   │   ├── permissions.ts     # User permission queries (hasPermission, getUserPermissions)
 │   │   │   ├── sanitize-redirect.ts # Open redirect prevention
 │   │   │   └── settings.ts        # User settings persistence (JSON cookie + DB)
 │   │   └── auth.ts                # Better Auth config (bcrypt override, OAuth providers, plugins)
@@ -115,6 +118,7 @@ src/
 └── app.html                       # HTML template with data-theme injection
 scripts/
 ├── import-meteor-users.ts         # Migrate users from MongoDB
+├── import-permissions.ts          # Import wikiEdit permissions from MongoDB
 └── dictionary/
     ├── import-unihan.ts           # Unicode Unihan (1.56M rows)
     ├── import-cedict.ts           # CC-CEDICT (124k entries)
@@ -126,7 +130,9 @@ scripts/
     ├── import-zhengzhang.ts       # Zhengzhang historical phonology
     ├── import-jun-da-char-freq.ts # Character frequency corpus
     ├── import-subtlex-ch.ts       # Subtitle frequency corpus
-    └── rebuild-dict-char.ts       # Rebuild denormalized char cache
+    ├── rebuild-dict-char.ts       # Rebuild denormalized char cache (re-creates char view)
+    ├── create-char-view.ts        # Create/replace dictionary.char view
+    └── char-view-sql.ts           # Shared SQL for the char view (used by rebuild + create scripts)
 .storybook/
 ├── main.ts                        # Config with viteFinal aliases for $app/paths and $env/dynamic/public
 ├── preview.ts                     # Preview config
@@ -152,9 +158,9 @@ For Storybook: `npm run storybook` (port 6006). If Playwright browsers are missi
 
 The project uses 3 Postgres schemas:
 
-- **`public`** — Auth tables (Better Auth managed), `anonymous_session`, `user_settings`, progress tables
+- **`public`** — Auth tables (Better Auth managed), `anonymous_session`, `user_settings`, `user_permission`, progress tables
 - **`stage`** — Raw imported data: `unihan_raw` (EAV, 1.56M rows), `cedict_raw` (124k entries), `sync_metadata`. Used for data exploration and materialized view generation.
-- **`dictionary`** — Denormalized dictionary data: `dict_char`, `dict_word`, `stroke_data`, etc. Serves the actual app queries.
+- **`dictionary`** — `char_base` (materialized from stage sources), `char_manual` (append-only edit log with approval workflow), `char` (view overlaying approved edits on base). Serves the actual app queries.
 
 Drizzle config (`drizzle.config.ts`) has `schemaFilter: ['public', 'stage', 'dictionary']`.
 

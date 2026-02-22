@@ -19,7 +19,10 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - name: Create stage schema
-        run: node -e "import('postgres').then(m => m.default(process.env.DATABASE_URL)\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => process.exit(0)))"
+      - name: Create schemas
+        run: |
+          node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
       - run: npx drizzle-kit push --force
+      - name: Create char view
+        run: npm run dictionary:create-char-view
       - run: npm run dictionary:import-dong-dictionary
