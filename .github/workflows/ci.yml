@@ -56,7 +56,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
-          flags: server
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-client:
@@ -89,7 +88,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
-          flags: client
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-e2e:
