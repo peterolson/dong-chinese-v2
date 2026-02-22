@@ -7,6 +7,12 @@ coverage:
       default:
         target: 70%
 
+flags:
+  server:
+    carryforward: true
+  client:
+    carryforward: true
+
 ignore:
   - 'src/lib/server/auth.ts'
   - 'src/lib/server/db/index.ts'
