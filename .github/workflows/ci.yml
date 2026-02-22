@@ -18,7 +18,7 @@ jobs:
       - run: npm run lint
       - run: npm run check
 
-  test-server:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -44,29 +44,6 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - name: Create schemas
-        run: |
-          node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
-      - run: npx drizzle-kit push --force
-      - name: Create char view
-        run: npm run dictionary:create-char-view
-      - run: npm run test:server
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage/lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  test-client:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-          cache: 'npm'
-      - run: npm ci
       - name: Get Playwright version
         id: playwright-version
         run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
@@ -82,7 +59,13 @@ jobs:
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - run: npm run test:client
+      - name: Create schemas
+        run: |
+          node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
+      - run: npx drizzle-kit push --force
+      - name: Create char view
+        run: npm run dictionary:create-char-view
+      - run: npm run test:coverage
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v5
