@@ -1,6 +1,6 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, afterEach, beforeEach } from 'vitest';
 import { db } from '$lib/server/db';
-import { charManual } from '$lib/server/db/dictionary.schema';
+import { charBase, charManual } from '$lib/server/db/dictionary.schema';
 import { user } from '$lib/server/db/auth.schema';
 import { eq } from 'drizzle-orm';
 import {
@@ -13,9 +13,27 @@ import {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const testUserIds: string[] = [];
+const testChars: string[] = [];
+
+// Characters used by tests — seeded into char_base so submitCharEdit passes validation
+const ALL_TEST_CHARS = ['你', '好', '中', '大', '小', '人', '山', '水', '火', '木', '金', '土'];
+
+beforeEach(async () => {
+	await db.insert(charBase).values(
+		ALL_TEST_CHARS.map((c) => ({
+			character: c,
+			gloss: 'test'
+		}))
+	);
+	testChars.push(...ALL_TEST_CHARS);
+});
 
 afterEach(async () => {
 	await db.delete(charManual);
+	for (const c of testChars) {
+		await db.delete(charBase).where(eq(charBase.character, c));
+	}
+	testChars.length = 0;
 	for (const id of testUserIds) {
 		await db.delete(user).where(eq(user.id, id));
 	}
@@ -76,6 +94,30 @@ describe('submitCharEdit', () => {
 		});
 
 		expect(result.status).toBe('pending');
+	});
+
+	it('throws when character does not exist in char_base', async () => {
+		await expect(
+			submitCharEdit({
+				character: '龘',
+				data: { gloss: 'dragons' },
+				editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000010' },
+				editComment: '',
+				autoApprove: false
+			})
+		).rejects.toThrow('does not exist in char_base');
+	});
+
+	it('throws when neither userId nor anonymousSessionId is provided', async () => {
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { gloss: 'you' },
+				editedBy: {},
+				editComment: '',
+				autoApprove: false
+			})
+		).rejects.toThrow('At least one of userId or anonymousSessionId is required');
 	});
 });
 

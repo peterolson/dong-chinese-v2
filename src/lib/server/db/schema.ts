@@ -42,7 +42,7 @@ export const userPermission = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		permission: text('permission').notNull(),
 		grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
-		grantedBy: text('granted_by') // user.id of admin who granted, null for imports
+		grantedBy: text('granted_by').references(() => user.id, { onDelete: 'set null' }) // admin who granted; null for imports
 	},
 	(table) => [
 		unique('user_permission_user_id_permission_unique').on(table.userId, table.permission),

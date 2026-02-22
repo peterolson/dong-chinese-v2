@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { charManual } from '$lib/server/db/dictionary.schema';
+import { charBase, charManual } from '$lib/server/db/dictionary.schema';
 import { eq, desc, and } from 'drizzle-orm';
 
 export type CharManualInsert = typeof charManual.$inferInsert;
@@ -10,6 +10,9 @@ export type CharManualRow = typeof charManual.$inferSelect;
  * the edit is immediately approved. Otherwise it's pending review.
  *
  * autoApprove requires a userId — anonymous users cannot auto-approve.
+ * Requires at least one of userId or anonymousSessionId for attribution.
+ * The character must exist in char_base — edits for unknown characters are rejected
+ * because the dictionary.char view is driven by char_base.
  */
 export async function submitCharEdit(params: {
 	character: string;
@@ -29,6 +32,18 @@ export async function submitCharEdit(params: {
 	editComment: string;
 	autoApprove: boolean;
 }): Promise<{ id: string; status: 'pending' | 'approved' }> {
+	if (!params.editedBy.userId && !params.editedBy.anonymousSessionId) {
+		throw new Error('At least one of userId or anonymousSessionId is required');
+	}
+
+	const [existing] = await db
+		.select({ character: charBase.character })
+		.from(charBase)
+		.where(eq(charBase.character, params.character));
+	if (!existing) {
+		throw new Error(`Character '${params.character}' does not exist in char_base`);
+	}
+
 	// Auto-approve requires an authenticated user
 	const canAutoApprove = params.autoApprove && params.editedBy.userId != null;
 	const status = canAutoApprove ? 'approved' : 'pending';

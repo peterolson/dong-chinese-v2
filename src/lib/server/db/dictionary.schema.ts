@@ -126,12 +126,12 @@ export const charManual = dictionary.table(
 
 		// Status / review
 		status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
-		reviewedBy: text('reviewed_by'),
+		reviewedBy: text('reviewed_by'), // user.id of reviewer; no FK so edits survive user deletion
 		reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
 
-		// Audit
-		editedBy: text('edited_by'), // user.id, null for anonymous
-		anonymousSessionId: uuid('anonymous_session_id'), // for unauthenticated users
+		// Audit — no FK on editedBy so anonymous and deleted-user edits are preserved
+		editedBy: text('edited_by'), // user.id when authenticated, null for anonymous
+		anonymousSessionId: uuid('anonymous_session_id'), // session ID for unauthenticated users
 		editComment: text('edit_comment').notNull().default(''),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
