@@ -48,4 +48,6 @@ SELECT
   GREATEST(COALESCE(m.created_at, b.updated_at), b.updated_at) AS updated_at
 FROM dictionary.char_base b
 LEFT JOIN latest_approved m USING (character)
+-- This view is driven by char_base. Manual edits for characters not in char_base
+-- will not appear. The char-edit service should validate the character exists.
 `;

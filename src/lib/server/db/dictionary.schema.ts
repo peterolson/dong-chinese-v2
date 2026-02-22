@@ -7,8 +7,10 @@ import {
 	jsonb,
 	doublePrecision,
 	index,
-	uuid
+	uuid,
+	check
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const dictionary = pgSchema('dictionary');
 
@@ -136,6 +138,7 @@ export const charManual = dictionary.table(
 	(t) => [
 		index('char_manual_character_status_created_idx').on(t.character, t.status, t.createdAt),
 		index('char_manual_edited_by_idx').on(t.editedBy),
-		index('char_manual_status_idx').on(t.status)
+		index('char_manual_status_idx').on(t.status),
+		check('char_manual_status_check', sql`${t.status} IN ('pending', 'approved', 'rejected')`)
 	]
 );

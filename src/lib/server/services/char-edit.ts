@@ -8,6 +8,8 @@ export type CharManualRow = typeof charManual.$inferSelect;
 /**
  * Submit a character edit. If autoApprove is true (caller has wikiEdit permission),
  * the edit is immediately approved. Otherwise it's pending review.
+ *
+ * autoApprove requires a userId — anonymous users cannot auto-approve.
  */
 export async function submitCharEdit(params: {
 	character: string;
@@ -27,7 +29,9 @@ export async function submitCharEdit(params: {
 	editComment: string;
 	autoApprove: boolean;
 }): Promise<{ id: string; status: 'pending' | 'approved' }> {
-	const status = params.autoApprove ? 'approved' : 'pending';
+	// Auto-approve requires an authenticated user
+	const canAutoApprove = params.autoApprove && params.editedBy.userId != null;
+	const status = canAutoApprove ? 'approved' : 'pending';
 
 	const [row] = await db
 		.insert(charManual)
@@ -35,8 +39,8 @@ export async function submitCharEdit(params: {
 			character: params.character,
 			...params.data,
 			status,
-			reviewedBy: params.autoApprove ? params.editedBy.userId : null,
-			reviewedAt: params.autoApprove ? new Date() : null,
+			reviewedBy: canAutoApprove ? params.editedBy.userId! : null,
+			reviewedAt: canAutoApprove ? new Date() : null,
 			editedBy: params.editedBy.userId ?? null,
 			anonymousSessionId: params.editedBy.anonymousSessionId ?? null,
 			editComment: params.editComment
@@ -48,30 +52,38 @@ export async function submitCharEdit(params: {
 
 /**
  * Approve a pending edit. Sets the reviewer and timestamp.
+ * Returns true if the edit was approved, false if it was not found or already reviewed.
  */
-export async function approveCharEdit(editId: string, reviewedBy: string): Promise<void> {
-	await db
+export async function approveCharEdit(editId: string, reviewedBy: string): Promise<boolean> {
+	const rows = await db
 		.update(charManual)
 		.set({
 			status: 'approved',
 			reviewedBy,
 			reviewedAt: new Date()
 		})
-		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')));
+		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')))
+		.returning({ id: charManual.id });
+
+	return rows.length > 0;
 }
 
 /**
  * Reject a pending edit. Sets the reviewer and timestamp.
+ * Returns true if the edit was rejected, false if it was not found or already reviewed.
  */
-export async function rejectCharEdit(editId: string, reviewedBy: string): Promise<void> {
-	await db
+export async function rejectCharEdit(editId: string, reviewedBy: string): Promise<boolean> {
+	const rows = await db
 		.update(charManual)
 		.set({
 			status: 'rejected',
 			reviewedBy,
 			reviewedAt: new Date()
 		})
-		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')));
+		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')))
+		.returning({ id: charManual.id });
+
+	return rows.length > 0;
 }
 
 /**
