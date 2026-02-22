@@ -24,3 +24,4 @@ jobs:
           node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
       - run: npx drizzle-kit push --force
       - run: npm run import:users
+      - run: npm run import:permissions
