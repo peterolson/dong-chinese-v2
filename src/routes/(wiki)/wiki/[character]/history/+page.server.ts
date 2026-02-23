@@ -7,11 +7,44 @@ import {
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
+import { db } from '$lib/server/db';
+import { charBase } from '$lib/server/db/dictionary.schema';
+import { eq } from 'drizzle-orm';
+
+/** Pick only the fields that edits can touch (no frequency, shuowen, etc.) */
+function pickEditableFields(row: Record<string, unknown>) {
+	return {
+		gloss: row.gloss ?? null,
+		hint: row.hint ?? null,
+		originalMeaning: row.originalMeaning ?? null,
+		isVerified: row.isVerified ?? null,
+		pinyin: row.pinyin ?? null,
+		components: row.components ?? null,
+		simplifiedVariants: row.simplifiedVariants ?? null,
+		traditionalVariants: row.traditionalVariants ?? null,
+		customSources: row.customSources ?? null,
+		strokeDataSimp: row.strokeDataSimp ?? null,
+		strokeDataTrad: row.strokeDataTrad ?? null,
+		strokeCountSimp: row.strokeCountSimp ?? null,
+		strokeCountTrad: row.strokeCountTrad ?? null,
+		fragmentsSimp: row.fragmentsSimp ?? null,
+		fragmentsTrad: row.fragmentsTrad ?? null,
+		historicalImages: row.historicalImages ?? null,
+		historicalPronunciations: row.historicalPronunciations ?? null
+	};
+}
 
 export const load: PageServerLoad = async ({ params, parent }) => {
 	const char = params.character;
 
-	const edits = await getCharEditHistory(char);
+	const [edits, baseRow] = await Promise.all([
+		getCharEditHistory(char),
+		db
+			.select()
+			.from(charBase)
+			.where(eq(charBase.character, char))
+			.then((rows) => rows[0])
+	]);
 	const { canReview } = await parent();
 
 	// Resolve user names
@@ -32,18 +65,15 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		createdAt: edit.createdAt.toISOString(),
 		reviewedAt: edit.reviewedAt?.toISOString() ?? null,
 		// Include editable fields for diff display
-		gloss: edit.gloss,
-		hint: edit.hint,
-		originalMeaning: edit.originalMeaning,
-		isVerified: edit.isVerified,
-		pinyin: edit.pinyin,
-		components: edit.components,
-		simplifiedVariants: edit.simplifiedVariants,
-		traditionalVariants: edit.traditionalVariants
+		...pickEditableFields(edit)
 	}));
+
+	// Base data from char_base (before any manual edits) — used as baseline for the oldest edit
+	const charBaseData = baseRow ? pickEditableFields(baseRow) : null;
 
 	return {
 		edits: items,
+		charBase: charBaseData,
 		canReview
 	};
 };

@@ -31,7 +31,16 @@ export const load: PageServerLoad = async ({ parent }) => {
 		pinyin: edit.pinyin,
 		components: edit.components,
 		simplifiedVariants: edit.simplifiedVariants,
-		traditionalVariants: edit.traditionalVariants
+		traditionalVariants: edit.traditionalVariants,
+		customSources: edit.customSources,
+		strokeDataSimp: edit.strokeDataSimp,
+		strokeDataTrad: edit.strokeDataTrad,
+		strokeCountSimp: edit.strokeCountSimp,
+		strokeCountTrad: edit.strokeCountTrad,
+		fragmentsSimp: edit.fragmentsSimp,
+		fragmentsTrad: edit.fragmentsTrad,
+		historicalImages: edit.historicalImages,
+		historicalPronunciations: edit.historicalPronunciations
 	}));
 
 	return { items };

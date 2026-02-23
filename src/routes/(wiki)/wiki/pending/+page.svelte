@@ -57,7 +57,7 @@
 
 					{#if expandedId === item.id}
 						<div class="diff-panel">
-							<FieldDiff editData={item} baseData={null} />
+							<FieldDiff editData={item} baseData={null} character={item.character} />
 						</div>
 					{/if}
 

@@ -26,7 +26,8 @@
 	<p class="empty">No edits have been made to this character.</p>
 {:else}
 	<ul class="timeline">
-		{#each data.edits as edit (edit.id)}
+		{#each data.edits as edit, i (edit.id)}
+			{@const baseData = i < data.edits.length - 1 ? data.edits[i + 1] : data.charBase}
 			<li class="timeline-entry">
 				<div class="entry-header">
 					<EditStatusBadge status={edit.status} />
@@ -80,7 +81,7 @@
 
 				{#if expandedId === edit.id}
 					<div class="diff-panel">
-						<FieldDiff editData={edit} baseData={data.character} />
+						<FieldDiff editData={edit} {baseData} character={data.character.character} />
 					</div>
 				{/if}
 			</li>
