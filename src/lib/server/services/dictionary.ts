@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { charView } from '$lib/server/db/dictionary.views';
-import { eq, inArray, sql, asc, desc } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import type { CharacterData, ComponentData, HistoricalPronunciation } from '$lib/types/dictionary';
 
 /**
@@ -118,7 +118,7 @@ export async function searchCharacters(
 				WHEN ${trimmed} = ANY(${charView.pinyin}) THEN 1
 				ELSE 2
 			END`,
-			asc(charView.subtlexRank)
+			sql`${charView.subtlexRank} ASC NULLS LAST`
 		)
 		.limit(limit);
 
@@ -200,12 +200,21 @@ export async function getCharacterList(
 			orderClause = sql`${charView.junDaRank} ASC NULLS LAST`;
 			whereClause = sql`${charView.junDaRank} IS NOT NULL`;
 			break;
-		case 'common-components':
-			// Characters that appear most frequently as components in other characters
-			// Use a subquery counting how many chars reference this character in their components JSONB
-			orderClause = sql`${charView.subtlexRank} ASC NULLS LAST`;
-			whereClause = sql`${charView.components} IS NOT NULL AND jsonb_array_length(${charView.components}) > 0`;
+		case 'common-components': {
+			// Characters that appear most frequently as components in other characters.
+			// Uses a subquery counting how many chars reference this character in their components JSONB.
+			const componentCountSubquery = sql`(
+				SELECT count(*)::int FROM ${charView} AS other
+				WHERE other.components IS NOT NULL
+				AND EXISTS (
+					SELECT 1 FROM jsonb_array_elements(other.components) AS comp
+					WHERE comp->>'character' = ${charView}.character
+				)
+			)`;
+			orderClause = sql`${componentCountSubquery} DESC`;
+			whereClause = sql`${componentCountSubquery} > 0`;
 			break;
+		}
 	}
 
 	const [items, countResult] = await Promise.all([

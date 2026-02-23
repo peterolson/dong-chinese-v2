@@ -5,7 +5,7 @@ import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { canReview, user } = await parent();
+	const { canReview } = await parent();
 
 	if (!canReview) {
 		redirect(303, '/wiki');

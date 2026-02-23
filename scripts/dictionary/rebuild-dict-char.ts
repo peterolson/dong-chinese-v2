@@ -16,7 +16,7 @@
  */
 
 import postgres, { type Row, type PendingQuery } from 'postgres';
-import { CHAR_VIEW_SQL } from './char-view-sql.js';
+import { CHAR_VIEW_SQL } from '../../src/lib/server/db/char-view-sql.js';
 
 type Tx = postgres.TransactionSql & {
 	<T extends readonly (object | undefined)[] = Row[]>(

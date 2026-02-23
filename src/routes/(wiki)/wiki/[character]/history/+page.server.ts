@@ -94,6 +94,12 @@ export const actions: Actions = {
 
 		const targetEdit = await getCharManualById(editId);
 		if (!targetEdit) return fail(404, { error: 'Edit not found' });
+		if (targetEdit.character !== params.character) {
+			return fail(400, { error: 'Edit does not belong to this character' });
+		}
+		if (targetEdit.status !== 'approved') {
+			return fail(400, { error: 'Can only rollback to approved edits' });
+		}
 
 		// Copy data columns from the target edit
 		const {

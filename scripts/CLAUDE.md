@@ -39,7 +39,6 @@ Every import script follows the same pattern:
 | File                                   | Purpose                                                                                              |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `dictionary/wiktionary-lua-modules.ts` | Fetches + parses Wiktionary Lua tables. Handles pagination and 429 rate-limit backoff (500ms delay). |
-| `dictionary/char-view-sql.ts`          | Shared `CHAR_VIEW_SQL` constant used by both `rebuild-dict-char.ts` and `create-char-view.ts`.       |
 
 ## User Migration
 

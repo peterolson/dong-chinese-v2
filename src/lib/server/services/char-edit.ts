@@ -150,16 +150,29 @@ export async function getCharManualById(editId: string): Promise<CharManualRow |
 
 /**
  * Get recent edits across all characters, paginated. Includes all statuses.
+ * Only selects columns needed for the recent-changes listing (no large JSONB data).
  */
 export async function getRecentEdits({
 	limit = 50,
 	offset = 0
-}: { limit?: number; offset?: number } = {}): Promise<{
-	edits: CharManualRow[];
-	total: number;
-}> {
+}: { limit?: number; offset?: number } = {}) {
 	const [edits, countResult] = await Promise.all([
-		db.select().from(charManual).orderBy(desc(charManual.createdAt)).limit(limit).offset(offset),
+		db
+			.select({
+				id: charManual.id,
+				character: charManual.character,
+				status: charManual.status,
+				editComment: charManual.editComment,
+				editedBy: charManual.editedBy,
+				reviewedBy: charManual.reviewedBy,
+				reviewComment: charManual.reviewComment,
+				createdAt: charManual.createdAt,
+				reviewedAt: charManual.reviewedAt
+			})
+			.from(charManual)
+			.orderBy(desc(charManual.createdAt))
+			.limit(limit)
+			.offset(offset),
 		db
 			.select({ count: sql<number>`count(*)::int` })
 			.from(charManual)

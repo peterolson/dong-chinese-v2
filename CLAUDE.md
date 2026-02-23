@@ -79,7 +79,8 @@ src/
 │   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings, permissions)
 │   │   │   ├── stage.schema.ts    # Stage schema (unihan_raw, cedict_raw, sync_metadata)
 │   │   │   ├── dictionary.schema.ts # Dictionary schema (char_base, char_manual)
-│   │   │   ├── dictionary.views.ts # Drizzle view declarations (charView — .existing(), not managed by drizzle-kit)
+│   │   │   ├── dictionary.views.ts # Drizzle view declarations (charView — .as() managed by drizzle-kit)
+│   │   │   ├── char-view-sql.ts   # Shared char view SQL (single source of truth for views.ts + scripts)
 │   │   │   ├── auth.schema.ts     # Auto-generated Better Auth schema
 │   │   │   └── index.ts           # DB connection + exports
 │   │   ├── services/
@@ -131,8 +132,7 @@ scripts/
     ├── import-jun-da-char-freq.ts # Character frequency corpus
     ├── import-subtlex-ch.ts       # Subtitle frequency corpus
     ├── rebuild-dict-char.ts       # Rebuild denormalized char cache (re-creates char view)
-    ├── create-char-view.ts        # Create/replace dictionary.char view
-    └── char-view-sql.ts           # Shared SQL for the char view (used by rebuild + create scripts)
+    └── create-char-view.ts        # Create/replace dictionary.char view
 .storybook/
 ├── main.ts                        # Config with viteFinal aliases for $app/paths and $env/dynamic/public
 ├── preview.ts                     # Preview config

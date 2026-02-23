@@ -11,7 +11,7 @@
  */
 
 import postgres from 'postgres';
-import { CHAR_VIEW_SQL } from './char-view-sql.js';
+import { CHAR_VIEW_SQL } from '../../src/lib/server/db/char-view-sql.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 

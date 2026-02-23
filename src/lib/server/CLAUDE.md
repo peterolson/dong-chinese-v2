@@ -34,7 +34,7 @@ Denormalized data serving app queries:
 
 - `char_base` — Base character table, materialized from all stage sources by `scripts/dictionary/rebuild-dict-char.ts`
 - `char_manual` — Append-only edit log. Full-row snapshots with `status` (pending/approved/rejected), reviewer info, and audit columns. Anyone can suggest edits; `wikiEdit` users get auto-approved and can approve/reject others.
-- `char` (view) — Overlays the latest approved `char_manual` edit on top of `char_base` via COALESCE. Declared in `dictionary.views.ts` with `.existing()` (not managed by drizzle-kit). Created by `scripts/dictionary/create-char-view.ts`.
+- `char` (view) — Overlays the latest approved `char_manual` edit on top of `char_base` via COALESCE. SQL defined once in `char-view-sql.ts`, used by `dictionary.views.ts` (drizzle-managed `.as()`), `rebuild-dict-char.ts` (atomic swap), and `create-char-view.ts` (standalone creation).
 
 ### `auth.schema.ts`
 
