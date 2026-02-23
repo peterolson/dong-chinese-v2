@@ -7,6 +7,7 @@ export const userSettings = pgTable('user_settings', {
 		.references(() => user.id, { onDelete: 'cascade' }),
 	theme: text('theme'),
 	characterSet: text('character_set'),
+	phoneticScript: text('phonetic_script'),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

@@ -1,7 +1,12 @@
 import type { Cookies } from '@sveltejs/kit';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { SETTINGS_COOKIE, SETTINGS_DEFAULTS, type UserSettings } from '$lib/settings';
+import {
+	SETTINGS_COOKIE,
+	SETTINGS_DEFAULTS,
+	PHONETIC_SCRIPT_VALUES,
+	type UserSettings
+} from '$lib/settings';
 import { userSettings } from '$lib/server/db/schema';
 
 const MAX_AGE = 34560000; // 400 days
@@ -59,6 +64,12 @@ export async function readUserSettings(
 	if (row.characterSet === 'simplified' || row.characterSet === 'traditional') {
 		result.characterSet = row.characterSet;
 	}
+	if (
+		row.phoneticScript &&
+		PHONETIC_SCRIPT_VALUES.includes(row.phoneticScript as (typeof PHONETIC_SCRIPT_VALUES)[number])
+	) {
+		result.phoneticScript = row.phoneticScript as UserSettings['phoneticScript'];
+	}
 	return result;
 }
 
@@ -70,18 +81,21 @@ export async function writeUserSettings(
 ): Promise<void> {
 	const theme = partial.theme ?? null;
 	const characterSet = partial.characterSet ?? null;
+	const phoneticScript = partial.phoneticScript ?? null;
 	await db
 		.insert(userSettings)
 		.values({
 			userId,
 			theme,
-			characterSet
+			characterSet,
+			phoneticScript
 		})
 		.onConflictDoUpdate({
 			target: userSettings.userId,
 			set: {
 				theme,
 				characterSet,
+				phoneticScript,
 				updatedAt: new Date()
 			}
 		});

@@ -8,4 +8,5 @@
 <CharacterView
 	character={data.character}
 	characterSet={data.settings.characterSet ?? 'simplified'}
+	phoneticScript={data.settings.phoneticScript}
 />

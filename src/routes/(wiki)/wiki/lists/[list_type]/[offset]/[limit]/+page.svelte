@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatPinyinList } from '$lib/orthography';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -67,7 +68,7 @@
 							<span class="variants" lang="zh-Hant">({item.traditionalVariants.join(', ')})</span>
 						{/if}
 					</td>
-					<td>{item.pinyin?.join(', ') ?? ''}</td>
+					<td>{formatPinyinList(item.pinyin, data.settings.phoneticScript)}</td>
 					<td>{item.gloss ?? ''}</td>
 					{#if data.listType === 'subtlex-rank' || data.listType === 'subtlex-context-diversity'}
 						<td class="num-col">{item.subtlexPerMillion?.toFixed(1) ?? '—'}</td>

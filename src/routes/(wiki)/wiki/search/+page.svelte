@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatPinyinList } from '$lib/orthography';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -42,7 +43,7 @@
 							<td class="char-cell">
 								<a href="/wiki/{result.character}">{result.character}</a>
 							</td>
-							<td>{result.pinyin?.join(', ') ?? ''}</td>
+							<td>{formatPinyinList(result.pinyin, data.settings.phoneticScript)}</td>
 							<td>{result.gloss ?? ''}</td>
 						</tr>
 					{/each}

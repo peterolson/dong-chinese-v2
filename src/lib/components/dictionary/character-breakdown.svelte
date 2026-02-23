@@ -8,6 +8,8 @@
 		CharacterData,
 		HistoricalPronunciation
 	} from '$lib/types/dictionary';
+	import type { PhoneticScript } from '$lib/orthography';
+	import { formatPinyinList } from '$lib/orthography';
 	import { getComponentColor, getComponentTitle } from './component-colors';
 	import CharacterGlyph from './character-glyph.svelte';
 	import CjkLinkedText from './cjk-linked-text.svelte';
@@ -25,6 +27,7 @@
 		fragments: number[][] | null;
 		historicalPronunciations: HistoricalPronunciation[] | null;
 		characterSet?: 'simplified' | 'traditional';
+		phoneticScript?: PhoneticScript | null;
 	}
 
 	let {
@@ -35,7 +38,8 @@
 		strokes,
 		fragments,
 		historicalPronunciations,
-		characterSet
+		characterSet,
+		phoneticScript = null
 	}: Props = $props();
 
 	const charLinkBase = getCharLinkBase();
@@ -133,7 +137,9 @@
 						{#if comp.pinyin?.length || comp.gloss}
 							<div class="component-meta">
 								{#if comp.pinyin && comp.pinyin.length > 0}
-									<span class="component-pinyin">{comp.pinyin.join(', ')}</span>
+									<span class="component-pinyin"
+										>{formatPinyinList(comp.pinyin, phoneticScript)}</span
+									>
 								{/if}
 								{#if comp.gloss}
 									<span class="component-gloss">{comp.gloss}</span>

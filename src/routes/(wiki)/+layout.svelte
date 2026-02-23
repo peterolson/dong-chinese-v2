@@ -32,7 +32,7 @@
 	<label for="sidebar-toggle" class="sidebar-backdrop" aria-hidden="true"></label>
 
 	<div class="sidebar-wrapper">
-		<WikiSidebar canReview={data.canReview} />
+		<WikiSidebar canReview={data.canReview} settings={data.settings} />
 	</div>
 
 	<main
