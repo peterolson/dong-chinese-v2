@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { RouteId } from '$app/types';
-	import { House, BookOpen, BookText, Play, Settings } from 'lucide-svelte';
+	import { BookOpen, BookText, Play, Settings } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
@@ -9,12 +9,11 @@
 	type NavItem<R extends RouteId = RouteId> = {
 		route: R;
 		label: string;
-		icon: typeof House;
+		icon: typeof BookOpen;
 	};
 
 	const mainNav = [
-		{ route: '/', label: 'Home', icon: House },
-		{ route: '/(app)/lessons', label: 'Lessons', icon: BookOpen },
+		{ route: '/(app)/learn', label: 'Learn', icon: BookOpen },
 		{ route: '/(app)/dictionary', label: 'Dictionary', icon: BookText },
 		{ route: '/(app)/media', label: 'Media', icon: Play }
 	] as const satisfies readonly NavItem[];
