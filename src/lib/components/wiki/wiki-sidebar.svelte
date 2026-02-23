@@ -6,7 +6,7 @@
 	let { canReview = false }: { canReview?: boolean } = $props();
 
 	const mainNav = [
-		{ href: '/wiki', label: 'Wiki Home', icon: House },
+		{ href: '/wiki', label: 'Home', icon: House },
 		{ href: '/wiki/search', label: 'Search', icon: Search },
 		{ href: '/wiki/lists', label: 'Lists', icon: List },
 		{ href: '/wiki/recent-changes', label: 'Recent Changes', icon: Clock }
@@ -92,14 +92,15 @@
 
 	.nav-link:hover {
 		background: var(--surface);
-		color: var(--primary-soft);
+		color: var(--secondary-soft);
 		text-decoration: none;
 	}
 
 	.nav-link[aria-current='page'] {
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
-		color: var(--primary-soft);
+		background: color-mix(in srgb, var(--secondary) 8%, transparent);
+		color: var(--secondary-soft);
 		font-weight: 600;
+		border-right: 3px solid var(--secondary-soft);
 	}
 
 	.nav-link :global(.nav-icon) {
@@ -110,7 +111,7 @@
 
 	.nav-link:hover :global(.nav-icon),
 	.nav-link[aria-current='page'] :global(.nav-icon) {
-		color: var(--primary-soft);
+		color: var(--secondary-soft);
 	}
 
 	.nav-divider {

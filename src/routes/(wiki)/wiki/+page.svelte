@@ -2,15 +2,15 @@
 </script>
 
 <svelte:head>
-	<title>Wiki — Dong Chinese</title>
+	<title>Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="wiki-home">
-	<h1>Dong Chinese Wiki</h1>
+	<h1>Chinese Character Wiki</h1>
 
 	<p>
-		The Dong Chinese character wiki is a community-maintained database of Chinese character
-		information. It powers the character breakdowns and explanations throughout the site.
+		The Chinese Character Wiki is a community-maintained database of Chinese character information.
+		It powers the character breakdowns and explanations throughout the site.
 	</p>
 
 	<section class="wiki-section">

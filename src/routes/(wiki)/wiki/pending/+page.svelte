@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Pending Edits — Dong Chinese Wiki</title>
+	<title>Pending Edits — Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="pending-page">
@@ -205,7 +205,7 @@
 	}
 
 	.reject-input:focus {
-		outline: 2px solid var(--primary-soft);
+		outline: 2px solid var(--secondary-soft);
 		outline-offset: -1px;
 	}
 

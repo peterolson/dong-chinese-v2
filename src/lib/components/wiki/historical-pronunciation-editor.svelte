@@ -102,7 +102,7 @@
 
 	.field-input:focus,
 	.field-select:focus {
-		outline: 2px solid var(--primary-soft);
+		outline: 2px solid var(--secondary-soft);
 		outline-offset: -1px;
 	}
 

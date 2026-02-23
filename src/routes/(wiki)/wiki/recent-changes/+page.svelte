@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Recent Changes — Dong Chinese Wiki</title>
+	<title>Recent Changes — Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="recent-changes">

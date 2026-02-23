@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.q ? `"${data.q}" — ` : ''}Search — Dong Chinese Wiki</title>
+	<title>{data.q ? `"${data.q}" — ` : ''}Search — Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="wiki-search">
@@ -78,7 +78,7 @@
 	}
 
 	.search-input:focus {
-		outline: 2px solid var(--primary-soft);
+		outline: 2px solid var(--secondary-soft);
 		outline-offset: -1px;
 	}
 
@@ -86,9 +86,9 @@
 		padding: 0.5rem 1rem;
 		font-size: 1rem;
 		font-weight: 500;
-		border: 1px solid var(--primary);
+		border: 1px solid var(--secondary);
 		border-radius: var(--radius);
-		background: var(--primary);
+		background: var(--secondary);
 		color: var(--primary-foreground);
 	}
 

@@ -23,11 +23,11 @@
 </script>
 
 <svelte:head>
-	<title>{char} — Dong Chinese Wiki</title>
+	<title>{char} — Chinese Character Wiki</title>
 </svelte:head>
 
 <div class="wiki-character">
-	<TabBar {tabs} />
+	<TabBar {tabs} variant="secondary" />
 	{@render children()}
 </div>
 

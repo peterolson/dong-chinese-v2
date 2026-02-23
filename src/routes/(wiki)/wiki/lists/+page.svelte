@@ -2,7 +2,7 @@
 </script>
 
 <svelte:head>
-	<title>Character Lists — Dong Chinese Wiki</title>
+	<title>Character Lists — Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="lists-home">
@@ -72,7 +72,7 @@
 	}
 
 	.list-card:hover {
-		border-color: var(--primary-soft);
+		border-color: var(--secondary-soft);
 		box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 		text-decoration: none;
 	}
@@ -80,7 +80,7 @@
 	.list-card h2 {
 		font-size: 1.125rem;
 		margin-bottom: 0.375rem;
-		color: var(--primary-soft);
+		color: var(--secondary-soft);
 	}
 
 	.list-card p {

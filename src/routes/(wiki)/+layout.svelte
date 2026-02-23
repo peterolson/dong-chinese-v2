@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import SiteHeader from '$lib/components/layout/site-header.svelte';
+	import WikiHeader from '$lib/components/wiki/wiki-header.svelte';
 	import WikiSidebar from '$lib/components/wiki/wiki-sidebar.svelte';
 	import { applyThemeToDOM } from '$lib/settings-client';
 	import type { LayoutData } from './$types';
@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Wiki — Dong Chinese</title>
+	<title>Chinese Character Wiki</title>
 </svelte:head>
 
 <input
@@ -26,7 +26,7 @@
 	tabindex="-1"
 />
 
-<SiteHeader user={data.user} />
+<WikiHeader user={data.user} />
 
 <div class="app-body">
 	<label for="sidebar-toggle" class="sidebar-backdrop" aria-hidden="true"></label>

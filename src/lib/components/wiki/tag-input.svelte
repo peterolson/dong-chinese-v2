@@ -173,7 +173,7 @@
 	}
 
 	.tag-text-input:focus {
-		outline: 2px solid var(--primary-soft);
+		outline: 2px solid var(--secondary-soft);
 		outline-offset: -1px;
 	}
 </style>

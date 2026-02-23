@@ -6,15 +6,17 @@
 	type AnyComponent = typeof SvelteComponent<any>;
 
 	let {
-		tabs
+		tabs,
+		variant = 'primary'
 	}: {
 		tabs: { label: string; href: string; badge?: number | null; icon?: AnyComponent }[];
+		variant?: 'primary' | 'secondary' | 'tertiary';
 	} = $props();
 
 	const pathname = $derived(decodeURIComponent(page.url.pathname));
 </script>
 
-<nav class="tab-bar" aria-label="Page tabs">
+<nav class="tab-bar {variant}" aria-label="Page tabs">
 	{#each tabs as tab (tab.label)}
 		{@const active = pathname === tab.href}
 		<a href={tab.href} class="tab-link" class:active aria-current={active ? 'page' : undefined}>
@@ -58,9 +60,22 @@
 	}
 
 	.tab-link.active {
-		color: var(--primary);
 		font-weight: 600;
+	}
+
+	.primary .tab-link.active {
+		color: var(--primary);
 		border-bottom-color: var(--primary);
+	}
+
+	.secondary .tab-link.active {
+		color: var(--secondary-soft);
+		border-bottom-color: var(--secondary-soft);
+	}
+
+	.tertiary .tab-link.active {
+		color: var(--tertiary);
+		border-bottom-color: var(--tertiary);
 	}
 
 	.badge {

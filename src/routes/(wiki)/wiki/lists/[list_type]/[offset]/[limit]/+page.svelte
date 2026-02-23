@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.listLabel} ({startRank}–{endRank}) — Dong Chinese Wiki</title>
+	<title>{data.listLabel} ({startRank}–{endRank}) — Chinese Character Wiki</title>
 </svelte:head>
 
 <article class="list-page">
