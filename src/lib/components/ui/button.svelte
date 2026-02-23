@@ -2,16 +2,18 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 
-	type Variant = 'primary' | 'secondary' | 'tertiary' | 'outline';
+	type Variant = 'primary' | 'secondary' | 'tertiary' | 'outline' | 'dashed' | 'ghost';
+	type Size = 'default' | 'sm' | 'icon';
 
 	let {
 		variant = 'secondary',
+		size = 'default',
 		children,
 		...rest
-	}: HTMLButtonAttributes & { variant?: Variant; children: Snippet } = $props();
+	}: HTMLButtonAttributes & { variant?: Variant; size?: Size; children: Snippet } = $props();
 </script>
 
-<button class="btn {variant}" {...rest}>
+<button class="btn {variant} size-{size}" {...rest}>
 	{@render children()}
 </button>
 
@@ -43,6 +45,21 @@
 		filter: none;
 	}
 
+	/* Sizes */
+
+	.size-sm {
+		padding: 0.375rem 0.75rem;
+		font-size: 0.875rem;
+	}
+
+	.size-icon {
+		padding: 0.25rem;
+		font-size: 1.25rem;
+		line-height: 1;
+	}
+
+	/* Variants */
+
 	.primary {
 		background: var(--primary);
 		color: var(--primary-foreground);
@@ -66,6 +83,29 @@
 
 	.outline:hover {
 		background: var(--surface);
+		filter: none;
+	}
+
+	.dashed {
+		background: transparent;
+		color: var(--secondary-soft);
+		border: 1px dashed var(--border);
+		font-weight: 500;
+	}
+
+	.dashed:hover {
+		background: var(--surface);
+		filter: none;
+	}
+
+	.ghost {
+		background: none;
+		color: var(--muted-foreground);
+		filter: none;
+	}
+
+	.ghost:hover {
+		color: var(--error);
 		filter: none;
 	}
 </style>

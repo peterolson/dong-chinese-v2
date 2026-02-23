@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import type { CharacterData } from '$lib/types/dictionary';
+	import { getCharLinkBase } from './char-link-context';
 	import StrokeAnimation from './stroke-animation.svelte';
 	import CharacterBreakdown from './character-breakdown.svelte';
 	import CharacterFrequency from './character-frequency.svelte';
@@ -49,6 +49,8 @@
 			hasCustomSources: (character.customSources?.length ?? 0) > 0
 		})
 	);
+
+	const charLinkBase = getCharLinkBase();
 
 	let audioAttribution = $derived(
 		character.pinyin && character.pinyin.length > 0 ? ('allset' as const) : null
@@ -138,7 +140,7 @@
 							<dt>Simplified</dt>
 							<dd>
 								{#each simplifiedVariants as v (v)}
-									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+									<a href="{charLinkBase}/{v}">{v}</a>
 								{/each}
 							</dd>
 						</div>
@@ -148,7 +150,7 @@
 							<dt>Traditional</dt>
 							<dd>
 								{#each traditionalVariants as v (v)}
-									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+									<a href="{charLinkBase}/{v}">{v}</a>
 								{/each}
 							</dd>
 						</div>

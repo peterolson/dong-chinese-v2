@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import type { HistoricalPronunciation } from '$lib/types/dictionary';
 	import Alert from '$lib/components/ui/alert.svelte';
+	import { getCharLinkBase } from './char-link-context';
 
 	interface Props {
 		character: string;
@@ -11,6 +11,8 @@
 	}
 
 	let { character, compCharacter, charPronunciations, compPronunciations }: Props = $props();
+
+	const charLinkBase = getCharLinkBase();
 
 	/** Strip parenthesized text and diacritics for fairer comparison */
 	function normalize(s: string): string {
@@ -96,20 +98,18 @@
 
 <Alert variant="warning">
 	<span>
-		<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a> and
-		<a href={resolve('/(app)/dictionary/[entry]', { entry: compCharacter })}>{compCharacter}</a>
+		<a href={`${charLinkBase}/${character}`}>{character}</a> and
+		<a href={`${charLinkBase}/${compCharacter}`}>{compCharacter}</a>
 		don't sound similar in modern Mandarin due to historical phonetic changes. They were more similar
 		in {comparison ? comparison.field : 'older Chinese'}.
 		{#if comparison}
 			<span class="pron-comparison">
 				<br /><span class="pron-pair"
-					><a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a>
+					><a href={`${charLinkBase}/${character}`}>{character}</a>
 					<span class="pron-value">{comparison.charPron}</span></span
 				>
 				<br /><span class="pron-pair"
-					><a href={resolve('/(app)/dictionary/[entry]', { entry: compCharacter })}
-						>{compCharacter}</a
-					>
+					><a href={`${charLinkBase}/${compCharacter}`}>{compCharacter}</a>
 					<span class="pron-value">{comparison.compPron}</span></span
 				>
 			</span>

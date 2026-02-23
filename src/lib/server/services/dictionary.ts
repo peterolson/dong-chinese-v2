@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { charView } from '$lib/server/db/dictionary.views';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql, asc, desc } from 'drizzle-orm';
 import type { CharacterData, ComponentData, HistoricalPronunciation } from '$lib/types/dictionary';
 
 /**
@@ -78,5 +78,157 @@ export async function getCharacterData(char: string): Promise<CharacterData | nu
 		shuowenPinyin: row.shuowenPinyin,
 		pinyinFrequencies: row.pinyinFrequencies as CharacterData['pinyinFrequencies'],
 		pinyin: row.pinyin
+	};
+}
+
+export interface CharacterSearchResult {
+	character: string;
+	pinyin: string[] | null;
+	gloss: string | null;
+}
+
+/**
+ * Search characters by character, pinyin, or gloss.
+ * Returns exact character matches first, then pinyin matches, then gloss matches.
+ */
+export async function searchCharacters(
+	query: string,
+	limit = 50
+): Promise<CharacterSearchResult[]> {
+	if (!query.trim()) return [];
+
+	const trimmed = query.trim();
+
+	const rows = await db
+		.select({
+			character: charView.character,
+			pinyin: charView.pinyin,
+			gloss: charView.gloss
+		})
+		.from(charView)
+		.where(
+			sql`${charView.character} = ${trimmed}
+				OR ${trimmed} = ANY(${charView.pinyin})
+				OR ${charView.gloss} ILIKE ${'%' + trimmed + '%'}`
+		)
+		.orderBy(
+			// Exact character match first, then pinyin match, then gloss match
+			sql`CASE
+				WHEN ${charView.character} = ${trimmed} THEN 0
+				WHEN ${trimmed} = ANY(${charView.pinyin}) THEN 1
+				ELSE 2
+			END`,
+			asc(charView.subtlexRank)
+		)
+		.limit(limit);
+
+	return rows;
+}
+
+export const LIST_TYPES = {
+	'subtlex-rank': {
+		label: 'Movie Frequency',
+		orderBy: 'subtlex_rank ASC NULLS LAST',
+		legacyCamelCase: 'movieFrequency'
+	},
+	'subtlex-context-diversity': {
+		label: 'Context Diversity',
+		orderBy: 'subtlex_context_diversity DESC NULLS LAST',
+		legacyCamelCase: 'contextDiversity'
+	},
+	'jun-da-rank': {
+		label: 'Book Frequency',
+		orderBy: 'jun_da_rank ASC NULLS LAST',
+		legacyCamelCase: 'bookCount'
+	},
+	'common-components': {
+		label: 'Most Common Components',
+		orderBy: null, // custom query
+		legacyCamelCase: null
+	}
+} as const;
+
+export type ListType = keyof typeof LIST_TYPES;
+
+export interface CharacterListItem {
+	character: string;
+	pinyin: string[] | null;
+	gloss: string | null;
+	subtlexRank: number | null;
+	subtlexPerMillion: number | null;
+	subtlexContextDiversity: number | null;
+	junDaRank: number | null;
+	junDaPerMillion: number | null;
+	simplifiedVariants: string[] | null;
+	traditionalVariants: string[] | null;
+}
+
+/**
+ * Get a frequency-ordered character list with pagination.
+ */
+export async function getCharacterList(
+	listType: ListType,
+	offset: number,
+	limit: number
+): Promise<{ items: CharacterListItem[]; total: number }> {
+	const selectCols = {
+		character: charView.character,
+		pinyin: charView.pinyin,
+		gloss: charView.gloss,
+		subtlexRank: charView.subtlexRank,
+		subtlexPerMillion: charView.subtlexPerMillion,
+		subtlexContextDiversity: charView.subtlexContextDiversity,
+		junDaRank: charView.junDaRank,
+		junDaPerMillion: charView.junDaPerMillion,
+		simplifiedVariants: charView.simplifiedVariants,
+		traditionalVariants: charView.traditionalVariants
+	};
+
+	let orderClause: ReturnType<typeof sql>;
+	let whereClause: ReturnType<typeof sql> | undefined;
+
+	switch (listType) {
+		case 'subtlex-rank':
+			orderClause = sql`${charView.subtlexRank} ASC NULLS LAST`;
+			whereClause = sql`${charView.subtlexRank} IS NOT NULL`;
+			break;
+		case 'subtlex-context-diversity':
+			orderClause = sql`${charView.subtlexContextDiversity} DESC NULLS LAST`;
+			whereClause = sql`${charView.subtlexContextDiversity} IS NOT NULL`;
+			break;
+		case 'jun-da-rank':
+			orderClause = sql`${charView.junDaRank} ASC NULLS LAST`;
+			whereClause = sql`${charView.junDaRank} IS NOT NULL`;
+			break;
+		case 'common-components':
+			// Characters that appear most frequently as components in other characters
+			// Use a subquery counting how many chars reference this character in their components JSONB
+			orderClause = sql`${charView.subtlexRank} ASC NULLS LAST`;
+			whereClause = sql`${charView.components} IS NOT NULL AND jsonb_array_length(${charView.components}) > 0`;
+			break;
+	}
+
+	const [items, countResult] = await Promise.all([
+		db
+			.select(selectCols)
+			.from(charView)
+			.where(whereClause)
+			.orderBy(orderClause)
+			.offset(offset)
+			.limit(limit),
+		db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(charView)
+			.where(whereClause)
+			.then((rows) => rows[0])
+	]);
+
+	return {
+		items: items.map((row) => ({
+			...row,
+			simplifiedVariants: row.simplifiedVariants as string[] | null,
+			traditionalVariants: row.traditionalVariants as string[] | null
+		})),
+		total: countResult.count
 	};
 }

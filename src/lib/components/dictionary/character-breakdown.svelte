@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { getCharLinkBase } from './char-link-context';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type {
 		ComponentData,
@@ -36,6 +37,8 @@
 		historicalPronunciations,
 		characterSet
 	}: Props = $props();
+
+	const charLinkBase = getCharLinkBase();
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -108,10 +111,7 @@
 					{/if}
 					<div class="component-details">
 						<div class="component-header">
-							<a
-								href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-								class="component-char">{comp.character}</a
-							>
+							<a href="{charLinkBase}/{comp.character}" class="component-char">{comp.character}</a>
 							{#if comp.type && comp.type.length > 0}
 								<span class="component-type">
 									{#each comp.type as t (t)}
@@ -145,14 +145,11 @@
 						{/if}
 						{#if comp.isFromOriginalMeaning && originalMeaning}
 							<Alert variant="info">
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-									>{comp.character}</a
-								>
+								<a href="{charLinkBase}/{comp.character}">{comp.character}</a>
 								hints at the original meaning of
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a
-								>, "{originalMeaning}", which is no longer the most common meaning of
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a> in
-								modern Mandarin.
+								<a href="{charLinkBase}/{character}">{character}</a>, "{originalMeaning}", which is
+								no longer the most common meaning of
+								<a href="{charLinkBase}/{character}">{character}</a> in modern Mandarin.
 							</Alert>
 						{/if}
 						{#if comp.isOldPronunciation}
@@ -166,9 +163,8 @@
 						{#if comp.isGlyphChanged}
 							<Alert variant="info">
 								Due to historical stylistic changes, this component is less similar to
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-									>{comp.character}</a
-								> than it was in ancient scripts.
+								<a href="{charLinkBase}/{comp.character}">{comp.character}</a>
+								than it was in ancient scripts.
 							</Alert>
 						{/if}
 					</div>

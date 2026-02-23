@@ -203,7 +203,7 @@ Import script at `scripts/import-meteor-users.ts` (`npm run import:users`). Migr
 - Use named exports, not default exports (except where SvelteKit requires default exports)
 - Error handling: use explicit error types, not thrown strings. Prefer Result pattern where practical.
 - SQL: Drizzle's query builder for simple queries, `sql` template tag for complex ones. No raw string concatenation.
-- Components: one component per file, props typed with TypeScript interfaces
+- Components: one component per file, props typed with TypeScript interfaces. Always use existing `ui/` primitives (`Button`, `Alert`, `Modal`, etc.) instead of writing bespoke HTML+CSS. If a needed variant doesn't exist, extend the shared component.
 - File naming: `kebab-case` for files, `PascalCase` for components
 - CSS: vanilla CSS with custom properties, dark mode via CSS custom properties (`--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground`, etc.)
 

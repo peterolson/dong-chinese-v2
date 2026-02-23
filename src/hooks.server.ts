@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 import { building } from '$app/environment';
@@ -12,6 +13,42 @@ import {
 } from '$lib/server/services/anonymous-session';
 import { SETTINGS_COOKIE } from '$lib/settings';
 import type { UserSettings } from '$lib/settings';
+
+/**
+ * Convert camelCase path segments to kebab-case for /wiki/ URLs.
+ * Legacy dong-chinese.com used camelCase; we use kebab-case.
+ * Returns null if no conversion is needed.
+ */
+function camelToKebab(segment: string): string {
+	// Only match uppercase letters preceded by a lowercase letter (actual camelCase).
+	// This avoids mangling percent-encoded bytes like %E6 in Chinese character URLs.
+	return segment.replace(/(?<=[a-z])[A-Z]/g, (match) => '-' + match.toLowerCase());
+}
+
+const handleWikiRedirect: Handle = async ({ event, resolve }) => {
+	const { pathname } = event.url;
+
+	if (pathname.startsWith('/wiki/')) {
+		const segments = pathname.split('/');
+		let changed = false;
+
+		for (let i = 0; i < segments.length; i++) {
+			const converted = camelToKebab(segments[i]);
+			if (converted !== segments[i]) {
+				segments[i] = converted;
+				changed = true;
+			}
+		}
+
+		if (changed) {
+			const newPath = segments.join('/');
+			const search = event.url.search;
+			redirect(301, newPath + search);
+		}
+	}
+
+	return resolve(event);
+};
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
@@ -95,5 +132,11 @@ const handleSettings: Handle = async ({ event, resolve }) => {
 	});
 };
 
-// Better Auth runs first (sets locals.user), then anonymous session, then settings
-export const handle: Handle = sequence(handleBetterAuth, handleAnonymousSession, handleSettings);
+// Wiki redirect first (301 camelCase→kebab-case), then Better Auth (sets locals.user),
+// then anonymous session, then settings
+export const handle: Handle = sequence(
+	handleWikiRedirect,
+	handleBetterAuth,
+	handleAnonymousSession,
+	handleSettings
+);

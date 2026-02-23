@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import { getCharLinkBase } from './char-link-context';
 
 	interface Props {
 		text: string;
 	}
 
 	let { text }: Props = $props();
+
+	const charLinkBase = getCharLinkBase();
 
 	const CJK_RE = /(\p{Unified_Ideograph}+)/gu;
 
@@ -26,7 +28,7 @@
 
 {#each segments(text) as seg, i (i)}{#if seg.cjk}<a
 			class="cjk-link"
-			href={resolve('/(app)/dictionary/[entry]', { entry: seg.text })}>{seg.text}</a
+			href="{charLinkBase}/{seg.text}">{seg.text}</a
 		>{:else}{seg.text}{/if}{/each}
 
 <style>

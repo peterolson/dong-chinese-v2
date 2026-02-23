@@ -171,7 +171,7 @@ describe('rejectCharEdit', () => {
 		});
 
 		const reviewerId = await createTestUser('reviewer-3');
-		const rejected = await rejectCharEdit(result.id, reviewerId);
+		const rejected = await rejectCharEdit(result.id, reviewerId, 'Rejected');
 		expect(rejected).toBe(true);
 
 		const rows = await db.select().from(charManual).where(eq(charManual.id, result.id));
@@ -188,8 +188,8 @@ describe('rejectCharEdit', () => {
 		});
 
 		const reviewerId = await createTestUser('reviewer-4');
-		await rejectCharEdit(result.id, reviewerId);
-		const rejected = await rejectCharEdit(result.id, reviewerId);
+		await rejectCharEdit(result.id, reviewerId, 'Rejected');
+		const rejected = await rejectCharEdit(result.id, reviewerId, 'Rejected');
 		expect(rejected).toBe(false);
 	});
 });

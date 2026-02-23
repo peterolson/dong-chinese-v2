@@ -6,7 +6,8 @@ export default defineConfig({
 	schema: [
 		'./src/lib/server/db/schema.ts',
 		'./src/lib/server/db/stage.schema.ts',
-		'./src/lib/server/db/dictionary.schema.ts'
+		'./src/lib/server/db/dictionary.schema.ts',
+		'./src/lib/server/db/dictionary.views.ts'
 	],
 	dialect: 'postgresql',
 	dbCredentials: { url: process.env.DATABASE_URL },

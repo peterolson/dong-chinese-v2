@@ -128,6 +128,7 @@ export const charManual = dictionary.table(
 		status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
 		reviewedBy: text('reviewed_by'), // user.id of reviewer; no FK so edits survive user deletion
 		reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+		reviewComment: text('review_comment'),
 
 		// Audit — no FK on editedBy so anonymous and deleted-user edits are preserved
 		editedBy: text('edited_by'), // user.id when authenticated, null for anonymous

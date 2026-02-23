@@ -4,14 +4,14 @@ Four subdirectories of Svelte 5 components. All use runes (`$state`, `$derived`,
 
 ## ui/ — Reusable Primitives
 
-| Component                  | Notes                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `button.svelte`            | Polymorphic (renders `<a>` or `<button>`). Variants: primary, secondary, tertiary, outline. |
-| `modal.svelte`             | Native `<dialog>`, backdrop click-to-close, CSS animations. Controlled via `open` prop.     |
-| `alert.svelte`             | Variants: error, success, warning, info. Renders Lucide icons.                              |
-| `segmented-control.svelte` | Accessible radio group styled as toggle buttons.                                            |
-| `speak-button.svelte`      | Plays TTS via `speech.ts`. Shows loading state while synthesizing.                          |
-| `progress-button.svelte`   | Button with a loading spinner.                                                              |
+| Component                  | Notes                                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `button.svelte`            | Polymorphic (renders `<a>` or `<button>`). Variants: primary, secondary, tertiary, outline, dashed, ghost. Sizes: default, sm, icon. |
+| `modal.svelte`             | Native `<dialog>`, backdrop click-to-close, CSS animations. Controlled via `open` prop.                                              |
+| `alert.svelte`             | Variants: error, success, warning, info. Renders Lucide icons.                                                                       |
+| `segmented-control.svelte` | Accessible radio group styled as toggle buttons.                                                                                     |
+| `speak-button.svelte`      | Plays TTS via `speech.ts`. Shows loading state while synthesizing.                                                                   |
+| `progress-button.svelte`   | Button with a loading spinner.                                                                                                       |
 
 ## auth/ — Authentication Forms
 
@@ -74,6 +74,7 @@ The largest and most complex component area. Renders the dictionary detail page 
 
 ## Conventions
 
+- **Reuse existing components** — always use `ui/` primitives (`Button`, `Alert`, `Modal`, etc.) instead of writing bespoke HTML+CSS for the same purpose. If a needed variant or size doesn't exist, add it to the shared component rather than creating one-off styles. This applies to all buttons, modals, alerts, and other common UI patterns.
 - **Storybook stories** use Svelte CSF (`defineMeta` + `<Story>`) with auto-running play functions (tested via Vitest).
 - **No Tailwind** — vanilla CSS with `--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground` etc.
 - **Dark mode** via `data-theme="dark"` on `<html>`, using CSS custom properties.
