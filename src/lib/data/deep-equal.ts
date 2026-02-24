@@ -39,7 +39,9 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
 /**
  * Compare submitted data against current state and return the list of fields
- * that actually changed. Only checks the specified editable fields.
+ * that actually changed. Only checks fields that are both in the editable list
+ * AND actually present as own properties in the submitted data (so fields the
+ * form doesn't submit are ignored rather than treated as "changed to null").
  */
 export function computeChangedFields(
 	current: Record<string, unknown>,
@@ -48,6 +50,7 @@ export function computeChangedFields(
 ): EditableField[] {
 	const changed: EditableField[] = [];
 	for (const field of fields) {
+		if (!(field in submitted)) continue;
 		if (!deepEqual(current[field] ?? null, submitted[field] ?? null)) {
 			changed.push(field);
 		}

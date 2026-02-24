@@ -66,7 +66,7 @@ export async function submitCharEdit(params: {
 				params.data as unknown as Record<string, unknown>,
 				EDITABLE_FIELDS
 			)
-		: [...EDITABLE_FIELDS]; // no current state = treat all as changed
+		: EDITABLE_FIELDS.filter((f) => f in (params.data as Record<string, unknown>)); // no current state = treat all submitted fields as changed
 
 	if (changedFields.length === 0) {
 		throw new Error('No fields were changed');

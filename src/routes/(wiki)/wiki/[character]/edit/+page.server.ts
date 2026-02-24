@@ -116,9 +116,9 @@ export const actions: Actions = {
 				autoApprove: canReview
 			});
 		} catch (err) {
-			return fail(500, {
-				error: err instanceof Error ? err.message : 'Failed to submit edit'
-			});
+			const message = err instanceof Error ? err.message : 'Failed to submit edit';
+			const status = message === 'No fields were changed' ? 400 : 500;
+			return fail(status, { error: message });
 		}
 
 		redirect(303, `/wiki/${encodeURIComponent(char)}?edited=${editResult.status}`);

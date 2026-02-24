@@ -157,7 +157,12 @@
 		<input
 			type="hidden"
 			name="components"
-			value={JSON.stringify(components.map(({ fragmentSimp, fragmentTrad, ...rest }) => rest))}
+			value={JSON.stringify(
+				components.map(
+					({ fragmentSimp, fragmentTrad, pinyin, gloss, historicalPronunciations: _hp, ...rest }) =>
+						rest
+				)
+			)}
 		/>
 		<input
 			type="hidden"
@@ -174,7 +179,11 @@
 		<input type="hidden" name="strokeDataSimp" value={strokeDataSimp} />
 		<input type="hidden" name="strokeDataTrad" value={strokeDataTrad} />
 		<input type="hidden" name="fragmentsSimp" value={JSON.stringify(fragmentsSimp)} />
-		<input type="hidden" name="fragmentsTrad" value={JSON.stringify(fragmentsTrad)} />
+		<input
+			type="hidden"
+			name="fragmentsTrad"
+			value={JSON.stringify(components.some((c) => c.fragmentTrad.trim()) ? fragmentsTrad : null)}
+		/>
 	</div>
 
 	<fieldset class="form-section">

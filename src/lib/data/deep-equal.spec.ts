@@ -137,4 +137,20 @@ describe('computeChangedFields', () => {
 		expect(result).toContain('hint');
 		expect(result).toContain('isVerified');
 	});
+
+	it('skips fields not present in submitted data', () => {
+		// The form doesn't submit historicalImages, so it shouldn't be detected as changed
+		const current = { gloss: 'water', historicalImages: [{ type: 'oracle', url: '...' }] };
+		const submitted = { gloss: 'water' }; // historicalImages not present at all
+		const result = computeChangedFields(current, submitted, EDITABLE_FIELDS);
+		expect(result).not.toContain('historicalImages');
+		expect(result).toEqual([]);
+	});
+
+	it('detects changes only for fields present in submitted data', () => {
+		const current = { gloss: 'water', hint: 'flows', historicalImages: [{ type: 'oracle' }] };
+		const submitted = { gloss: 'liquid', hint: 'flows' }; // historicalImages missing
+		const result = computeChangedFields(current, submitted, EDITABLE_FIELDS);
+		expect(result).toEqual(['gloss']);
+	});
 });

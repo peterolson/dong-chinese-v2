@@ -106,6 +106,21 @@ for (const jsEnabled of [true, false]) {
 			});
 		});
 
+		test.describe('Edit', () => {
+			test('rejects a no-change edit and shows error', async ({ page }) => {
+				await page.goto('/wiki/%E8%8A%B1/edit');
+				const editComment = page.getByRole('textbox', { name: 'Edit Comment (required)' });
+				await editComment.fill('test no changes');
+				await page.getByRole('button', { name: /Submit/ }).click();
+
+				// Should stay on the edit page (not redirect)
+				await expect(page).toHaveURL(/\/wiki\/.*\/edit/);
+
+				// Should show an error alert
+				await expect(page.getByRole('alert')).toContainText('No fields were changed');
+			});
+		});
+
 		test.describe('Navigation', () => {
 			test('wiki home → search via quick link', async ({ page }) => {
 				await page.goto('/wiki');

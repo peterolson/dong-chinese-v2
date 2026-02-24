@@ -1,9 +1,10 @@
 <script lang="ts">
 	import CharEditForm from '$lib/components/wiki/char-edit-form.svelte';
+	import Alert from '$lib/components/ui/alert.svelte';
 	import EditStatusBadge from '$lib/components/wiki/edit-status-badge.svelte';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-US', {
@@ -15,6 +16,12 @@
 		});
 	}
 </script>
+
+{#if form?.error}
+	<div class="form-error">
+		<Alert variant="error">{form.error}</Alert>
+	</div>
+{/if}
 
 {#if data.pendingEdits.length > 0}
 	<section class="pending-section">
@@ -59,6 +66,11 @@
 <CharEditForm character={data.character} canReview={data.canReview} />
 
 <style>
+	.form-error {
+		max-width: 800px;
+		margin-bottom: 1rem;
+	}
+
 	.pending-section {
 		margin-bottom: 2rem;
 		padding: 1rem;
