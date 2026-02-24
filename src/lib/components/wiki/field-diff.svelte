@@ -350,16 +350,23 @@
 							{/each}
 						</ul>
 					{:else if change.field === 'strokeDataSimp' || change.field === 'strokeDataTrad'}
-						<!-- Stroke data: side-by-side CharacterGlyph -->
+						<!-- Stroke data: side-by-side CharacterGlyph with component colors -->
 						{@const oldData = change.baseVal as StrokeVariantData | null}
 						{@const newData = change.editVal as StrokeVariantData | null}
 						{@const oldCount = getStrokeCount(change.field, baseData)}
 						{@const newCount = getStrokeCount(change.field, editData)}
+						{@const fragField =
+							change.field === 'strokeDataSimp' ? 'fragmentsSimp' : 'fragmentsTrad'}
 						<div class="glyph-diff">
 							{#if oldData}
 								<div class="glyph-panel">
 									<div class="glyph-box">
-										<CharacterGlyph {character} strokes={oldData.strokes} />
+										<CharacterGlyph
+											{character}
+											strokes={oldData.strokes}
+											components={baseData?.components ?? null}
+											allFragments={baseData?.[fragField] ?? null}
+										/>
 									</div>
 									<span class="glyph-caption diff-from"
 										>{oldCount ?? oldData.strokes.length} strokes</span
@@ -372,7 +379,12 @@
 							{#if newData}
 								<div class="glyph-panel">
 									<div class="glyph-box">
-										<CharacterGlyph {character} strokes={newData.strokes} />
+										<CharacterGlyph
+											{character}
+											strokes={newData.strokes}
+											components={editData.components ?? null}
+											allFragments={editData[fragField] ?? null}
+										/>
 									</div>
 									<span class="glyph-caption diff-to"
 										>{newCount ?? newData.strokes.length} strokes</span
@@ -388,10 +400,39 @@
 							</p>
 						{/if}
 					{:else if change.field === 'fragmentsSimp' || change.field === 'fragmentsTrad'}
-						<!-- Fragments: show per-component ranges -->
+						<!-- Fragments: color-coded glyphs + per-component ranges -->
 						{@const oldFrags = (change.baseVal as number[][] | null) ?? []}
 						{@const newFrags = (change.editVal as number[][] | null) ?? []}
 						{@const maxLen = Math.max(oldFrags.length, newFrags.length)}
+						{@const strokeField =
+							change.field === 'fragmentsSimp' ? 'strokeDataSimp' : 'strokeDataTrad'}
+						{@const strokeData = (editData[strokeField] ??
+							baseData?.[strokeField]) as StrokeVariantData | null}
+						{#if strokeData}
+							<div class="glyph-diff">
+								<div class="glyph-panel">
+									<div class="glyph-box">
+										<CharacterGlyph
+											{character}
+											strokes={strokeData.strokes}
+											components={baseData?.components ?? editData.components ?? null}
+											allFragments={change.baseVal}
+										/>
+									</div>
+								</div>
+								<span class="diff-arrow glyph-arrow">&rarr;</span>
+								<div class="glyph-panel">
+									<div class="glyph-box">
+										<CharacterGlyph
+											{character}
+											strokes={strokeData.strokes}
+											components={editData.components ?? baseData?.components ?? null}
+											allFragments={change.editVal}
+										/>
+									</div>
+								</div>
+							</div>
+						{/if}
 						<ul class="fragment-diff">
 							{#each Array(maxLen) as _, i (i)}
 								{@const oldRange = i < oldFrags.length ? formatFragmentRange(oldFrags[i]) : ''}
