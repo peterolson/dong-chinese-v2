@@ -35,6 +35,14 @@
 
 ## In Progress
 
+- [ ] Wiki editing UX improvements (test-first, write failing tests then implement):
+  - [ ] **No duplicate pending edits** — A user can only have one pending edit per character. If they already have a pending edit, the edit form loads their pending state, the button says "Update pending edit", and submitting updates the existing row rather than inserting a new one. Edit comment defaults to the previous comment.
+  - [ ] **Show pending edit in character view** — When a user has a pending edit for a character, the character view shows their draft by default with a toggle ("Draft" / "Published") to switch between pending and approved versions.
+  - [ ] **Hide other users' pending indicators** — Unauthorized users (no `wikiEdit` permission) should not see pending edit counts, badges, or other users' pending submissions.
+  - [ ] **Scoped pending changes page** — Any user can see `/wiki/pending` with only their own pending edits. The full review queue (all users' edits) is restricted to `wikiEdit` users.
+  - [ ] **Full entry view for historical edits** — Add a way to view the full rendered character page for any edit in the history, not just diffs. Render `CharacterView` with the edit snapshot overlaid on base data.
+- [ ] **Import legacy wiki history** (separate task) — Import `dictionary.char.history` from MongoDB into `char_manual` to preserve legacy edit attribution and timestamps.
+
 - [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
 
 ### Phase B exploration queries to run
