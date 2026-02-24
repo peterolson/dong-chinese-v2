@@ -40,6 +40,24 @@ function safeJsonParse(value: string | null): unknown {
 	}
 }
 
+/** Only allow http(s) and safe relative URLs — blocks javascript:, data:, etc. */
+function isSafeUrl(url: string): boolean {
+	return /^https?:\/\//.test(url) || (url.startsWith('/') && !url.startsWith('//'));
+}
+
+/** Sanitize customSources: strip entries with unsafe URLs. */
+function sanitizeCustomSources(raw: unknown): string[] | null {
+	if (!Array.isArray(raw)) return null;
+	const safe = raw.filter((entry): entry is string => {
+		if (typeof entry !== 'string') return false;
+		const pipeIdx = entry.indexOf('|');
+		if (pipeIdx === -1) return true; // plain text, no URL
+		const url = entry.substring(pipeIdx + 1);
+		return isSafeUrl(url);
+	});
+	return safe.length > 0 ? safe : null;
+}
+
 export const actions: Actions = {
 	submitEdit: async ({ request, params, locals }) => {
 		const char = params.character;
@@ -82,7 +100,9 @@ export const actions: Actions = {
 			historicalPronunciations: safeJsonParse(
 				formData.get('historicalPronunciations')?.toString() ?? null
 			),
-			customSources: safeJsonParse(formData.get('customSources')?.toString() ?? null)
+			customSources: sanitizeCustomSources(
+				safeJsonParse(formData.get('customSources')?.toString() ?? null)
+			)
 		};
 
 		try {

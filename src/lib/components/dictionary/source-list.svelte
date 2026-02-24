@@ -8,6 +8,10 @@
 	}
 
 	let { sourceGroups, customSources, audioAttribution }: Props = $props();
+
+	function isSafeUrl(url: string): boolean {
+		return /^https?:\/\//.test(url) || (url.startsWith('/') && !url.startsWith('//'));
+	}
 </script>
 
 {#if sourceGroups.length > 0 || (customSources && customSources.length > 0)}
@@ -30,10 +34,10 @@
 						{#if group.label === 'Character origin' && customSources}
 							{#each customSources as source, i (i)}
 								{@const parts = source.split('|')}
-								{#if parts.length >= 2}
+								{#if parts.length >= 2 && isSafeUrl(parts[1])}
 									<a href={parts[1]} target="_blank" rel="noopener noreferrer">{parts[0]}</a>
 								{:else}
-									<span>{source}</span>
+									<span>{parts[0] ?? source}</span>
 								{/if}
 							{/each}
 						{/if}
