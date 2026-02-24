@@ -202,18 +202,35 @@ export async function getCharacterList(
 			break;
 		case 'common-components': {
 			// Characters that appear most frequently as components in other characters.
-			// Uses a subquery counting how many chars reference this character in their components JSONB.
-			const componentCountSubquery = sql`(
-				SELECT count(*)::int FROM ${charView} AS other
-				WHERE other.components IS NOT NULL
-				AND EXISTS (
-					SELECT 1 FROM jsonb_array_elements(other.components) AS comp
-					WHERE comp->>'character' = ${charView}.character
+			// Precompute counts in a single aggregate rather than a correlated subquery per row.
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				WITH component_counts AS (
+					SELECT comp->>'character' AS character, count(*)::int AS usage_count
+					FROM ${charView} AS src, jsonb_array_elements(src.components) AS comp
+					WHERE src.components IS NOT NULL
+					GROUP BY comp->>'character'
 				)
-			)`;
-			orderClause = sql`${componentCountSubquery} DESC`;
-			whereClause = sql`${componentCountSubquery} > 0`;
-			break;
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					count(*) OVER() AS total
+				FROM component_counts cc
+				JOIN ${charView} c ON c.character = cc.character
+				ORDER BY cc.usage_count DESC
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed,
+				total: typed.length > 0 ? typed[0].total : 0
+			};
 		}
 	}
 

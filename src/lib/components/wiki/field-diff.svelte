@@ -3,7 +3,6 @@
 	 * Shows changed fields between a character data snapshot and the base data.
 	 * Renders per-field semantic diffs instead of raw JSON.
 	 */
-	import { resolve } from '$app/paths';
 	import CharacterGlyph from '$lib/components/dictionary/character-glyph.svelte';
 	import {
 		getComponentColor,
@@ -188,7 +187,12 @@
 	function parseSource(source: string): { name: string; url: string | null } {
 		const parts = source.split('|');
 		if (parts.length >= 2) {
-			return { name: parts[0], url: parts[1] };
+			const url = parts[1];
+			// Only allow http(s) and relative URLs to prevent javascript: XSS
+			if (/^https?:\/\//.test(url) || (url.startsWith('/') && !url.startsWith('//'))) {
+				return { name: parts[0], url };
+			}
+			return { name: parts[0], url: null };
 		}
 		return { name: source, url: null };
 	}
@@ -284,14 +288,13 @@
 					{:else if change.field === 'customSources'}
 						<!-- Sources: parse pipe format -->
 						{@const diff = diffStringArrays(change.baseVal, change.editVal)}
+						<!-- eslint-disable svelte/no-navigation-without-resolve -- external URLs from custom sources -->
 						<ul class="source-diff">
 							{#each diff.kept as src (src)}
 								{@const parsed = parseSource(src)}
 								<li class="source-item">
 									{#if parsed.url}
-										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
-											>{parsed.name}</a
-										>
+										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
 									{:else}
 										{parsed.name}
 									{/if}
@@ -302,9 +305,7 @@
 								<li class="source-item added">
 									<span class="badge-added">+</span>
 									{#if parsed.url}
-										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
-											>{parsed.name}</a
-										>
+										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
 									{:else}
 										{parsed.name}
 									{/if}
@@ -315,15 +316,14 @@
 								<li class="source-item removed">
 									<span class="badge-removed">-</span>
 									{#if parsed.url}
-										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
-											>{parsed.name}</a
-										>
+										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
 									{:else}
 										{parsed.name}
 									{/if}
 								</li>
 							{/each}
 						</ul>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{:else if change.field === 'components'}
 						<!-- Components: match by character, show sub-field diffs -->
 						{@const diff = matchByKey<ComponentData>(change.baseVal, change.editVal, 'character')}
