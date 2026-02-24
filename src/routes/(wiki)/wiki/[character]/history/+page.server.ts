@@ -124,12 +124,12 @@ export const actions: Actions = {
 				editComment: `[Rollback] ${comment}`,
 				autoApprove: true
 			});
-
-			redirect(303, `/wiki/${character}/history`);
 		} catch (err) {
 			return fail(500, {
 				error: err instanceof Error ? err.message : 'Failed to rollback'
 			});
 		}
+
+		redirect(303, `/wiki/${character}/history`);
 	}
 };

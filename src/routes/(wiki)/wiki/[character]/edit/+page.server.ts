@@ -105,21 +105,22 @@ export const actions: Actions = {
 			)
 		};
 
+		let editResult;
 		try {
-			const result = await submitCharEdit({
+			editResult = await submitCharEdit({
 				character: char,
 				data,
 				editedBy: { userId, anonymousSessionId },
 				editComment,
 				autoApprove: canReview
 			});
-
-			redirect(303, `/wiki/${char}?edited=${result.status}`);
 		} catch (err) {
 			return fail(500, {
 				error: err instanceof Error ? err.message : 'Failed to submit edit'
 			});
 		}
+
+		redirect(303, `/wiki/${char}?edited=${editResult.status}`);
 	},
 
 	approveEdit: async ({ request, locals }) => {
