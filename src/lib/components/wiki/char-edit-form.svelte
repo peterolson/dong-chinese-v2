@@ -280,17 +280,17 @@
 		{#if sources.length === 0}
 			<p class="empty-hint">No sources.</p>
 		{/if}
-		{#each sources as _, i (i)}
+		{#each sources as source, i (i)}
 			<div class="source-entry">
 				<input
 					type="text"
-					bind:value={sources[i].name}
+					bind:value={source.name}
 					placeholder="Name"
 					class="field-input source-name"
 				/>
 				<input
 					type="text"
-					bind:value={sources[i].url}
+					bind:value={source.url}
 					placeholder="URL (optional)"
 					class="field-input source-url"
 				/>

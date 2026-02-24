@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import EditStatusBadge from '$lib/components/wiki/edit-status-badge.svelte';
 	import type { PageData } from './$types';
 
@@ -29,7 +30,7 @@
 			{#each data.items as item (item.id)}
 				<li class="edit-item">
 					<div class="edit-header">
-						<a href="/wiki/{item.character}" class="edit-char">{item.character}</a>
+						<a href={resolve(`/wiki/${item.character}`)} class="edit-char">{item.character}</a>
 						<EditStatusBadge status={item.status} />
 						<span class="edit-meta">
 							by {item.editorName} &middot; {formatDate(item.createdAt)}
@@ -56,13 +57,17 @@
 		{#if data.totalPages > 1}
 			<nav class="pagination" aria-label="Page navigation">
 				{#if data.pageNum > 1}
-					<a href="/wiki/recent-changes?page={data.pageNum - 1}" class="page-link">Previous</a>
+					<a href={resolve(`/wiki/recent-changes?page=${data.pageNum - 1}`)} class="page-link"
+						>Previous</a
+					>
 				{:else}
 					<span class="page-link disabled">Previous</span>
 				{/if}
 				<span class="page-info">Page {data.pageNum} of {data.totalPages}</span>
 				{#if data.pageNum < data.totalPages}
-					<a href="/wiki/recent-changes?page={data.pageNum + 1}" class="page-link">Next</a>
+					<a href={resolve(`/wiki/recent-changes?page=${data.pageNum + 1}`)} class="page-link"
+						>Next</a
+					>
 				{:else}
 					<span class="page-link disabled">Next</span>
 				{/if}

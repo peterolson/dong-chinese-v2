@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import EditStatusBadge from '$lib/components/wiki/edit-status-badge.svelte';
 	import FieldDiff from '$lib/components/wiki/field-diff.svelte';
 	import type { PageData } from './$types';
@@ -38,7 +39,7 @@
 			{#each data.items as item (item.id)}
 				<li class="edit-item">
 					<div class="edit-header">
-						<a href="/wiki/{item.character}" class="edit-char">{item.character}</a>
+						<a href={resolve(`/wiki/${item.character}`)} class="edit-char">{item.character}</a>
 						<EditStatusBadge status="pending" />
 						<span class="edit-meta">
 							by {item.editorName} &middot; {formatDate(item.createdAt)}

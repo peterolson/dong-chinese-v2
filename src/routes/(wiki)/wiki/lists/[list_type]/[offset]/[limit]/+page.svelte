@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { formatPinyinList } from '$lib/orthography';
 	import type { PageData } from './$types';
 
@@ -29,12 +30,12 @@
 
 	<nav class="pagination" aria-label="List navigation">
 		{#if hasPrev}
-			<a href={prevHref} class="page-link">Previous {data.limit}</a>
+			<a href={resolve(prevHref)} class="page-link">Previous {data.limit}</a>
 		{:else}
 			<span class="page-link disabled">Previous {data.limit}</span>
 		{/if}
 		{#if hasNext}
-			<a href={nextHref} class="page-link">Next {data.limit}</a>
+			<a href={resolve(nextHref)} class="page-link">Next {data.limit}</a>
 		{:else}
 			<span class="page-link disabled">Next {data.limit}</span>
 		{/if}
@@ -63,7 +64,7 @@
 				<tr>
 					<td class="rank-col">{data.offset + i + 1}</td>
 					<td class="char-col">
-						<a href="/wiki/{item.character}">{item.character}</a>
+						<a href={resolve(`/wiki/${item.character}`)}>{item.character}</a>
 						{#if item.traditionalVariants?.length}
 							<span class="variants" lang="zh-Hant">({item.traditionalVariants.join(', ')})</span>
 						{/if}
@@ -86,12 +87,12 @@
 
 	<nav class="pagination bottom" aria-label="List navigation">
 		{#if hasPrev}
-			<a href={prevHref} class="page-link">Previous {data.limit}</a>
+			<a href={resolve(prevHref)} class="page-link">Previous {data.limit}</a>
 		{:else}
 			<span class="page-link disabled">Previous {data.limit}</span>
 		{/if}
 		{#if hasNext}
-			<a href={nextHref} class="page-link">Next {data.limit}</a>
+			<a href={resolve(nextHref)} class="page-link">Next {data.limit}</a>
 		{:else}
 			<span class="page-link disabled">Next {data.limit}</span>
 		{/if}

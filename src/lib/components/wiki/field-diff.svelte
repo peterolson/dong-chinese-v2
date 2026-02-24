@@ -3,6 +3,7 @@
 	 * Shows changed fields between a character data snapshot and the base data.
 	 * Renders per-field semantic diffs instead of raw JSON.
 	 */
+	import { resolve } from '$app/paths';
 	import CharacterGlyph from '$lib/components/dictionary/character-glyph.svelte';
 	import {
 		getComponentColor,
@@ -288,7 +289,9 @@
 								{@const parsed = parseSource(src)}
 								<li class="source-item">
 									{#if parsed.url}
-										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
+										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
+											>{parsed.name}</a
+										>
 									{:else}
 										{parsed.name}
 									{/if}
@@ -299,7 +302,9 @@
 								<li class="source-item added">
 									<span class="badge-added">+</span>
 									{#if parsed.url}
-										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
+										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
+											>{parsed.name}</a
+										>
 									{:else}
 										{parsed.name}
 									{/if}
@@ -310,7 +315,9 @@
 								<li class="source-item removed">
 									<span class="badge-removed">-</span>
 									{#if parsed.url}
-										<a href={parsed.url} target="_blank" rel="noopener noreferrer">{parsed.name}</a>
+										<a href={resolve(parsed.url)} target="_blank" rel="noopener noreferrer"
+											>{parsed.name}</a
+										>
 									{:else}
 										{parsed.name}
 									{/if}

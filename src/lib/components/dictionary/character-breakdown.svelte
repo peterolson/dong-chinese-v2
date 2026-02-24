@@ -115,7 +115,9 @@
 					{/if}
 					<div class="component-details">
 						<div class="component-header">
-							<a href="{charLinkBase}/{comp.character}" class="component-char">{comp.character}</a>
+							<a href={resolve(`${charLinkBase}/${comp.character}`)} class="component-char"
+								>{comp.character}</a
+							>
 							{#if comp.type && comp.type.length > 0}
 								<span class="component-type">
 									{#each comp.type as t (t)}
@@ -151,11 +153,11 @@
 						{/if}
 						{#if comp.isFromOriginalMeaning && originalMeaning}
 							<Alert variant="info">
-								<a href="{charLinkBase}/{comp.character}">{comp.character}</a>
+								<a href={resolve(`${charLinkBase}/${comp.character}`)}>{comp.character}</a>
 								hints at the original meaning of
-								<a href="{charLinkBase}/{character}">{character}</a>, "{originalMeaning}", which is
-								no longer the most common meaning of
-								<a href="{charLinkBase}/{character}">{character}</a> in modern Mandarin.
+								<a href={resolve(`${charLinkBase}/${character}`)}>{character}</a>, "{originalMeaning}",
+								which is no longer the most common meaning of
+								<a href={resolve(`${charLinkBase}/${character}`)}>{character}</a> in modern Mandarin.
 							</Alert>
 						{/if}
 						{#if comp.isOldPronunciation}
@@ -169,7 +171,7 @@
 						{#if comp.isGlyphChanged}
 							<Alert variant="info">
 								Due to historical stylistic changes, this component is less similar to
-								<a href="{charLinkBase}/{comp.character}">{comp.character}</a>
+								<a href={resolve(`${charLinkBase}/${comp.character}`)}>{comp.character}</a>
 								than it was in ancient scripts.
 							</Alert>
 						{/if}

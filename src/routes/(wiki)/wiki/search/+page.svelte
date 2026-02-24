@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { formatPinyinList } from '$lib/orthography';
 	import type { PageData } from './$types';
 
@@ -41,7 +42,7 @@
 					{#each data.results as result (result.character)}
 						<tr>
 							<td class="char-cell">
-								<a href="/wiki/{result.character}">{result.character}</a>
+								<a href={resolve(`/wiki/${result.character}`)}>{result.character}</a>
 							</td>
 							<td>{formatPinyinList(result.pinyin, data.settings.phoneticScript)}</td>
 							<td>{result.gloss ?? ''}</td>

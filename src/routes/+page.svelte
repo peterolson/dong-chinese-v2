@@ -39,7 +39,7 @@
 				<p>Look up characters and words</p>
 			</div>
 		</a>
-		<a href="/wiki" class="nav-card">
+		<a href={resolve('/wiki')} class="nav-card">
 			<BookMarked size={32} aria-hidden="true" />
 			<div>
 				<h2>Wiki</h2>

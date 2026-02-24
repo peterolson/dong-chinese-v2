@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 </script>
 
 <svelte:head>
@@ -12,13 +13,13 @@
 
 	<ul class="list-cards">
 		<li>
-			<a href="/wiki/lists/subtlex-rank/0/100" class="list-card">
+			<a href={resolve('/wiki/lists/subtlex-rank/0/100')} class="list-card">
 				<h2>Movie Frequency</h2>
 				<p>Characters ranked by how often they appear in Chinese film subtitles (SUBTLEX-CH).</p>
 			</a>
 		</li>
 		<li>
-			<a href="/wiki/lists/subtlex-context-diversity/0/100" class="list-card">
+			<a href={resolve('/wiki/lists/subtlex-context-diversity/0/100')} class="list-card">
 				<h2>Context Diversity</h2>
 				<p>
 					Characters ranked by how many different films they appear in. A good measure of how
@@ -27,13 +28,13 @@
 			</a>
 		</li>
 		<li>
-			<a href="/wiki/lists/jun-da-rank/0/100" class="list-card">
+			<a href={resolve('/wiki/lists/jun-da-rank/0/100')} class="list-card">
 				<h2>Book Frequency</h2>
 				<p>Characters ranked by how often they appear in modern Chinese books (Jun Da corpus).</p>
 			</a>
 		</li>
 		<li>
-			<a href="/wiki/lists/common-components/0/100" class="list-card">
+			<a href={resolve('/wiki/lists/common-components/0/100')} class="list-card">
 				<h2>Most Common Components</h2>
 				<p>Characters that are most frequently used as building blocks of other characters.</p>
 			</a>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { SvelteComponent } from 'svelte';
 
@@ -19,7 +20,12 @@
 <nav class="tab-bar {variant}" aria-label="Page tabs">
 	{#each tabs as tab (tab.label)}
 		{@const active = pathname === tab.href}
-		<a href={tab.href} class="tab-link" class:active aria-current={active ? 'page' : undefined}>
+		<a
+			href={resolve(tab.href)}
+			class="tab-link"
+			class:active
+			aria-current={active ? 'page' : undefined}
+		>
 			{#if tab.icon}
 				{@const Icon = tab.icon}
 				<Icon size={14} />

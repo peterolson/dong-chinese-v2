@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 </script>
 
 <svelte:head>
@@ -62,8 +63,8 @@
 		<h2>How to Contribute</h2>
 		<p>
 			Anyone can suggest edits to character data. Navigate to a character page (e.g.
-			<a href="/wiki/你">你</a>) and click "Edit this character." Your edit will be reviewed by a
-			wiki editor before being published.
+			<a href={resolve('/wiki/你')}>你</a>) and click "Edit this character." Your edit will be
+			reviewed by a wiki editor before being published.
 		</p>
 		<p>
 			If you have wiki editor permissions, your edits are automatically approved and you can review
@@ -90,9 +91,9 @@
 	<section class="wiki-section">
 		<h2>Quick Links</h2>
 		<ul>
-			<li><a href="/wiki/search">Search characters</a></li>
-			<li><a href="/wiki/lists">Browse frequency lists</a></li>
-			<li><a href="/wiki/recent-changes">View recent changes</a></li>
+			<li><a href={resolve('/wiki/search')}>Search characters</a></li>
+			<li><a href={resolve('/wiki/lists')}>Browse frequency lists</a></li>
+			<li><a href={resolve('/wiki/recent-changes')}>View recent changes</a></li>
 		</ul>
 	</section>
 </article>

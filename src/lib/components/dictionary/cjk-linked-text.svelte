@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { getCharLinkBase } from './char-link-context';
 
 	interface Props {
@@ -28,7 +29,7 @@
 
 {#each segments(text) as seg, i (i)}{#if seg.cjk}<a
 			class="cjk-link"
-			href="{charLinkBase}/{seg.text}">{seg.text}</a
+			href={resolve(`${charLinkBase}/${seg.text}`)}>{seg.text}</a
 		>{:else}{seg.text}{/if}{/each}
 
 <style>

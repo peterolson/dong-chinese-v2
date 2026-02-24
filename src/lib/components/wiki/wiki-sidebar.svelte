@@ -48,7 +48,7 @@
 		{#each mainNav as item (item.href)}
 			<li>
 				<a
-					href={item.href}
+					href={resolve(item.href)}
 					class="nav-link"
 					aria-current={isActive(item.href) ? 'page' : undefined}
 				>
@@ -61,7 +61,7 @@
 		{#if canReview}
 			<li>
 				<a
-					href="/wiki/pending"
+					href={resolve('/wiki/pending')}
 					class="nav-link"
 					aria-current={isActive('/wiki/pending') ? 'page' : undefined}
 				>

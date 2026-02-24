@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { CharacterData } from '$lib/types/dictionary';
 	import type { PhoneticScript } from '$lib/orthography';
 	import { formatPinyinList } from '$lib/orthography';
@@ -144,7 +145,7 @@
 							<dt>Simplified</dt>
 							<dd>
 								{#each simplifiedVariants as v (v)}
-									<a href="{charLinkBase}/{v}">{v}</a>
+									<a href={resolve(`${charLinkBase}/${v}`)}>{v}</a>
 								{/each}
 							</dd>
 						</div>
@@ -154,7 +155,7 @@
 							<dt>Traditional</dt>
 							<dd>
 								{#each traditionalVariants as v (v)}
-									<a href="{charLinkBase}/{v}">{v}</a>
+									<a href={resolve(`${charLinkBase}/${v}`)}>{v}</a>
 								{/each}
 							</dd>
 						</div>

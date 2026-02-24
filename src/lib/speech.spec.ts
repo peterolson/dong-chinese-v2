@@ -53,7 +53,6 @@ class MockSpeechSynthesisUtterance {
 	voice: null | object = null;
 	onend: (() => void) | null = null;
 	onerror: (() => void) | null = null;
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	constructor(_text?: string) {}
 }
 vi.stubGlobal('SpeechSynthesisUtterance', MockSpeechSynthesisUtterance);
