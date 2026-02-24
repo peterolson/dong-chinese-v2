@@ -71,6 +71,9 @@ describe('getCharacterList', () => {
 	it('respects offset parameter', async () => {
 		const page1 = await getCharacterList('subtlex-rank', 0, 3);
 		const page2 = await getCharacterList('subtlex-rank', 3, 3);
+		// Both queries should return valid results
+		expect(Array.isArray(page1.items)).toBe(true);
+		expect(Array.isArray(page2.items)).toBe(true);
 		// If data exists, pages should have different characters
 		if (page1.items.length > 0 && page2.items.length > 0) {
 			expect(page1.items[0].character).not.toBe(page2.items[0].character);

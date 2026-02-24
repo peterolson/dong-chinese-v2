@@ -18,7 +18,7 @@
 		await expect(canvas.getByRole('button', { name: '+ Add entry' })).toBeInTheDocument();
 	}}
 >
-	<KeyValueEditor name="custom" label="Custom Fields" />
+	<KeyValueEditor name="custom" label="Custom Fields" entries={[]} />
 </Story>
 
 <Story
@@ -55,5 +55,5 @@
 		await expect(canvas.getByPlaceholderText('Value')).toBeInTheDocument();
 	}}
 >
-	<KeyValueEditor name="custom" label="Custom Fields" />
+	<KeyValueEditor name="custom" label="Custom Fields" entries={[]} />
 </Story>
