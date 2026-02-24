@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import postgres from 'postgres';
 
 for (const jsEnabled of [true, false]) {
 	test.describe(`Wiki pages (JS ${jsEnabled ? 'enabled' : 'disabled'})`, () => {
@@ -107,6 +108,22 @@ for (const jsEnabled of [true, false]) {
 		});
 
 		test.describe('Edit', () => {
+			const sql = postgres(process.env.DATABASE_URL!);
+
+			test.beforeAll(async () => {
+				await sql`
+					INSERT INTO dictionary.char_base (character, gloss, pinyin)
+					VALUES ('花', 'flower', ARRAY['huā'])
+					ON CONFLICT (character) DO NOTHING
+				`;
+			});
+
+			test.afterAll(async () => {
+				await sql`DELETE FROM dictionary.char_manual WHERE character = '花'`;
+				await sql`DELETE FROM dictionary.char_base WHERE character = '花'`;
+				await sql.end();
+			});
+
 			test('rejects a no-change edit and shows error', async ({ page }) => {
 				await page.goto('/wiki/%E8%8A%B1/edit');
 				const editComment = page.getByRole('textbox', { name: 'Edit Comment (required)' });
