@@ -10,6 +10,12 @@ vi.mock('$lib/server/services/permissions', () => ({
 
 const { load } = await import('./+layout.server');
 
+async function loadResult(...args: Parameters<typeof load>) {
+	const r = await load(...args);
+	if (!r) throw new Error('Unexpected void from load');
+	return r;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function makeEvent(
@@ -35,7 +41,7 @@ beforeEach(() => {
 
 describe('load', () => {
 	it('returns canReview=false when no user', async () => {
-		const result = await load(makeEvent());
+		const result = await loadResult(makeEvent());
 
 		expect(result.canReview).toBe(false);
 		expect(result.user).toBeNull();
@@ -46,7 +52,7 @@ describe('load', () => {
 		mockHasPermission.mockResolvedValue(true);
 		const user = { id: 'user-1', name: 'Alice' };
 
-		const result = await load(makeEvent({ user }));
+		const result = await loadResult(makeEvent({ user }));
 
 		expect(result.canReview).toBe(true);
 		expect(result.user).toEqual(user);
@@ -57,7 +63,7 @@ describe('load', () => {
 		mockHasPermission.mockResolvedValue(false);
 		const user = { id: 'user-2', name: 'Bob' };
 
-		const result = await load(makeEvent({ user }));
+		const result = await loadResult(makeEvent({ user }));
 
 		expect(result.canReview).toBe(false);
 		expect(mockHasPermission).toHaveBeenCalledWith('user-2', 'wikiEdit');
@@ -65,7 +71,7 @@ describe('load', () => {
 
 	it('passes through settings from locals', async () => {
 		const settings = { theme: 'dark', characterSet: 'traditional' };
-		const result = await load(makeEvent({ settings }));
+		const result = await loadResult(makeEvent({ settings }));
 
 		expect(result.settings).toEqual(settings);
 	});
@@ -78,7 +84,7 @@ describe('load', () => {
 			}
 		} as unknown as Parameters<typeof load>[0];
 
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.settings).toEqual({});
 	});

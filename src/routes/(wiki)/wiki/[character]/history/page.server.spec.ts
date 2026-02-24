@@ -48,6 +48,12 @@ vi.mock('drizzle-orm', () => ({
 
 const { load, actions } = await import('./+page.server');
 
+async function loadResult(...args: Parameters<typeof load>) {
+	const r = await load(...args);
+	if (!r) throw new Error('Unexpected void from load');
+	return r;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function makeEdit(overrides: Record<string, unknown> = {}) {
@@ -167,7 +173,7 @@ describe('load', () => {
 		);
 
 		const event = makeLoadEvent('水');
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.edits).toHaveLength(1);
 		expect(result.edits[0]).toMatchObject({
@@ -188,7 +194,7 @@ describe('load', () => {
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
 
 		const event = makeLoadEvent('水');
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.charBase).toMatchObject({
 			gloss: 'base water',
@@ -201,7 +207,7 @@ describe('load', () => {
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
 
 		const event = makeLoadEvent('水');
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.charBase).toBeNull();
 	});
@@ -212,7 +218,7 @@ describe('load', () => {
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.edits[0].editorName).toBe('Anonymous');
 		expect(result.edits[0].reviewerName).toBeNull();
@@ -224,7 +230,7 @@ describe('load', () => {
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.edits[0].editorName).toBe('Unknown');
 		expect(result.edits[0].reviewerName).toBe('Unknown');
@@ -232,7 +238,7 @@ describe('load', () => {
 
 	it('passes canReview from parent', async () => {
 		const event = makeLoadEvent('水', true);
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.canReview).toBe(true);
 	});

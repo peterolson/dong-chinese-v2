@@ -24,6 +24,12 @@ vi.mock('$lib/server/services/user', () => ({
 
 const { load, actions } = await import('./+page.server');
 
+async function loadResult(...args: Parameters<typeof load>) {
+	const r = await load(...args);
+	if (!r) throw new Error('Unexpected void from load');
+	return r;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function makeEdit(overrides: Record<string, unknown> = {}) {
@@ -101,7 +107,7 @@ describe('load', () => {
 		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
 
 		const event = makeLoadEvent(true);
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.items).toHaveLength(1);
 		expect(result.items[0]).toMatchObject({
@@ -127,7 +133,7 @@ describe('load', () => {
 		);
 
 		const event = makeLoadEvent(true);
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(mockResolveUserNames).toHaveBeenCalledWith(['user-1', 'user-2']);
 		expect(result.items[0].editorName).toBe('Alice');
@@ -140,7 +146,7 @@ describe('load', () => {
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent(true);
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.items[0].editorName).toBe('Anonymous');
 	});
@@ -152,7 +158,7 @@ describe('load', () => {
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent(true);
-		const result = await load(event);
+		const result = await loadResult(event);
 
 		expect(result.items[0].editorName).toBe('Unknown');
 	});

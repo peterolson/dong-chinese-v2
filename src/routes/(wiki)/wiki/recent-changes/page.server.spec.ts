@@ -15,6 +15,12 @@ vi.mock('$lib/server/services/user', () => ({
 
 const { load } = await import('./+page.server');
 
+async function loadResult(...args: Parameters<typeof load>) {
+	const r = await load(...args);
+	if (!r) throw new Error('Unexpected void from load');
+	return r;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function makeEvent(searchParams: Record<string, string> = {}) {
@@ -102,7 +108,7 @@ describe('load', () => {
 	it('returns pagination metadata', async () => {
 		mockGetRecentEdits.mockResolvedValue({ edits: [], total: 150 });
 
-		const result = await load(makeEvent({ page: '2' }));
+		const result = await loadResult(makeEvent({ page: '2' }));
 
 		expect(result.pageNum).toBe(2);
 		expect(result.pageSize).toBe(50);
@@ -120,7 +126,7 @@ describe('load', () => {
 			])
 		);
 
-		const result = await load(makeEvent());
+		const result = await loadResult(makeEvent());
 
 		expect(result.items).toEqual([
 			{
@@ -142,7 +148,7 @@ describe('load', () => {
 		mockGetRecentEdits.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
-		const result = await load(makeEvent());
+		const result = await loadResult(makeEvent());
 
 		expect(result.items[0].editorName).toBe('Anonymous');
 		expect(result.items[0].reviewerName).toBeNull();
@@ -153,7 +159,7 @@ describe('load', () => {
 		mockGetRecentEdits.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
-		const result = await load(makeEvent());
+		const result = await loadResult(makeEvent());
 
 		expect(result.items[0].editorName).toBe('Unknown');
 		expect(result.items[0].reviewerName).toBe('Unknown');

@@ -14,6 +14,12 @@ vi.mock('$lib/server/services/dictionary', () => ({
 
 const { load } = await import('./+page.server');
 
+async function loadResult(...args: Parameters<typeof load>) {
+	const r = await load(...args);
+	if (!r) throw new Error('Unexpected void from load');
+	return r;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function makeEvent(params: { list_type: string; offset: string; limit: string }) {
@@ -68,7 +74,9 @@ describe('load', () => {
 		const fakeItems = [{ character: '\u6C34', pinyin: 'shu\u01D0', gloss: 'water' }];
 		mockGetCharacterList.mockResolvedValue({ items: fakeItems, total: 100 });
 
-		const result = await load(makeEvent({ list_type: 'subtlex-rank', offset: '10', limit: '50' }));
+		const result = await loadResult(
+			makeEvent({ list_type: 'subtlex-rank', offset: '10', limit: '50' })
+		);
 
 		expect(mockGetCharacterList).toHaveBeenCalledWith('subtlex-rank', 10, 50);
 		expect(result).toEqual({
@@ -84,7 +92,9 @@ describe('load', () => {
 	it('accepts offset of 0', async () => {
 		mockGetCharacterList.mockResolvedValue({ items: [], total: 0 });
 
-		const result = await load(makeEvent({ list_type: 'jun-da-rank', offset: '0', limit: '100' }));
+		const result = await loadResult(
+			makeEvent({ list_type: 'jun-da-rank', offset: '0', limit: '100' })
+		);
 
 		expect(result.offset).toBe(0);
 		expect(result.listType).toBe('jun-da-rank');
