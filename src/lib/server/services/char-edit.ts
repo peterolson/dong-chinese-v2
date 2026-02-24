@@ -142,27 +142,16 @@ export async function approveCharEdit(
 	// Merge all charManual data columns (not just editable — we need frequency, shuowen, etc.)
 	const mergedValues: Record<string, unknown> = {};
 
-	// Get all data column keys from the charManual table (exclude metadata columns)
-	const metadataColumns = new Set([
-		'id',
-		'character',
-		'changedFields',
-		'status',
-		'reviewedBy',
-		'reviewedAt',
-		'reviewComment',
-		'editedBy',
-		'anonymousSessionId',
-		'editComment',
-		'createdAt'
-	]);
-
-	// For editable fields: use edit's value if in changedFields, else current state
+	// For editable fields: use edit's value if in changedFields, else current state.
+	// When currentState exists, always prefer its value (even if null) so that
+	// explicitly-nulled fields aren't overwritten by stale pending edit data.
 	for (const field of EDITABLE_FIELDS) {
 		if (changedSet.has(field)) {
 			mergedValues[field] = editRecord[field];
+		} else if (currentState) {
+			mergedValues[field] = currentRecord[field];
 		} else {
-			mergedValues[field] = currentRecord[field] ?? editRecord[field];
+			mergedValues[field] = editRecord[field];
 		}
 	}
 
@@ -182,7 +171,11 @@ export async function approveCharEdit(
 		'pinyinFrequencies'
 	];
 	for (const field of nonEditableDataColumns) {
-		mergedValues[field] = currentRecord[field] ?? editRecord[field];
+		if (currentState) {
+			mergedValues[field] = currentRecord[field];
+		} else {
+			mergedValues[field] = editRecord[field];
+		}
 	}
 
 	// Update the edit row with merged data + approved status

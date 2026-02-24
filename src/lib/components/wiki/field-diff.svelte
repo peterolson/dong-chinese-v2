@@ -16,7 +16,7 @@
 		HistoricalImage
 	} from '$lib/types/dictionary';
 	import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
-	import { normalize, deepEqual } from '$lib/data/deep-equal';
+	import { deepEqual } from '$lib/data/deep-equal';
 
 	const FIELD_LABELS: Record<string, string> = {
 		gloss: 'Gloss',
