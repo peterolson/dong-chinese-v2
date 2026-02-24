@@ -8,6 +8,14 @@ import { computeChangedFields } from '$lib/data/deep-equal';
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
 
+export class CharEditError extends Error {
+	code: string;
+	constructor(code: string, message: string) {
+		super(message);
+		this.code = code;
+	}
+}
+
 /**
  * Submit a character edit. If autoApprove is true (caller has wikiEdit permission),
  * the edit is immediately approved. Otherwise it's pending review.
@@ -69,7 +77,7 @@ export async function submitCharEdit(params: {
 		: EDITABLE_FIELDS.filter((f) => f in (params.data as Record<string, unknown>)); // no current state = treat all submitted fields as changed
 
 	if (changedFields.length === 0) {
-		throw new Error('No fields were changed');
+		throw new CharEditError('NO_FIELDS_CHANGED', 'No fields were changed');
 	}
 
 	// Auto-approve requires an authenticated user

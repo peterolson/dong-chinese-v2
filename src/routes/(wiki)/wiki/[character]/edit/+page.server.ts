@@ -4,7 +4,8 @@ import {
 	submitCharEdit,
 	getPendingEdits,
 	approveCharEdit,
-	rejectCharEdit
+	rejectCharEdit,
+	CharEditError
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
@@ -117,7 +118,7 @@ export const actions: Actions = {
 			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to submit edit';
-			const status = message === 'No fields were changed' ? 400 : 500;
+			const status = err instanceof CharEditError && err.code === 'NO_FIELDS_CHANGED' ? 400 : 500;
 			return fail(status, { error: message });
 		}
 
