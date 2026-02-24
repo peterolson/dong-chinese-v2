@@ -15,24 +15,8 @@
 		HistoricalPronunciation,
 		HistoricalImage
 	} from '$lib/types/dictionary';
-
-	const EDITABLE_FIELDS = [
-		'gloss',
-		'hint',
-		'originalMeaning',
-		'isVerified',
-		'pinyin',
-		'simplifiedVariants',
-		'traditionalVariants',
-		'components',
-		'strokeDataSimp',
-		'strokeDataTrad',
-		'fragmentsSimp',
-		'fragmentsTrad',
-		'historicalImages',
-		'historicalPronunciations',
-		'customSources'
-	] as const;
+	import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+	import { normalize, deepEqual } from '$lib/data/deep-equal';
 
 	const FIELD_LABELS: Record<string, string> = {
 		gloss: 'Gloss',
@@ -49,7 +33,9 @@
 		fragmentsTrad: 'Stroke fragments (traditional)',
 		historicalImages: 'Historical images',
 		historicalPronunciations: 'Historical pronunciations',
-		customSources: 'Sources'
+		customSources: 'Sources',
+		strokeCountSimp: 'Stroke count (simplified)',
+		strokeCountTrad: 'Stroke count (traditional)'
 	};
 
 	const SIMPLE_TEXT_FIELDS = new Set(['gloss', 'hint', 'originalMeaning']);
@@ -61,46 +47,17 @@
 	let {
 		editData,
 		baseData,
-		character
+		character,
+		changedFields = null
 	}: {
 		editData: Record<string, any>;
 		baseData: Record<string, any> | null;
 		character: string;
+		/** When provided, only show diffs for these fields (from char_manual.changedFields) */
+		changedFields?: string[] | null;
 	} = $props();
 
 	// --- Comparison helpers ---
-
-	/** Normalize "empty-ish" values so false, null, undefined, "", and [] all compare equal */
-	function normalize(val: unknown): unknown {
-		if (val == null) return null;
-		if (val === false) return null;
-		if (val === '') return null;
-		if (Array.isArray(val) && val.length === 0) return null;
-		return val;
-	}
-
-	function deepEqual(a: unknown, b: unknown): boolean {
-		const na = normalize(a);
-		const nb = normalize(b);
-		if (na === nb) return true;
-		if (na == null && nb == null) return true;
-		if (na == null || nb == null) return false;
-		if (typeof na !== typeof nb) return false;
-		if (Array.isArray(na) && Array.isArray(nb)) {
-			if (na.length !== nb.length) return false;
-			return na.every((item, i) => deepEqual(item, nb[i]));
-		}
-		if (typeof na === 'object' && typeof nb === 'object') {
-			const aObj = na as Record<string, unknown>;
-			const bObj = nb as Record<string, unknown>;
-			const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
-			for (const key of keys) {
-				if (!deepEqual(aObj[key], bObj[key])) return false;
-			}
-			return true;
-		}
-		return false;
-	}
 
 	function diffStringArrays(
 		from: string[] | null,
@@ -205,9 +162,14 @@
 		baseVal: any;
 	}
 
+	const changedFieldSet = $derived(changedFields ? new Set(changedFields) : null);
+
 	const changes: FieldChange[] = $derived.by(() => {
 		const result: FieldChange[] = [];
 		for (const field of EDITABLE_FIELDS) {
+			// When changedFields is provided, skip fields that weren't intentionally changed
+			if (changedFieldSet && !changedFieldSet.has(field)) continue;
+
 			const editVal = editData[field] ?? null;
 			const baseVal = baseData?.[field] ?? null;
 

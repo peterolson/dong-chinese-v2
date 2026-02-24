@@ -3,6 +3,18 @@ import type { Actions, PageServerLoad } from './$types';
 import { getPendingEdits, approveCharEdit, rejectCharEdit } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
+import { charView } from '$lib/server/db/dictionary.views';
+import { db } from '$lib/server/db';
+import { inArray } from 'drizzle-orm';
+import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+
+function pickEditableFields(row: Record<string, unknown>) {
+	const result: Record<string, unknown> = {};
+	for (const field of EDITABLE_FIELDS) {
+		result[field] = row[field as keyof typeof row] ?? null;
+	}
+	return result;
+}
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { canReview } = await parent();
@@ -17,12 +29,24 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const userIds = edits.map((e) => e.editedBy).filter((id): id is string => id != null);
 	const nameMap = await resolveUserNames(userIds);
 
+	// Batch-load current char view data for all unique characters
+	const uniqueChars = [...new Set(edits.map((e) => e.character))];
+	const charViewRows =
+		uniqueChars.length > 0
+			? await db.select().from(charView).where(inArray(charView.character, uniqueChars))
+			: [];
+	const charBaseDataMap: Record<string, Record<string, unknown>> = {};
+	for (const row of charViewRows) {
+		charBaseDataMap[row.character] = pickEditableFields(row as unknown as Record<string, unknown>);
+	}
+
 	const items = edits.map((edit) => ({
 		id: edit.id,
 		character: edit.character,
 		editComment: edit.editComment,
 		editorName: edit.editedBy ? (nameMap.get(edit.editedBy) ?? 'Unknown') : 'Anonymous',
 		createdAt: edit.createdAt.toISOString(),
+		changedFields: edit.changedFields,
 		// Include editable fields for diff
 		gloss: edit.gloss,
 		hint: edit.hint,
@@ -43,7 +67,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 		historicalPronunciations: edit.historicalPronunciations
 	}));
 
-	return { items };
+	return { items, charBaseDataMap };
 };
 
 export const actions: Actions = {

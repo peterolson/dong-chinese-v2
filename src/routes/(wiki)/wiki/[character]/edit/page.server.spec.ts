@@ -46,6 +46,7 @@ function makePendingEdit(overrides: Record<string, unknown> = {}) {
 		createdAt: new Date('2025-01-15T10:00:00Z'),
 		reviewedAt: null,
 		anonymousSessionId: null,
+		changedFields: ['gloss'],
 		gloss: 'water',
 		hint: null,
 		originalMeaning: null,
@@ -117,7 +118,8 @@ describe('load', () => {
 			id: 'edit-1',
 			editComment: 'Updated gloss',
 			editorName: 'Alice',
-			createdAt: '2025-01-15T10:00:00.000Z'
+			createdAt: '2025-01-15T10:00:00.000Z',
+			changedFields: ['gloss']
 		});
 		expect(mockGetPendingEdits).toHaveBeenCalledWith('水');
 	});
@@ -444,7 +446,7 @@ describe('actions.submitEdit', () => {
 
 		await expect(actions!.submitEdit(event)).rejects.toMatchObject({
 			status: 303,
-			location: '/wiki/水?edited=pending'
+			location: `/wiki/${encodeURIComponent('水')}?edited=pending`
 		});
 	});
 
@@ -459,7 +461,7 @@ describe('actions.submitEdit', () => {
 
 		await expect(actions!.submitEdit(event)).rejects.toMatchObject({
 			status: 303,
-			location: '/wiki/水?edited=approved'
+			location: `/wiki/${encodeURIComponent('水')}?edited=approved`
 		});
 	});
 

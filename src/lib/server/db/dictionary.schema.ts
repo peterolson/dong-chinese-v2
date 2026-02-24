@@ -124,6 +124,9 @@ export const charManual = dictionary.table(
 		pinyinFrequencies: jsonb('pinyin_frequencies'),
 		pinyin: text('pinyin').array(),
 
+		// Which fields this edit intentionally changed (null = all fields, for backward compat)
+		changedFields: text('changed_fields').array(),
+
 		// Status / review
 		status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
 		reviewedBy: text('reviewed_by'), // user.id of reviewer; no FK so edits survive user deletion

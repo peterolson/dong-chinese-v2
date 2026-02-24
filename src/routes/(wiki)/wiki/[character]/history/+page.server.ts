@@ -10,28 +10,15 @@ import { resolveUserNames } from '$lib/server/services/user';
 import { db } from '$lib/server/db';
 import { charBase } from '$lib/server/db/dictionary.schema';
 import { eq } from 'drizzle-orm';
+import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 
 /** Pick only the fields that edits can touch (no frequency, shuowen, etc.) */
 function pickEditableFields(row: Record<string, unknown>) {
-	return {
-		gloss: row.gloss ?? null,
-		hint: row.hint ?? null,
-		originalMeaning: row.originalMeaning ?? null,
-		isVerified: row.isVerified ?? null,
-		pinyin: row.pinyin ?? null,
-		components: row.components ?? null,
-		simplifiedVariants: row.simplifiedVariants ?? null,
-		traditionalVariants: row.traditionalVariants ?? null,
-		customSources: row.customSources ?? null,
-		strokeDataSimp: row.strokeDataSimp ?? null,
-		strokeDataTrad: row.strokeDataTrad ?? null,
-		strokeCountSimp: row.strokeCountSimp ?? null,
-		strokeCountTrad: row.strokeCountTrad ?? null,
-		fragmentsSimp: row.fragmentsSimp ?? null,
-		fragmentsTrad: row.fragmentsTrad ?? null,
-		historicalImages: row.historicalImages ?? null,
-		historicalPronunciations: row.historicalPronunciations ?? null
-	};
+	const result: Record<string, unknown> = {};
+	for (const field of EDITABLE_FIELDS) {
+		result[field] = row[field as keyof typeof row] ?? null;
+	}
+	return result;
 }
 
 export const load: PageServerLoad = async ({ params, parent }) => {
@@ -64,6 +51,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		reviewerName: edit.reviewedBy ? (nameMap.get(edit.reviewedBy) ?? 'Unknown') : null,
 		createdAt: edit.createdAt.toISOString(),
 		reviewedAt: edit.reviewedAt?.toISOString() ?? null,
+		changedFields: edit.changedFields,
 		// Include editable fields for diff display
 		...pickEditableFields(edit)
 	}));
@@ -105,6 +93,7 @@ export const actions: Actions = {
 		const {
 			id: _id,
 			character,
+			changedFields: _changedFields,
 			status: _status,
 			reviewedBy: _reviewedBy,
 			reviewedAt: _reviewedAt,
@@ -130,6 +119,6 @@ export const actions: Actions = {
 			});
 		}
 
-		redirect(303, `/wiki/${character}/history`);
+		redirect(303, `/wiki/${encodeURIComponent(character)}/history`);
 	}
 };

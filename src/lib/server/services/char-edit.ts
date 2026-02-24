@@ -1,6 +1,9 @@
 import { db } from '$lib/server/db';
 import { charBase, charManual } from '$lib/server/db/dictionary.schema';
+import { charView } from '$lib/server/db/dictionary.views';
 import { eq, desc, and, sql } from 'drizzle-orm';
+import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+import { computeChangedFields } from '$lib/data/deep-equal';
 
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
@@ -13,6 +16,8 @@ export type CharManualRow = typeof charManual.$inferSelect;
  * Requires at least one of userId or anonymousSessionId for attribution.
  * The character must exist in char_base — edits for unknown characters are rejected
  * because the dictionary.char view is driven by char_base.
+ *
+ * Computes changedFields by diffing submitted data against the current char view state.
  */
 export async function submitCharEdit(params: {
 	character: string;
@@ -20,6 +25,7 @@ export async function submitCharEdit(params: {
 		CharManualInsert,
 		| 'id'
 		| 'character'
+		| 'changedFields'
 		| 'status'
 		| 'reviewedBy'
 		| 'reviewedAt'
@@ -37,12 +43,33 @@ export async function submitCharEdit(params: {
 		throw new Error('At least one of userId or anonymousSessionId is required');
 	}
 
-	const [existing] = await db
-		.select({ character: charBase.character })
-		.from(charBase)
-		.where(eq(charBase.character, params.character));
-	if (!existing) {
-		throw new Error(`Character '${params.character}' does not exist in char_base`);
+	// Load current state from the char view (need full row for changedFields computation)
+	const [currentState] = await db
+		.select()
+		.from(charView)
+		.where(eq(charView.character, params.character));
+	if (!currentState) {
+		// Fall back to checking char_base for a better error message
+		const [baseExists] = await db
+			.select({ character: charBase.character })
+			.from(charBase)
+			.where(eq(charBase.character, params.character));
+		if (!baseExists) {
+			throw new Error(`Character '${params.character}' does not exist in char_base`);
+		}
+	}
+
+	// Compute which fields actually changed
+	const changedFields = currentState
+		? computeChangedFields(
+				currentState as unknown as Record<string, unknown>,
+				params.data as unknown as Record<string, unknown>,
+				EDITABLE_FIELDS
+			)
+		: [...EDITABLE_FIELDS]; // no current state = treat all as changed
+
+	if (changedFields.length === 0) {
+		throw new Error('No fields were changed');
 	}
 
 	// Auto-approve requires an authenticated user
@@ -54,6 +81,7 @@ export async function submitCharEdit(params: {
 		.values({
 			character: params.character,
 			...params.data,
+			changedFields,
 			status,
 			reviewedBy: canAutoApprove ? params.editedBy.userId! : null,
 			reviewedAt: canAutoApprove ? new Date() : null,
@@ -67,7 +95,12 @@ export async function submitCharEdit(params: {
 }
 
 /**
- * Approve a pending edit. Sets the reviewer and timestamp.
+ * Approve a pending edit. Merges the edit's changed fields with the current
+ * char view state so that only intentionally changed fields are applied.
+ *
+ * For legacy rows with changedFields = null, falls back to the old behavior
+ * (approve as-is without merge).
+ *
  * Returns true if the edit was approved, false if it was not found or already reviewed.
  */
 export async function approveCharEdit(
@@ -75,9 +108,89 @@ export async function approveCharEdit(
 	reviewedBy: string,
 	reviewComment?: string
 ): Promise<boolean> {
+	// Load the pending edit
+	const edit = await getCharManualById(editId);
+	if (!edit || edit.status !== 'pending') return false;
+
+	// If changedFields is null (legacy row), approve without merge
+	if (edit.changedFields == null) {
+		const rows = await db
+			.update(charManual)
+			.set({
+				status: 'approved',
+				reviewedBy,
+				reviewedAt: new Date(),
+				reviewComment: reviewComment ?? null
+			})
+			.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')))
+			.returning({ id: charManual.id });
+
+		return rows.length > 0;
+	}
+
+	// Load current char view state for merging
+	const [currentState] = await db
+		.select()
+		.from(charView)
+		.where(eq(charView.character, edit.character));
+
+	// Build merged data: use edit's values for changedFields, current state for everything else
+	const changedSet = new Set(edit.changedFields);
+	const editRecord = edit as unknown as Record<string, unknown>;
+	const currentRecord = (currentState ?? {}) as unknown as Record<string, unknown>;
+
+	// Merge all charManual data columns (not just editable — we need frequency, shuowen, etc.)
+	const mergedValues: Record<string, unknown> = {};
+
+	// Get all data column keys from the charManual table (exclude metadata columns)
+	const metadataColumns = new Set([
+		'id',
+		'character',
+		'changedFields',
+		'status',
+		'reviewedBy',
+		'reviewedAt',
+		'reviewComment',
+		'editedBy',
+		'anonymousSessionId',
+		'editComment',
+		'createdAt'
+	]);
+
+	// For editable fields: use edit's value if in changedFields, else current state
+	for (const field of EDITABLE_FIELDS) {
+		if (changedSet.has(field)) {
+			mergedValues[field] = editRecord[field];
+		} else {
+			mergedValues[field] = currentRecord[field] ?? editRecord[field];
+		}
+	}
+
+	// For non-editable data columns: always use current state (frequency, shuowen, etc.)
+	const nonEditableDataColumns = [
+		'codepoint',
+		'junDaRank',
+		'junDaFrequency',
+		'junDaPerMillion',
+		'subtlexRank',
+		'subtlexCount',
+		'subtlexPerMillion',
+		'subtlexContextDiversity',
+		'shuowenExplanation',
+		'shuowenPronunciation',
+		'shuowenPinyin',
+		'pinyinFrequencies'
+	];
+	for (const field of nonEditableDataColumns) {
+		mergedValues[field] = currentRecord[field] ?? editRecord[field];
+	}
+
+	// Update the edit row with merged data + approved status
+	// Use WHERE status = 'pending' as an optimistic lock
 	const rows = await db
 		.update(charManual)
 		.set({
+			...mergedValues,
 			status: 'approved',
 			reviewedBy,
 			reviewedAt: new Date(),
@@ -167,7 +280,8 @@ export async function getRecentEdits({
 				reviewedBy: charManual.reviewedBy,
 				reviewComment: charManual.reviewComment,
 				createdAt: charManual.createdAt,
-				reviewedAt: charManual.reviewedAt
+				reviewedAt: charManual.reviewedAt,
+				changedFields: charManual.changedFields
 			})
 			.from(charManual)
 			.orderBy(desc(charManual.createdAt))

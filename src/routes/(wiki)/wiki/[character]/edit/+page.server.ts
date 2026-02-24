@@ -25,7 +25,8 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		id: edit.id,
 		editComment: edit.editComment,
 		editorName: edit.editedBy ? (nameMap.get(edit.editedBy) ?? 'Unknown') : 'Anonymous',
-		createdAt: edit.createdAt.toISOString()
+		createdAt: edit.createdAt.toISOString(),
+		changedFields: edit.changedFields
 	}));
 
 	return { canReview, pendingEdits: pendingItems };
@@ -120,7 +121,7 @@ export const actions: Actions = {
 			});
 		}
 
-		redirect(303, `/wiki/${char}?edited=${editResult.status}`);
+		redirect(303, `/wiki/${encodeURIComponent(char)}?edited=${editResult.status}`);
 	},
 
 	approveEdit: async ({ request, locals }) => {

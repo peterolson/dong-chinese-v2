@@ -388,6 +388,131 @@ describe('getRecentEdits', () => {
 	});
 });
 
+describe('submitCharEdit — changedFields', () => {
+	it('computes changedFields for only the fields that actually changed', async () => {
+		// char_base has gloss='test' for all chars. Submitting gloss='you' should detect that change.
+		const result = await submitCharEdit({
+			character: '你',
+			data: { gloss: 'you', hint: null, isVerified: false },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000040' },
+			editComment: 'change gloss only',
+			autoApprove: false
+		});
+
+		const row = await getCharManualById(result.id);
+		expect(row).not.toBeNull();
+		expect(row!.changedFields).toContain('gloss');
+		// hint and isVerified are null/false in both current state and submitted data, so shouldn't be changed
+		expect(row!.changedFields).not.toContain('hint');
+		expect(row!.changedFields).not.toContain('isVerified');
+	});
+
+	it('detects multiple changed fields', async () => {
+		const result = await submitCharEdit({
+			character: '好',
+			data: { gloss: 'good', hint: 'female + child', isVerified: true },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000041' },
+			editComment: 'multiple changes',
+			autoApprove: false
+		});
+
+		const row = await getCharManualById(result.id);
+		expect(row!.changedFields).toContain('gloss');
+		expect(row!.changedFields).toContain('hint');
+		expect(row!.changedFields).toContain('isVerified');
+	});
+
+	it('throws when no fields were changed', async () => {
+		// char_base has gloss='test' for all chars. Submitting the same value should fail.
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { gloss: 'test' },
+				editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000045' },
+				editComment: 'no-op edit',
+				autoApprove: false
+			})
+		).rejects.toThrow('No fields were changed');
+	});
+});
+
+describe('approveCharEdit — merge', () => {
+	it('merges: uses changed fields from edit, unchanged from current state', async () => {
+		const userId = await createTestUser('merge-reviewer');
+
+		// First: create an approved edit that sets hint='water flows'
+		await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water', hint: 'water flows' },
+			editedBy: { userId },
+			editComment: 'set hint',
+			autoApprove: true
+		});
+
+		// Second: submit a pending edit that changes gloss only
+		const pendingResult = await submitCharEdit({
+			character: '水',
+			data: { gloss: 'liquid', hint: 'water flows' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000042' },
+			editComment: 'change gloss',
+			autoApprove: false
+		});
+
+		// Verify changedFields only includes gloss
+		const pendingRow = await getCharManualById(pendingResult.id);
+		expect(pendingRow!.changedFields).toEqual(['gloss']);
+
+		// Approve — should merge: gloss from edit, hint from current state
+		const approved = await approveCharEdit(pendingResult.id, userId);
+		expect(approved).toBe(true);
+
+		const approvedRow = await getCharManualById(pendingResult.id);
+		expect(approvedRow!.gloss).toBe('liquid'); // from the edit
+		expect(approvedRow!.hint).toBe('water flows'); // from current state (preserved)
+	});
+
+	it('handles legacy rows with changedFields=null (no merge)', async () => {
+		// Directly insert a legacy row without changedFields
+		const [legacyRow] = await db
+			.insert(charManual)
+			.values({
+				character: '火',
+				gloss: 'flame',
+				status: 'pending',
+				editedBy: null,
+				anonymousSessionId: '00000000-0000-0000-0000-000000000043',
+				editComment: 'legacy edit',
+				changedFields: null
+			})
+			.returning({ id: charManual.id });
+
+		const reviewerId = await createTestUser('legacy-reviewer');
+		const approved = await approveCharEdit(legacyRow.id, reviewerId);
+		expect(approved).toBe(true);
+
+		const row = await getCharManualById(legacyRow.id);
+		expect(row!.status).toBe('approved');
+		expect(row!.gloss).toBe('flame'); // kept as-is, no merge
+	});
+});
+
+describe('getRecentEdits — changedFields', () => {
+	it('includes changedFields in results', async () => {
+		await submitCharEdit({
+			character: '木',
+			data: { gloss: 'tree' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000044' },
+			editComment: 'test',
+			autoApprove: false
+		});
+
+		const result = await getRecentEdits();
+		expect(result.edits).toHaveLength(1);
+		expect(result.edits[0]).toHaveProperty('changedFields');
+		expect(result.edits[0].changedFields).toContain('gloss');
+	});
+});
+
 describe('countPendingEdits', () => {
 	it('returns count of pending edits for a character', async () => {
 		await submitCharEdit({
