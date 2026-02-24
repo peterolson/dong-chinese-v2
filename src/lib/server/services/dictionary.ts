@@ -219,7 +219,7 @@ export async function getCharacterList(
 					c.jun_da_per_million AS "junDaPerMillion",
 					c.simplified_variants AS "simplifiedVariants",
 					c.traditional_variants AS "traditionalVariants",
-					count(*) OVER() AS total
+					count(*) OVER()::int AS total
 				FROM component_counts cc
 				JOIN ${charView} c ON c.character = cc.character
 				ORDER BY cc.usage_count DESC

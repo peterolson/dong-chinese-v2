@@ -108,7 +108,13 @@
 	}
 
 	.js-only {
-		display: contents;
+		display: none;
+	}
+
+	@media (scripting: enabled) {
+		.js-only {
+			display: contents;
+		}
 	}
 
 	.empty {

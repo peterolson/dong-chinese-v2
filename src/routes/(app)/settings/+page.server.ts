@@ -23,11 +23,11 @@ export const actions: Actions = {
 			charSetRaw === 'simplified' || charSetRaw === 'traditional' ? charSetRaw : null;
 
 		const phoneticScriptRaw = formData.get('phoneticScript')?.toString() ?? '';
-		const phoneticScript: UserSettings['phoneticScript'] = PHONETIC_SCRIPT_VALUES.includes(
-			phoneticScriptRaw as (typeof PHONETIC_SCRIPT_VALUES)[number]
-		)
-			? (phoneticScriptRaw as UserSettings['phoneticScript'])
-			: null;
+		const phoneticScript: UserSettings['phoneticScript'] =
+			phoneticScriptRaw !== 'pinyin' &&
+			PHONETIC_SCRIPT_VALUES.includes(phoneticScriptRaw as (typeof PHONETIC_SCRIPT_VALUES)[number])
+				? (phoneticScriptRaw as UserSettings['phoneticScript'])
+				: null;
 
 		const settings: Partial<UserSettings> = {
 			...event.locals.settings,

@@ -149,31 +149,33 @@
 </script>
 
 <form method="post" action="?/submitEdit" class="edit-form">
-	<!-- Hidden data serialized as JSON -->
-	<input type="hidden" name="pinyin" value={JSON.stringify(pinyin)} />
-	<input type="hidden" name="simplifiedVariants" value={JSON.stringify(simplifiedVariants)} />
-	<input type="hidden" name="traditionalVariants" value={JSON.stringify(traditionalVariants)} />
-	<input
-		type="hidden"
-		name="components"
-		value={JSON.stringify(components.map(({ fragmentSimp, fragmentTrad, ...rest }) => rest))}
-	/>
-	<input
-		type="hidden"
-		name="historicalPronunciations"
-		value={JSON.stringify(historicalPronunciations)}
-	/>
-	<input
-		type="hidden"
-		name="customSources"
-		value={JSON.stringify(sources.filter((s) => s.name.trim()).map(serializeSource))}
-	/>
-	<input type="hidden" name="strokeCountSimp" value={strokeCountSimp} />
-	<input type="hidden" name="strokeCountTrad" value={strokeCountTrad} />
-	<input type="hidden" name="strokeDataSimp" value={strokeDataSimp} />
-	<input type="hidden" name="strokeDataTrad" value={strokeDataTrad} />
-	<input type="hidden" name="fragmentsSimp" value={JSON.stringify(fragmentsSimp)} />
-	<input type="hidden" name="fragmentsTrad" value={JSON.stringify(fragmentsTrad)} />
+	<!-- Hidden data serialized as JSON — only active when JS is enabled (noscript inputs are used otherwise) -->
+	<div class="js-hidden-fields">
+		<input type="hidden" name="pinyin" value={JSON.stringify(pinyin)} />
+		<input type="hidden" name="simplifiedVariants" value={JSON.stringify(simplifiedVariants)} />
+		<input type="hidden" name="traditionalVariants" value={JSON.stringify(traditionalVariants)} />
+		<input
+			type="hidden"
+			name="components"
+			value={JSON.stringify(components.map(({ fragmentSimp, fragmentTrad, ...rest }) => rest))}
+		/>
+		<input
+			type="hidden"
+			name="historicalPronunciations"
+			value={JSON.stringify(historicalPronunciations)}
+		/>
+		<input
+			type="hidden"
+			name="customSources"
+			value={JSON.stringify(sources.filter((s) => s.name.trim()).map(serializeSource))}
+		/>
+		<input type="hidden" name="strokeCountSimp" value={strokeCountSimp} />
+		<input type="hidden" name="strokeCountTrad" value={strokeCountTrad} />
+		<input type="hidden" name="strokeDataSimp" value={strokeDataSimp} />
+		<input type="hidden" name="strokeDataTrad" value={strokeDataTrad} />
+		<input type="hidden" name="fragmentsSimp" value={JSON.stringify(fragmentsSimp)} />
+		<input type="hidden" name="fragmentsTrad" value={JSON.stringify(fragmentsTrad)} />
+	</div>
 
 	<fieldset class="form-section">
 		<legend>Basic Details</legend>
@@ -514,6 +516,16 @@
 
 	.submit-comment {
 		flex: 1;
+	}
+
+	.js-hidden-fields {
+		display: none;
+	}
+
+	@media (scripting: enabled) {
+		.js-hidden-fields {
+			display: contents;
+		}
 	}
 
 	.noscript-note {
