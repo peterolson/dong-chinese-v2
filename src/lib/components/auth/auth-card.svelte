@@ -80,17 +80,10 @@
 
 	.auth-page {
 		display: flex;
-		margin: calc(-1 * var(--content-padding));
 		padding: 2rem 1rem;
 		background: var(--surface);
-		min-height: calc(100vh - var(--header-height));
+		min-height: 100vh;
 		justify-content: center;
-	}
-
-	@media (max-width: 600px) {
-		.auth-page {
-			margin: -1.25rem -1rem;
-		}
 	}
 
 	.auth-card {

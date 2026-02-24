@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ComponentData, CharacterData } from '$lib/types/dictionary';
+	import { getCharLinkBase } from './char-link-context';
 	import { typeInfo, colorNames, type Chars } from '$lib/data/component-type-info';
 	import { getComponentTitle } from './component-colors';
 	import CharacterGlyph from './character-glyph.svelte';
@@ -13,6 +14,8 @@
 	}
 
 	let { type, characters, characterSet = null }: Props = $props();
+
+	const charLinkBase = getCharLinkBase();
 
 	let isTrad = $derived(characterSet === 'traditional');
 
@@ -73,7 +76,7 @@
 					allFragments={mono ? monoFrags(char) : fragmentsFor(char)}
 				/>
 			</div>
-			<a href={resolve('/(app)/dictionary/[entry]', { entry: char })} class="cell-char">{char}</a>
+			<a href={resolve(`${charLinkBase}/${char}`)} class="cell-char">{char}</a>
 			<span class="cell-pinyin">{pinyin}</span>
 			{#if showSpeak}
 				<SpeakButton text={char} label="Listen to {char}" />
@@ -101,7 +104,7 @@
 					allFragments={frags}
 				/>
 			</div>
-			<a href={resolve('/(app)/dictionary/[entry]', { entry: char })} class="cell-char">{char}</a>
+			<a href={resolve(`${charLinkBase}/${char}`)} class="cell-char">{char}</a>
 			<span class="cell-pinyin">{pinyin}</span>
 			{#if showSpeak}
 				<SpeakButton text={char} label="Listen to {char}" />

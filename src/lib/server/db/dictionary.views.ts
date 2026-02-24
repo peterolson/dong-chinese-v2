@@ -1,17 +1,16 @@
 /**
  * Drizzle view declarations for the dictionary schema.
  *
- * Separated from dictionary.schema.ts because drizzle-kit push does not
- * handle .existing() views in custom schemas. This file is imported by
- * application code but NOT listed in drizzle.config.ts.
+ * The char view overlays the most recent approved char_manual edit on top of char_base.
+ * The view SQL is defined once in char-view-sql.ts and shared with the rebuild/create scripts.
+ * Defined with .as() so drizzle-kit manages the view (won't drop it during push).
  */
 
+import { sql } from 'drizzle-orm';
 import { text, integer, boolean, timestamp, jsonb, doublePrecision } from 'drizzle-orm/pg-core';
 import { dictionary } from './dictionary.schema';
+import { CHAR_VIEW_BODY } from './char-view-sql';
 
-// Combined view: char_base with the most recent approved char_manual edit layered on top.
-// Created and managed by scripts/dictionary/create-char-view.ts (not by drizzle-kit).
-// The .existing() declaration gives Drizzle type information without managing the view.
 export const charView = dictionary
 	.view('char', {
 		character: text('character').notNull(),
@@ -47,4 +46,4 @@ export const charView = dictionary
 		createdAt: timestamp('created_at', { withTimezone: true }),
 		updatedAt: timestamp('updated_at', { withTimezone: true })
 	})
-	.existing();
+	.as(sql.raw(CHAR_VIEW_BODY));

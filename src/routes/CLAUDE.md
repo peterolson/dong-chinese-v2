@@ -30,6 +30,24 @@ Public pages with no app shell (no sidebar/header).
 
 All auth pages use `auth-card.svelte` layout and work without JavaScript.
 
+### (wiki)/ — Character Wiki
+
+Community-maintained character dictionary with editing workflow. Own layout with `WikiHeader` + `WikiSidebar`.
+
+| Route                                      | Status  | Notes                                                                                       |
+| ------------------------------------------ | ------- | ------------------------------------------------------------------------------------------- |
+| `/wiki`                                    | Working | Home page with component type overview, contribution guide, data sources, quick links.      |
+| `/wiki/search`                             | Working | Character search by character, pinyin, or English gloss. GET form (no-JS baseline).         |
+| `/wiki/lists`                              | Working | Index of frequency-based character lists (SUBTLEX, Jun Da, context diversity, components).  |
+| `/wiki/lists/[list_type]/[offset]/[limit]` | Working | Paginated character list by frequency metric.                                               |
+| `/wiki/[character]`                        | Working | Read-only character view reusing `CharacterView` component.                                 |
+| `/wiki/[character]/edit`                   | Working | Structured edit form with pending edit review. POST form actions for submit/approve/reject. |
+| `/wiki/[character]/history`                | Working | Edit history timeline with expandable diffs and rollback support.                           |
+| `/wiki/pending`                            | Working | Review queue for pending edits (requires `wikiEdit` permission).                            |
+| `/wiki/recent-changes`                     | Working | Feed of recent edits across all characters.                                                 |
+
+All wiki pages work without JavaScript (progressive enhancement).
+
 ### /api — JSON Endpoints
 
 | Route                            | Method | Notes                                                               |

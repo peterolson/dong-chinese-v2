@@ -22,3 +22,9 @@ ignore:
   - 'src/routes/api/dictionary/**'
   - 'src/routes/*/dictionary/*/+page.server.ts'
   - 'src/routes/*/dictionary/explain/**'
+  # Svelte components/templates — covered by Storybook and e2e tests
+  - 'src/**/*.svelte'
+  # Thin data-type files with no runtime logic
+  - 'src/lib/types/**'
+  # Storybook example stories (not app code)
+  - 'src/stories/**'

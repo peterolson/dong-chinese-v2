@@ -4,14 +4,15 @@ Four subdirectories of Svelte 5 components. All use runes (`$state`, `$derived`,
 
 ## ui/ — Reusable Primitives
 
-| Component                  | Notes                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `button.svelte`            | Polymorphic (renders `<a>` or `<button>`). Variants: primary, secondary, tertiary, outline. |
-| `modal.svelte`             | Native `<dialog>`, backdrop click-to-close, CSS animations. Controlled via `open` prop.     |
-| `alert.svelte`             | Variants: error, success, warning, info. Renders Lucide icons.                              |
-| `segmented-control.svelte` | Accessible radio group styled as toggle buttons.                                            |
-| `speak-button.svelte`      | Plays TTS via `speech.ts`. Shows loading state while synthesizing.                          |
-| `progress-button.svelte`   | Button with a loading spinner.                                                              |
+| Component                  | Notes                                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `button.svelte`            | Polymorphic (renders `<a>` or `<button>`). Variants: primary, secondary, tertiary, outline, dashed, ghost. Sizes: default, sm, icon. |
+| `modal.svelte`             | Native `<dialog>`, backdrop click-to-close, CSS animations. Controlled via `open` prop.                                              |
+| `alert.svelte`             | Variants: error, success, warning, info. Renders Lucide icons.                                                                       |
+| `segmented-control.svelte` | Accessible radio group styled as toggle buttons.                                                                                     |
+| `speak-button.svelte`      | Plays TTS via `speech.ts`. Shows loading state while synthesizing.                                                                   |
+| `tab-bar.svelte`           | Accessible tab bar for switching between views. Renders as `<nav>` with `aria-current`.                                              |
+| `progress-button.svelte`   | Button with a loading spinner.                                                                                                       |
 
 ## auth/ — Authentication Forms
 
@@ -68,12 +69,38 @@ The largest and most complex component area. Renders the dictionary detail page 
 
 | File                                         | Notes                                                                           |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
+| `char-link-context.ts`                       | Svelte context for character link base URL (`/dictionary` vs `/wiki`).          |
 | `component-colors.ts`                        | Maps component types → CSS custom properties. OKLCH color space for duplicates. |
 | `stories.data.ts`                            | Shared fixture data for Storybook stories.                                      |
 | `component-type-explanation.stories.data.ts` | Large (206K) fixture with full CharacterData for all 8 types.                   |
 
+## wiki/ — Character Wiki Editing
+
+Components for the `/wiki` route group's editing and review UI.
+
+| Component                                | Notes                                                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `char-edit-form.svelte`                  | Structured edit form for character data (components, strokes, pronunciation, sources).             |
+| `component-editor.svelte`                | Sub-editor for character component tree (add/remove/reorder components with type and stroke data). |
+| `edit-status-badge.svelte`               | Colored badge showing pending/approved/rejected status.                                            |
+| `field-diff.svelte`                      | Side-by-side diff viewer for edit history, handles all field types including JSON arrays.          |
+| `historical-image-editor.svelte`         | Editor for oracle bone, bronze, seal script images.                                                |
+| `historical-pronunciation-editor.svelte` | Editor for Baxter-Sagart, Zhengzhang, Tang reconstructions.                                        |
+| `key-value-editor.svelte`                | Generic key-value pair editor for structured source fields.                                        |
+| `list-editor.svelte`                     | Ordered list editor with add/remove/reorder.                                                       |
+| `tag-input.svelte`                       | Tag input with comma/enter to add, backspace to remove.                                            |
+| `wiki-header.svelte`                     | Wiki-specific header with logo and auth status.                                                    |
+| `wiki-sidebar.svelte`                    | Wiki navigation sidebar with search, character nav, and review links.                              |
+
+### Supporting Modules
+
+| File                | Notes                                                                       |
+| ------------------- | --------------------------------------------------------------------------- |
+| `fragment-range.ts` | Converts between 0-indexed stroke index arrays and 1-indexed range strings. |
+
 ## Conventions
 
+- **Reuse existing components** — always use `ui/` primitives (`Button`, `Alert`, `Modal`, etc.) instead of writing bespoke HTML+CSS for the same purpose. If a needed variant or size doesn't exist, add it to the shared component rather than creating one-off styles. This applies to all buttons, modals, alerts, and other common UI patterns.
 - **Storybook stories** use Svelte CSF (`defineMeta` + `<Story>`) with auto-running play functions (tested via Vitest).
 - **No Tailwind** — vanilla CSS with `--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground` etc.
 - **Dark mode** via `data-theme="dark"` on `<html>`, using CSS custom properties.

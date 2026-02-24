@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { charBase, charManual } from '$lib/server/db/dictionary.schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
@@ -23,6 +23,7 @@ export async function submitCharEdit(params: {
 		| 'status'
 		| 'reviewedBy'
 		| 'reviewedAt'
+		| 'reviewComment'
 		| 'editedBy'
 		| 'anonymousSessionId'
 		| 'editComment'
@@ -69,13 +70,18 @@ export async function submitCharEdit(params: {
  * Approve a pending edit. Sets the reviewer and timestamp.
  * Returns true if the edit was approved, false if it was not found or already reviewed.
  */
-export async function approveCharEdit(editId: string, reviewedBy: string): Promise<boolean> {
+export async function approveCharEdit(
+	editId: string,
+	reviewedBy: string,
+	reviewComment?: string
+): Promise<boolean> {
 	const rows = await db
 		.update(charManual)
 		.set({
 			status: 'approved',
 			reviewedBy,
-			reviewedAt: new Date()
+			reviewedAt: new Date(),
+			reviewComment: reviewComment ?? null
 		})
 		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')))
 		.returning({ id: charManual.id });
@@ -84,16 +90,21 @@ export async function approveCharEdit(editId: string, reviewedBy: string): Promi
 }
 
 /**
- * Reject a pending edit. Sets the reviewer and timestamp.
+ * Reject a pending edit. Requires a review comment explaining the rejection.
  * Returns true if the edit was rejected, false if it was not found or already reviewed.
  */
-export async function rejectCharEdit(editId: string, reviewedBy: string): Promise<boolean> {
+export async function rejectCharEdit(
+	editId: string,
+	reviewedBy: string,
+	reviewComment: string
+): Promise<boolean> {
 	const rows = await db
 		.update(charManual)
 		.set({
 			status: 'rejected',
 			reviewedBy,
-			reviewedAt: new Date()
+			reviewedAt: new Date(),
+			reviewComment
 		})
 		.where(and(eq(charManual.id, editId), eq(charManual.status, 'pending')))
 		.returning({ id: charManual.id });
@@ -127,4 +138,58 @@ export async function getCharEditHistory(character: string, limit = 50): Promise
 		.where(eq(charManual.character, character))
 		.orderBy(desc(charManual.createdAt))
 		.limit(limit);
+}
+
+/**
+ * Get a single char_manual edit by ID.
+ */
+export async function getCharManualById(editId: string): Promise<CharManualRow | null> {
+	const [row] = await db.select().from(charManual).where(eq(charManual.id, editId)).limit(1);
+	return row ?? null;
+}
+
+/**
+ * Get recent edits across all characters, paginated. Includes all statuses.
+ * Only selects columns needed for the recent-changes listing (no large JSONB data).
+ */
+export async function getRecentEdits({
+	limit = 50,
+	offset = 0
+}: { limit?: number; offset?: number } = {}) {
+	const [edits, countResult] = await Promise.all([
+		db
+			.select({
+				id: charManual.id,
+				character: charManual.character,
+				status: charManual.status,
+				editComment: charManual.editComment,
+				editedBy: charManual.editedBy,
+				reviewedBy: charManual.reviewedBy,
+				reviewComment: charManual.reviewComment,
+				createdAt: charManual.createdAt,
+				reviewedAt: charManual.reviewedAt
+			})
+			.from(charManual)
+			.orderBy(desc(charManual.createdAt))
+			.limit(limit)
+			.offset(offset),
+		db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(charManual)
+			.then((rows) => rows[0])
+	]);
+
+	return { edits, total: countResult.count };
+}
+
+/**
+ * Count pending edits for a character.
+ */
+export async function countPendingEdits(character: string): Promise<number> {
+	const [result] = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(charManual)
+		.where(and(eq(charManual.character, character), eq(charManual.status, 'pending')));
+
+	return result.count;
 }

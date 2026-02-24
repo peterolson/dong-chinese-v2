@@ -8,7 +8,10 @@ import {
 	approveCharEdit,
 	rejectCharEdit,
 	getPendingEdits,
-	getCharEditHistory
+	getCharEditHistory,
+	getCharManualById,
+	getRecentEdits,
+	countPendingEdits
 } from './char-edit';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,6 +22,12 @@ const testChars: string[] = [];
 const ALL_TEST_CHARS = ['你', '好', '中', '大', '小', '人', '山', '水', '火', '木', '金', '土'];
 
 beforeEach(async () => {
+	// Clean up any leftover data from a previous failed run
+	await db.delete(charManual);
+	for (const c of ALL_TEST_CHARS) {
+		await db.delete(charBase).where(eq(charBase.character, c));
+	}
+
 	await db.insert(charBase).values(
 		ALL_TEST_CHARS.map((c) => ({
 			character: c,
@@ -99,7 +108,7 @@ describe('submitCharEdit', () => {
 	it('throws when character does not exist in char_base', async () => {
 		await expect(
 			submitCharEdit({
-				character: '龘',
+				character: '🚫', // emoji — guaranteed not in char_base
 				data: { gloss: 'dragons' },
 				editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000010' },
 				editComment: '',
@@ -171,7 +180,7 @@ describe('rejectCharEdit', () => {
 		});
 
 		const reviewerId = await createTestUser('reviewer-3');
-		const rejected = await rejectCharEdit(result.id, reviewerId);
+		const rejected = await rejectCharEdit(result.id, reviewerId, 'Rejected');
 		expect(rejected).toBe(true);
 
 		const rows = await db.select().from(charManual).where(eq(charManual.id, result.id));
@@ -188,8 +197,8 @@ describe('rejectCharEdit', () => {
 		});
 
 		const reviewerId = await createTestUser('reviewer-4');
-		await rejectCharEdit(result.id, reviewerId);
-		const rejected = await rejectCharEdit(result.id, reviewerId);
+		await rejectCharEdit(result.id, reviewerId, 'Rejected');
+		const rejected = await rejectCharEdit(result.id, reviewerId, 'Rejected');
 		expect(rejected).toBe(false);
 	});
 });
@@ -268,5 +277,155 @@ describe('getCharEditHistory', () => {
 	it('returns empty array for character with no edits', async () => {
 		const history = await getCharEditHistory('龍');
 		expect(history).toEqual([]);
+	});
+});
+
+describe('getCharManualById', () => {
+	it('returns the edit row when it exists', async () => {
+		const result = await submitCharEdit({
+			character: '你',
+			data: { gloss: 'you' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000020' },
+			editComment: 'test lookup',
+			autoApprove: false
+		});
+
+		const row = await getCharManualById(result.id);
+		expect(row).not.toBeNull();
+		expect(row!.id).toBe(result.id);
+		expect(row!.character).toBe('你');
+		expect(row!.editComment).toBe('test lookup');
+	});
+
+	it('returns null for non-existent id', async () => {
+		const row = await getCharManualById('00000000-0000-0000-0000-000000000099');
+		expect(row).toBeNull();
+	});
+});
+
+describe('getRecentEdits', () => {
+	it('returns empty result when no edits exist', async () => {
+		const result = await getRecentEdits();
+		expect(result.edits).toHaveLength(0);
+		expect(result.total).toBe(0);
+	});
+
+	it('returns edits ordered by newest first', async () => {
+		await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000021' },
+			editComment: 'first',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '火',
+			data: { gloss: 'fire' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000022' },
+			editComment: 'second',
+			autoApprove: false
+		});
+
+		const result = await getRecentEdits();
+		expect(result.edits).toHaveLength(2);
+		expect(result.total).toBe(2);
+		expect(result.edits[0].character).toBe('火');
+		expect(result.edits[1].character).toBe('水');
+	});
+
+	it('respects limit and offset', async () => {
+		await submitCharEdit({
+			character: '木',
+			data: { gloss: 'tree' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000023' },
+			editComment: 'a',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '金',
+			data: { gloss: 'gold' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000024' },
+			editComment: 'b',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '土',
+			data: { gloss: 'earth' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000025' },
+			editComment: 'c',
+			autoApprove: false
+		});
+
+		const result = await getRecentEdits({ limit: 2, offset: 1 });
+		expect(result.edits).toHaveLength(2);
+		expect(result.total).toBe(3);
+		expect(result.edits[0].character).toBe('金');
+	});
+
+	it('includes all statuses', async () => {
+		const userId = await createTestUser('recent-test');
+
+		await submitCharEdit({
+			character: '大',
+			data: { gloss: 'big' },
+			editedBy: { userId },
+			editComment: 'auto-approved',
+			autoApprove: true
+		});
+		await submitCharEdit({
+			character: '小',
+			data: { gloss: 'small' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000026' },
+			editComment: 'pending',
+			autoApprove: false
+		});
+
+		const result = await getRecentEdits();
+		expect(result.edits).toHaveLength(2);
+		const statuses = result.edits.map((e) => e.status);
+		expect(statuses).toContain('approved');
+		expect(statuses).toContain('pending');
+	});
+});
+
+describe('countPendingEdits', () => {
+	it('returns count of pending edits for a character', async () => {
+		await submitCharEdit({
+			character: '人',
+			data: { gloss: 'person' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000030' },
+			editComment: 'edit 1',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '人',
+			data: { gloss: 'human' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000031' },
+			editComment: 'edit 2',
+			autoApprove: false
+		});
+
+		const count = await countPendingEdits('人');
+		expect(count).toBe(2);
+	});
+
+	it('returns 0 when no pending edits exist', async () => {
+		const count = await countPendingEdits('山');
+		expect(count).toBe(0);
+	});
+
+	it('does not count approved edits', async () => {
+		const userId = await createTestUser('count-test');
+
+		await submitCharEdit({
+			character: '中',
+			data: { gloss: 'middle' },
+			editedBy: { userId },
+			editComment: 'approved one',
+			autoApprove: true
+		});
+
+		const count = await countPendingEdits('中');
+		expect(count).toBe(0);
 	});
 });

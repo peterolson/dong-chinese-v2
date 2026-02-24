@@ -72,30 +72,34 @@ src/
 │   │   ├── auth/                  # Auth UI (auth-card, social-icon, password-input, magic-link-form)
 │   │   ├── dictionary/            # Dictionary UI (character-view, breakdown, glyph, stroke-animation, etc.)
 │   │   ├── layout/                # App shell (site-header, sidebar, auth-status)
-│   │   └── ui/                    # Reusable primitives (alert, button, modal, segmented-control, speak-button)
-│   ├── data/                      # Static data modules (component-type-info.ts)
+│   │   ├── ui/                    # Reusable primitives (alert, button, modal, segmented-control, speak-button, tab-bar)
+│   │   └── wiki/                  # Wiki editing UI (char-edit-form, component-editor, field-diff, wiki-sidebar, etc.)
+│   ├── data/                      # Static data modules (component-type-info.ts, common-sources.ts)
 │   ├── server/
 │   │   ├── db/
 │   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings, permissions)
 │   │   │   ├── stage.schema.ts    # Stage schema (unihan_raw, cedict_raw, sync_metadata)
 │   │   │   ├── dictionary.schema.ts # Dictionary schema (char_base, char_manual)
-│   │   │   ├── dictionary.views.ts # Drizzle view declarations (charView — .existing(), not managed by drizzle-kit)
+│   │   │   ├── dictionary.views.ts # Drizzle view declarations (charView — .as() managed by drizzle-kit)
+│   │   │   ├── char-view-sql.ts   # Shared char view SQL (single source of truth for views.ts + scripts)
 │   │   │   ├── auth.schema.ts     # Auto-generated Better Auth schema
 │   │   │   └── index.ts           # DB connection + exports
 │   │   ├── services/
 │   │   │   ├── anonymous-session.ts # Cookie + DB row anonymous sessions
-│   │   │   ├── char-edit.ts       # Submit/approve/reject character edits
-│   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search)
+│   │   │   ├── char-edit.ts       # Submit/approve/reject/rollback character edits, recent edits, pending counts
+│   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search, character lists)
 │   │   │   ├── email.ts           # Nodemailer email service
 │   │   │   ├── magic-link.ts      # Magic link generation + verification
 │   │   │   ├── permissions.ts     # User permission queries (hasPermission, getUserPermissions)
 │   │   │   ├── sanitize-redirect.ts # Open redirect prevention
-│   │   │   └── settings.ts        # User settings persistence (JSON cookie + DB)
+│   │   │   ├── settings.ts        # User settings persistence (JSON cookie + DB)
+│   │   │   └── user.ts            # User name resolution (batch lookup)
 │   │   └── auth.ts                # Better Auth config (bcrypt override, OAuth providers, plugins)
+│   ├── orthography/               # Phonetic script converters (pinyin → zhuyin, wade-giles, gwoyeu, cyrillic)
 │   ├── types/
 │   │   └── dictionary.ts          # CharacterData, ComponentData, WordData, etc.
 │   ├── pinyin.ts                  # Pinyin parsing/formatting utilities
-│   ├── settings.ts                # Shared settings types + defaults
+│   ├── settings.ts                # Shared settings types + defaults (theme, characterSet, phoneticScript)
 │   ├── settings-client.svelte.ts  # Client-side settings (reactive Svelte state)
 │   └── speech.ts                  # TTS with Azure Speech + browser fallback
 ├── routes/
@@ -111,6 +115,8 @@ src/
 │   │   ├── register/              # Sign up
 │   │   ├── forgot-password/       # Password reset request
 │   │   └── reset-password/        # Password reset with token
+│   ├── (wiki)/
+│   │   └── wiki/                  # Character wiki (home, search, lists, [character], edit, history, pending, recent-changes)
 │   ├── api/
 │   │   ├── dictionary/explain/[type]/ # JSON API for component explanations
 │   │   └── tts/token/             # Azure TTS auth token
@@ -131,8 +137,7 @@ scripts/
     ├── import-jun-da-char-freq.ts # Character frequency corpus
     ├── import-subtlex-ch.ts       # Subtitle frequency corpus
     ├── rebuild-dict-char.ts       # Rebuild denormalized char cache (re-creates char view)
-    ├── create-char-view.ts        # Create/replace dictionary.char view
-    └── char-view-sql.ts           # Shared SQL for the char view (used by rebuild + create scripts)
+    └── create-char-view.ts        # Create/replace dictionary.char view
 .storybook/
 ├── main.ts                        # Config with viteFinal aliases for $app/paths and $env/dynamic/public
 ├── preview.ts                     # Preview config
@@ -203,7 +208,7 @@ Import script at `scripts/import-meteor-users.ts` (`npm run import:users`). Migr
 - Use named exports, not default exports (except where SvelteKit requires default exports)
 - Error handling: use explicit error types, not thrown strings. Prefer Result pattern where practical.
 - SQL: Drizzle's query builder for simple queries, `sql` template tag for complex ones. No raw string concatenation.
-- Components: one component per file, props typed with TypeScript interfaces
+- Components: one component per file, props typed with TypeScript interfaces. Always use existing `ui/` primitives (`Button`, `Alert`, `Modal`, etc.) instead of writing bespoke HTML+CSS. If a needed variant doesn't exist, extend the shared component.
 - File naming: `kebab-case` for files, `PascalCase` for components
 - CSS: vanilla CSS with custom properties, dark mode via CSS custom properties (`--foreground`, `--background`, `--surface`, `--border`, `--muted-foreground`, etc.)
 

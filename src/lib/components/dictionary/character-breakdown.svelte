@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { getCharLinkBase } from './char-link-context';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type {
 		ComponentData,
 		CharacterData,
 		HistoricalPronunciation
 	} from '$lib/types/dictionary';
+	import type { PhoneticScript } from '$lib/orthography';
+	import { formatPinyinList } from '$lib/orthography';
 	import { getComponentColor, getComponentTitle } from './component-colors';
 	import CharacterGlyph from './character-glyph.svelte';
 	import CjkLinkedText from './cjk-linked-text.svelte';
@@ -24,6 +27,7 @@
 		fragments: number[][] | null;
 		historicalPronunciations: HistoricalPronunciation[] | null;
 		characterSet?: 'simplified' | 'traditional';
+		phoneticScript?: PhoneticScript | null;
 	}
 
 	let {
@@ -34,8 +38,11 @@
 		strokes,
 		fragments,
 		historicalPronunciations,
-		characterSet
+		characterSet,
+		phoneticScript = null
 	}: Props = $props();
+
+	const charLinkBase = getCharLinkBase();
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -108,9 +115,8 @@
 					{/if}
 					<div class="component-details">
 						<div class="component-header">
-							<a
-								href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-								class="component-char">{comp.character}</a
+							<a href={resolve(`${charLinkBase}/${comp.character}`)} class="component-char"
+								>{comp.character}</a
 							>
 							{#if comp.type && comp.type.length > 0}
 								<span class="component-type">
@@ -133,7 +139,9 @@
 						{#if comp.pinyin?.length || comp.gloss}
 							<div class="component-meta">
 								{#if comp.pinyin && comp.pinyin.length > 0}
-									<span class="component-pinyin">{comp.pinyin.join(', ')}</span>
+									<span class="component-pinyin"
+										>{formatPinyinList(comp.pinyin, phoneticScript)}</span
+									>
 								{/if}
 								{#if comp.gloss}
 									<span class="component-gloss">{comp.gloss}</span>
@@ -145,14 +153,11 @@
 						{/if}
 						{#if comp.isFromOriginalMeaning && originalMeaning}
 							<Alert variant="info">
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-									>{comp.character}</a
-								>
+								<a href={resolve(`${charLinkBase}/${comp.character}`)}>{comp.character}</a>
 								hints at the original meaning of
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a
-								>, "{originalMeaning}", which is no longer the most common meaning of
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: character })}>{character}</a> in
-								modern Mandarin.
+								<a href={resolve(`${charLinkBase}/${character}`)}>{character}</a>, "{originalMeaning}",
+								which is no longer the most common meaning of
+								<a href={resolve(`${charLinkBase}/${character}`)}>{character}</a> in modern Mandarin.
 							</Alert>
 						{/if}
 						{#if comp.isOldPronunciation}
@@ -166,9 +171,8 @@
 						{#if comp.isGlyphChanged}
 							<Alert variant="info">
 								Due to historical stylistic changes, this component is less similar to
-								<a href={resolve('/(app)/dictionary/[entry]', { entry: comp.character })}
-									>{comp.character}</a
-								> than it was in ancient scripts.
+								<a href={resolve(`${charLinkBase}/${comp.character}`)}>{comp.character}</a>
+								than it was in ancient scripts.
 							</Alert>
 						{/if}
 					</div>

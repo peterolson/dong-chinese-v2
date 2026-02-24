@@ -14,28 +14,16 @@
 </script>
 
 <Story
-	name="Home Active"
-	args={{ currentPath: '/' }}
+	name="Learn Active"
+	args={{ currentPath: '/learn' }}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const nav = canvas.getByRole('navigation', { name: 'Main navigation' });
 		await expect(nav).toBeInTheDocument();
-		const homeLink = canvas.getByRole('link', { name: 'Home' });
-		await expect(homeLink).toHaveAttribute('aria-current', 'page');
-		const lessonsLink = canvas.getByRole('link', { name: 'Lessons' });
-		await expect(lessonsLink).not.toHaveAttribute('aria-current');
-	}}
-/>
-
-<Story
-	name="Lessons Active"
-	args={{ currentPath: '/lessons' }}
-	play={async ({ canvasElement }) => {
-		const canvas = within(canvasElement);
-		const lessonsLink = canvas.getByRole('link', { name: 'Lessons' });
-		await expect(lessonsLink).toHaveAttribute('aria-current', 'page');
-		const homeLink = canvas.getByRole('link', { name: 'Home' });
-		await expect(homeLink).not.toHaveAttribute('aria-current');
+		const learnLink = canvas.getByRole('link', { name: 'Learn' });
+		await expect(learnLink).toHaveAttribute('aria-current', 'page');
+		const dictLink = canvas.getByRole('link', { name: 'Dictionary' });
+		await expect(dictLink).not.toHaveAttribute('aria-current');
 	}}
 />
 

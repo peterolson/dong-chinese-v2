@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { CharacterData } from '$lib/types/dictionary';
+	import type { PhoneticScript } from '$lib/orthography';
+	import { formatPinyinList } from '$lib/orthography';
+	import { getCharLinkBase } from './char-link-context';
 	import StrokeAnimation from './stroke-animation.svelte';
 	import CharacterBreakdown from './character-breakdown.svelte';
 	import CharacterFrequency from './character-frequency.svelte';
@@ -14,9 +17,10 @@
 	interface Props {
 		character: CharacterData;
 		characterSet?: 'simplified' | 'traditional';
+		phoneticScript?: PhoneticScript | null;
 	}
 
-	let { character, characterSet = 'simplified' }: Props = $props();
+	let { character, characterSet = 'simplified', phoneticScript = null }: Props = $props();
 
 	let strokeVariantData = $derived(
 		characterSet === 'traditional'
@@ -50,6 +54,8 @@
 		})
 	);
 
+	const charLinkBase = getCharLinkBase();
+
 	let audioAttribution = $derived(
 		character.pinyin && character.pinyin.length > 0 ? ('allset' as const) : null
 	);
@@ -80,7 +86,7 @@
 				{#if character.pinyin && character.pinyin.length > 0}
 					<div class="pinyin-readings">
 						{#each character.pinyin as p (p)}
-							<span class="pinyin-reading">{p}</span>
+							<span class="pinyin-reading">{formatPinyinList([p], phoneticScript)}</span>
 						{/each}
 					</div>
 				{/if}
@@ -101,6 +107,7 @@
 			historicalPronunciations={character.historicalPronunciations}
 			{fragments}
 			{characterSet}
+			{phoneticScript}
 		/>
 
 		{#if character.historicalImages && character.historicalImages.length > 0}
@@ -138,7 +145,7 @@
 							<dt>Simplified</dt>
 							<dd>
 								{#each simplifiedVariants as v (v)}
-									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+									<a href={resolve(`${charLinkBase}/${v}`)}>{v}</a>
 								{/each}
 							</dd>
 						</div>
@@ -148,7 +155,7 @@
 							<dt>Traditional</dt>
 							<dd>
 								{#each traditionalVariants as v (v)}
-									<a href={resolve('/(app)/dictionary/[entry]', { entry: v })}>{v}</a>
+									<a href={resolve(`${charLinkBase}/${v}`)}>{v}</a>
 								{/each}
 							</dd>
 						</div>

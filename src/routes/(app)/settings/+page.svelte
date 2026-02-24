@@ -10,6 +10,9 @@
 	const currentCharSet = $derived(
 		form?.settings?.characterSet ?? data.settings.characterSet ?? null
 	);
+	const currentPhoneticScript = $derived(
+		form?.settings?.phoneticScript ?? data.settings.phoneticScript ?? 'pinyin'
+	);
 
 	let formEl: HTMLFormElement | undefined = $state();
 
@@ -42,8 +45,22 @@
 		const charSet = formData.get('characterSet')?.toString() ?? '';
 		const charSetValue = charSet === 'simplified' || charSet === 'traditional' ? charSet : null;
 
+		const phoneticRaw = formData.get('phoneticScript')?.toString() ?? '';
+		const phoneticValue =
+			phoneticRaw === 'zhuyin' ||
+			phoneticRaw === 'wadegiles' ||
+			phoneticRaw === 'gwoyeu' ||
+			phoneticRaw === 'cyrillic'
+				? phoneticRaw
+				: null;
+
 		const current = readSettings();
-		writeSettings({ ...current, theme: themeValue, characterSet: charSetValue });
+		writeSettings({
+			...current,
+			theme: themeValue,
+			characterSet: charSetValue,
+			phoneticScript: phoneticValue
+		});
 
 		return async ({ update }) => {
 			await update({ reset: false });
@@ -67,6 +84,21 @@
 			selected={currentCharSet ?? 'simplified'}
 			onchange={() => formEl?.requestSubmit()}
 		/>
+	</div>
+	<div class="setting-row">
+		<span class="setting-label">Phonetic script</span>
+		<select
+			name="phoneticScript"
+			class="phonetic-select"
+			value={currentPhoneticScript}
+			onchange={() => formEl?.requestSubmit()}
+		>
+			<option value="pinyin">Hànyǔ Pīnyīn</option>
+			<option value="zhuyin">ㄅㄆㄇㄈ</option>
+			<option value="wadegiles">Wade-Giles</option>
+			<option value="gwoyeu">Gwoyeu Romatzyh</option>
+			<option value="cyrillic">Силиэр</option>
+		</select>
 	</div>
 	<noscript>
 		<button type="submit">Save</button>
@@ -94,6 +126,16 @@
 	.setting-label {
 		font-weight: 500;
 		white-space: nowrap;
+	}
+
+	.phonetic-select {
+		padding: 0.375rem 0.5rem;
+		font-size: 0.875rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--background);
+		color: var(--foreground);
+		cursor: pointer;
 	}
 
 	noscript {
