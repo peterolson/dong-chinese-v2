@@ -149,9 +149,9 @@ function addTone(syllable: string, tone: number): string {
 		addDiacritic('\u043E') ||
 		addDiacritic('\u044E') ||
 		syllable.slice(0, lastVowelIndex) +
-		syllable[lastVowelIndex] +
-		diacritic +
-		syllable.slice(lastVowelIndex + 1)
+			syllable[lastVowelIndex] +
+			diacritic +
+			syllable.slice(lastVowelIndex + 1)
 	);
 }
 
