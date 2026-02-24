@@ -9,12 +9,16 @@ const mockRejectCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
 const mockResolveUserNames = vi.fn();
 
-vi.mock('$lib/server/services/char-edit', () => ({
-	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
-	getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
-	approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
-	rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
-}));
+vi.mock('$lib/server/services/char-edit', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/services/char-edit')>();
+	return {
+		CharEditError: actual.CharEditError,
+		submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
+		getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
+		approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
+		rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
+	};
+});
 
 vi.mock('$lib/server/services/permissions', () => ({
 	hasPermission: (...args: unknown[]) => mockHasPermission(...args)
