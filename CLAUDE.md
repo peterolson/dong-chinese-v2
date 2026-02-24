@@ -72,8 +72,9 @@ src/
 │   │   ├── auth/                  # Auth UI (auth-card, social-icon, password-input, magic-link-form)
 │   │   ├── dictionary/            # Dictionary UI (character-view, breakdown, glyph, stroke-animation, etc.)
 │   │   ├── layout/                # App shell (site-header, sidebar, auth-status)
-│   │   └── ui/                    # Reusable primitives (alert, button, modal, segmented-control, speak-button)
-│   ├── data/                      # Static data modules (component-type-info.ts)
+│   │   ├── ui/                    # Reusable primitives (alert, button, modal, segmented-control, speak-button, tab-bar)
+│   │   └── wiki/                  # Wiki editing UI (char-edit-form, component-editor, field-diff, wiki-sidebar, etc.)
+│   ├── data/                      # Static data modules (component-type-info.ts, common-sources.ts)
 │   ├── server/
 │   │   ├── db/
 │   │   │   ├── schema.ts          # Main Drizzle schema (public schema — users, sessions, settings, permissions)
@@ -85,18 +86,20 @@ src/
 │   │   │   └── index.ts           # DB connection + exports
 │   │   ├── services/
 │   │   │   ├── anonymous-session.ts # Cookie + DB row anonymous sessions
-│   │   │   ├── char-edit.ts       # Submit/approve/reject character edits
-│   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search)
+│   │   │   ├── char-edit.ts       # Submit/approve/reject/rollback character edits, recent edits, pending counts
+│   │   │   ├── dictionary.ts      # Dictionary queries (character lookup, search, character lists)
 │   │   │   ├── email.ts           # Nodemailer email service
 │   │   │   ├── magic-link.ts      # Magic link generation + verification
 │   │   │   ├── permissions.ts     # User permission queries (hasPermission, getUserPermissions)
 │   │   │   ├── sanitize-redirect.ts # Open redirect prevention
-│   │   │   └── settings.ts        # User settings persistence (JSON cookie + DB)
+│   │   │   ├── settings.ts        # User settings persistence (JSON cookie + DB)
+│   │   │   └── user.ts            # User name resolution (batch lookup)
 │   │   └── auth.ts                # Better Auth config (bcrypt override, OAuth providers, plugins)
+│   ├── orthography/               # Phonetic script converters (pinyin → zhuyin, wade-giles, gwoyeu, cyrillic)
 │   ├── types/
 │   │   └── dictionary.ts          # CharacterData, ComponentData, WordData, etc.
 │   ├── pinyin.ts                  # Pinyin parsing/formatting utilities
-│   ├── settings.ts                # Shared settings types + defaults
+│   ├── settings.ts                # Shared settings types + defaults (theme, characterSet, phoneticScript)
 │   ├── settings-client.svelte.ts  # Client-side settings (reactive Svelte state)
 │   └── speech.ts                  # TTS with Azure Speech + browser fallback
 ├── routes/
@@ -112,6 +115,8 @@ src/
 │   │   ├── register/              # Sign up
 │   │   ├── forgot-password/       # Password reset request
 │   │   └── reset-password/        # Password reset with token
+│   ├── (wiki)/
+│   │   └── wiki/                  # Character wiki (home, search, lists, [character], edit, history, pending, recent-changes)
 │   ├── api/
 │   │   ├── dictionary/explain/[type]/ # JSON API for component explanations
 │   │   └── tts/token/             # Azure TTS auth token

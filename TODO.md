@@ -31,6 +31,8 @@
 
 - [x] Editable character dictionary — `char_manual` table (append-only edit log with pending/approved/rejected status), `user_permission` table, `dictionary.char` Postgres view overlaying approved edits on `char_base`. Suggestion/approval workflow: anyone can suggest edits, `wikiEdit` users auto-approve and can review others. Backend services for permissions and char editing. Import script for legacy MongoDB permissions. Rebuild script atomically re-creates view during table swap.
 
+- [x] Wiki section with character editing UI (PR) — `/wiki` route group with home, search, lists, character entry, edit form, edit history, pending edits, recent changes. Approval-based review workflow, `reviewComment` column, managed char view via drizzle-kit, new services (getRecentEdits, countPendingEdits, searchCharacters, getCharacterList), new UI components (TabBar, TagInput, ListEditor, ComponentEditor, FieldDiff, EditStatusBadge, WikiSidebar), phonetic script settings (zhuyin, wade-giles, gwoyeu, cyrillic). Unit tests for orthography, fragment-range, char-edit, settings, common-sources. E2E tests for all wiki pages (JS enabled/disabled).
+
 ## In Progress
 
 - [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
