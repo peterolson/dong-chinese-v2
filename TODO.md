@@ -33,39 +33,13 @@
 
 - [x] Wiki section with character editing UI (PR) — `/wiki` route group with home, search, lists, character entry, edit form, edit history, pending edits, recent changes. Approval-based review workflow, `reviewComment` column, managed char view via drizzle-kit, new services (getRecentEdits, countPendingEdits, searchCharacters, getCharacterList), new UI components (TabBar, TagInput, ListEditor, ComponentEditor, FieldDiff, EditStatusBadge, WikiSidebar), phonetic script settings (zhuyin, wade-giles, gwoyeu, cyrillic). Unit tests for orthography, fragment-range, char-edit, settings, common-sources. E2E tests for all wiki pages (JS enabled/disabled).
 
-## In Progress
-
-- [ ] Wiki editing UX improvements (test-first, write failing tests then implement):
-  - [ ] **No duplicate pending edits** — A user can only have one pending edit per character. If they already have a pending edit, the edit form loads their pending state, the button says "Update pending edit", and submitting updates the existing row rather than inserting a new one. Edit comment defaults to the previous comment.
-  - [ ] **Show pending edit in character view** — When a user has a pending edit for a character, the character view shows their draft by default with a toggle ("Draft" / "Published") to switch between pending and approved versions.
-  - [ ] **Hide other users' pending indicators** — Unauthorized users (no `wikiEdit` permission) should not see pending edit counts, badges, or other users' pending submissions.
-  - [ ] **Scoped pending changes page** — Any user can see `/wiki/pending` with only their own pending edits. The full review queue (all users' edits) is restricted to `wikiEdit` users.
-  - [ ] **Full entry view for historical edits** — Add a way to view the full rendered character page for any edit in the history, not just diffs. Render `CharacterView` with the edit snapshot overlaid on base data.
 - [x] **Import legacy wiki history** — `import-legacy-history.ts` reads char edits from `stage.dong_dict_history_raw`, maps MongoDB fields → `char_manual` columns, computes `changedFields` diffs, handles status mapping (approved/rejected/pre-approval-system). Incremental idempotency via `[mongo:<id>]` tag in `edit_comment` (stripped from UI display). Added to weekly GitHub Action. Also fixed double-encoding bug in `import-dong-dictionary.ts` (JSONB columns were storing JSON strings instead of objects).
 
-- [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
+- [x] **Wiki editing UX improvements** — No duplicate pending edits (update-in-place with `updateCharEdit`), draft/published toggle on character view, scoped pending page (any user sees own edits, reviewers see all), full entry view for historical snapshots (`/wiki/[char]/history/[editId]`), pending edits excluded from Recent Changes, approve/reject moved to history page. Sidebar always shows pending link (labeled "My Edits" or "Review Queue"). Badge count for reviewers only.
 
-### Phase B exploration queries to run
+## In Progress
 
-```sql
--- Unihan: which fields exist and how many codepoints have each?
-SELECT field, COUNT(*) FROM stage.unihan_raw WHERE is_current = true GROUP BY field ORDER BY count DESC;
-
--- Unihan: spot-check key fields for common characters
-SELECT codepoint, field, value FROM stage.unihan_raw
-WHERE codepoint IN ('U+4F60', 'U+597D', 'U+4E2D', 'U+56FD')
-  AND field IN ('kMandarin', 'kDefinition', 'kTotalStrokes', 'kRSUnicode', 'kSimplifiedVariant', 'kTraditionalVariant', 'kFrequency', 'kGradeLevel')
-ORDER BY codepoint, field;
-
--- CEDICT: sample multi-reading entries (same simplified, different pinyin)
-SELECT simplified, pinyin, definitions FROM stage.cedict_raw
-WHERE simplified IN (SELECT simplified FROM stage.cedict_raw WHERE is_current = true GROUP BY simplified HAVING COUNT(*) > 3)
-AND is_current = true ORDER BY simplified, pinyin LIMIT 30;
-
--- CEDICT: entries with classifier markers (CL:)
-SELECT traditional, simplified, pinyin, definitions FROM stage.cedict_raw
-WHERE definitions LIKE '%CL:%' AND is_current = true LIMIT 10;
-```
+(none)
 
 ## Up Next
 

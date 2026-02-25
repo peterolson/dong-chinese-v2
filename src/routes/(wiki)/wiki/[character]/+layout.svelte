@@ -11,14 +11,14 @@
 	const char = $derived(data.character.character);
 
 	const tabs = $derived([
-		{
-			label: 'Entry',
-			href: `/wiki/${char}`,
-			icon: BookText,
-			badge: data.pendingCount > 0 ? data.pendingCount : null
-		},
+		{ label: 'Entry', href: `/wiki/${char}`, icon: BookText },
 		{ label: 'Edit', href: `/wiki/${char}/edit`, icon: Pencil },
-		{ label: 'History', href: `/wiki/${char}/history`, icon: Clock }
+		{
+			label: 'History',
+			href: `/wiki/${char}/history`,
+			icon: Clock,
+			badge: data.pendingCount > 0 ? data.pendingCount : null
+		}
 	]);
 </script>
 

@@ -57,9 +57,16 @@
 	} = $props();
 
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
+		const d = new Date(iso);
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${d.getFullYear()}/${m}/${day}`;
+	}
+
+	function formatDateFull(iso: string): string {
+		return new Date(iso).toLocaleString('en-US', {
 			year: 'numeric',
-			month: 'short',
+			month: 'long',
 			day: 'numeric',
 			hour: '2-digit',
 			minute: '2-digit'
@@ -78,41 +85,58 @@
 	<ul class="edit-list">
 		{#each items as item (item.id)}
 			{@const baseData = baselineMap[item.id] ?? null}
+			{@const reviewed = item.status !== 'pending'}
+			{@const differentReviewer =
+				reviewed && item.reviewerName && item.reviewerName !== item.editorName}
 			<li class="edit-item">
 				<div class="edit-header">
 					{#if showCharacter}
 						<a href={resolve(`/wiki/${item.character}`)} class="edit-char">{item.character}</a>
 					{/if}
-					{#if !item.reviewerName || item.status === 'pending'}
-						<EditStatusBadge status={item.status} />
+					{#if !reviewed}
+						<EditStatusBadge status="pending" />
 					{/if}
-					{#if item.changedFields && item.changedFields.length > 0}
-						<span class="changed-fields">{changedFieldLabels(item.changedFields)}</span>
+					<span class="edit-meta"
+						><time datetime={item.createdAt} title={formatDateFull(item.createdAt)}
+							>{formatDate(item.createdAt)}</time
+						>
+						&middot; {item.editorName}</span
+					>
+					<span class="edit-comment-inline">{item.editComment ?? ''}</span>
+					{#if reviewed}
+						<span class="review-info" data-status={item.status}>
+							<span
+								class="reviewer"
+								title="{item.status}{differentReviewer
+									? ` by ${item.reviewerName}`
+									: ''}{item.reviewedAt ? ` · ${formatDateFull(item.reviewedAt)}` : ''}"
+								><span class="reviewer-icon"
+									>{item.status === 'approved' ? '\u2713' : '\u2717'}</span
+								>{#if differentReviewer}{item.reviewerName}{/if}</span
+							>
+							{#if item.reviewComment}
+								<span class="review-comment">&ldquo;{item.reviewComment}&rdquo;</span>
+							{/if}
+						</span>
 					{/if}
-					<span class="edit-meta">
-						by {item.editorName} &middot; {formatDate(item.createdAt)}
-					</span>
-					{#if item.editComment}
-						<span class="edit-comment">&ldquo;{item.editComment}&rdquo;</span>
+					<details class="diff-details">
+						<summary class="diff-toggle">Show changes</summary>
+					</details>
+					{#if actions}
+						<div class="header-actions">
+							{@render actions(item)}
+						</div>
 					{/if}
 				</div>
 
-				{#if item.reviewerName && item.status !== 'pending'}
-					<div class="review-info">
-						<EditStatusBadge status={item.status} />
-						by {item.reviewerName}
-						{#if item.reviewedAt}
-							&middot; {formatDate(item.reviewedAt)}
-						{/if}
-						{#if item.reviewComment}
-							— {item.reviewComment}
-						{/if}
-					</div>
-				{/if}
-
-				<details class="diff-details">
-					<summary class="diff-toggle">Show changes</summary>
+				<div class="diff-panel-wrapper">
 					<div class="diff-panel">
+						{#if item.editComment}
+							<p class="diff-comment">&ldquo;{item.editComment}&rdquo;</p>
+						{/if}
+						{#if item.changedFields && item.changedFields.length > 0}
+							<p class="changed-fields">Changed: {changedFieldLabels(item.changedFields)}</p>
+						{/if}
 						<FieldDiff
 							editData={item}
 							{baseData}
@@ -120,11 +144,7 @@
 							changedFields={item.changedFields}
 						/>
 					</div>
-				</details>
-
-				{#if actions}
-					{@render actions(item)}
-				{/if}
+				</div>
 			</li>
 		{/each}
 	</ul>
@@ -157,19 +177,19 @@
 	}
 
 	.edit-item {
-		padding: 0.5rem 0;
+		padding: 0.375rem 0;
 		border-bottom: 1px solid var(--border);
 	}
 
 	.edit-header {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		align-items: baseline;
+		gap: 0.375rem;
 		flex-wrap: wrap;
 	}
 
 	.edit-char {
-		font-size: 1.375rem;
+		font-size: 1.125rem;
 		text-decoration: none;
 	}
 
@@ -177,48 +197,103 @@
 		text-decoration: underline;
 	}
 
-	.changed-fields {
-		font-size: 0.8125rem;
-		color: var(--muted-foreground);
-	}
-
 	.edit-meta {
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 		color: var(--muted-foreground);
+		white-space: nowrap;
 	}
 
-	.edit-comment {
-		font-size: 0.8125rem;
+	.review-info {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: flex-end;
+		flex-shrink: 0;
+		gap: 0.0625rem;
+	}
+
+	.reviewer {
+		font-size: 0.75rem;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.review-info[data-status='approved'] .reviewer {
+		color: var(--success);
+	}
+
+	.review-info[data-status='rejected'] .reviewer {
+		color: var(--error);
+	}
+
+	.reviewer-icon {
+		margin-right: 0.125rem;
+	}
+
+	.review-comment {
+		font-size: 0.6875rem;
 		font-style: italic;
 		color: var(--muted-foreground);
 	}
 
-	.review-info {
-		font-size: 0.8125rem;
+	.edit-comment-inline {
+		flex: 1 1 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 0.75rem;
+		font-style: italic;
 		color: var(--muted-foreground);
-		margin-top: 0.125rem;
 	}
 
 	.diff-details {
-		margin-top: 0.25rem;
+		display: inline;
+		flex-shrink: 0;
 	}
 
 	.diff-toggle {
-		font-size: 0.8125rem;
 		color: var(--secondary-soft);
 		cursor: pointer;
+		font-size: 0.75rem;
+		white-space: nowrap;
 	}
 
 	.diff-toggle:hover {
 		opacity: 0.8;
 	}
 
+	.header-actions {
+		flex-shrink: 0;
+		margin-left: auto;
+	}
+
+	.diff-panel-wrapper {
+		display: none;
+	}
+
+	.edit-item:has(.diff-details[open]) .diff-panel-wrapper {
+		display: block;
+	}
+
 	.diff-panel {
-		margin-top: 0.5rem;
+		margin-top: 0.375rem;
 		padding: 0.75rem;
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
+	}
+
+	.diff-comment {
+		font-size: 0.8125rem;
+		font-style: italic;
+		color: var(--muted-foreground);
+		margin: 0 0 0.5rem;
+	}
+
+	.changed-fields {
+		font-size: 0.75rem;
+		color: var(--muted-foreground);
+		margin: 0 0 0.5rem;
 	}
 
 	.pagination {

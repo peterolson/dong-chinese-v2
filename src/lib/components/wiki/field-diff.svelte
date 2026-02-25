@@ -180,12 +180,16 @@
 			// Skip if values are the same
 			if (deepEqual(editVal, baseVal)) continue;
 
-			// Skip fragments if stroke data also changed (glyph view makes it obvious)
+			// Skip fragments if stroke data was also intentionally changed (glyph view makes it obvious).
+			// Only suppress when the stroke field is in changedFields — otherwise the stroke data
+			// difference is just an artifact of the baseline having stale/null values.
 			if (field === 'fragmentsSimp' || field === 'fragmentsTrad') {
 				const strokeField = field === 'fragmentsSimp' ? 'strokeDataSimp' : 'strokeDataTrad';
-				const strokeEditVal = editData[strokeField] ?? null;
-				const strokeBaseVal = baseData?.[strokeField] ?? null;
-				if (!deepEqual(strokeEditVal, strokeBaseVal) && strokeEditVal !== null) continue;
+				if (changedFieldSet?.has(strokeField)) {
+					const strokeEditVal = editData[strokeField] ?? null;
+					const strokeBaseVal = baseData?.[strokeField] ?? null;
+					if (!deepEqual(strokeEditVal, strokeBaseVal) && strokeEditVal !== null) continue;
+				}
 			}
 
 			// Skip components if no visible sub-field changes (e.g. only default boolean diffs)

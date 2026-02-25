@@ -46,16 +46,16 @@ Creates the Drizzle `db` instance using `postgres.js` driver and re-exports all 
 
 ## services/ — Business Logic
 
-| Service                | Purpose                                                                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `anonymous-session.ts` | Create/validate/delete anonymous sessions. Custom cookie + DB row.                                                                               |
-| `char-edit.ts`         | Submit/approve/reject character edits. `submitCharEdit()`, `approveCharEdit()`, `rejectCharEdit()`, `getPendingEdits()`, `getCharEditHistory()`. |
-| `dictionary.ts`        | `getCharacterData()` loads a character from the `dictionary.char` view + batch-loads component data.                                             |
-| `email.ts`             | Nodemailer wrapper. Logs to console when MAIL_URL not set (dev mode).                                                                            |
-| `magic-link.ts`        | Generates + verifies magic links. Resolves secondary emails.                                                                                     |
-| `permissions.ts`       | `hasPermission()`, `getUserPermissions()` — queries `user_permission` table.                                                                     |
-| `sanitize-redirect.ts` | Prevents open redirects — only allows relative paths.                                                                                            |
-| `settings.ts`          | Read/write settings from JSON cookie + DB. `applySettings()`, `syncSettingsOnLogin()`, `syncSettingsOnSignup()`.                                 |
+| Service                | Purpose                                                                                                                                                                                                                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `anonymous-session.ts` | Create/validate/delete anonymous sessions. Custom cookie + DB row.                                                                                                                                                                                                                                   |
+| `char-edit.ts`         | Submit/approve/reject character edits. `submitCharEdit()`, `updateCharEdit()`, `approveCharEdit()`, `rejectCharEdit()`, `getPendingEdits()`, `getUserPendingEdit()`, `getUserPendingEdits()`, `getCharEditHistory()`, `countPendingEdits()`, `countAllPendingEdits()`. Recent edits exclude pending. |
+| `dictionary.ts`        | `getCharacterData()` loads a character from the `dictionary.char` view + batch-loads component data.                                                                                                                                                                                                 |
+| `email.ts`             | Nodemailer wrapper. Logs to console when MAIL_URL not set (dev mode).                                                                                                                                                                                                                                |
+| `magic-link.ts`        | Generates + verifies magic links. Resolves secondary emails.                                                                                                                                                                                                                                         |
+| `permissions.ts`       | `hasPermission()`, `getUserPermissions()` — queries `user_permission` table.                                                                                                                                                                                                                         |
+| `sanitize-redirect.ts` | Prevents open redirects — only allows relative paths.                                                                                                                                                                                                                                                |
+| `settings.ts`          | Read/write settings from JSON cookie + DB. `applySettings()`, `syncSettingsOnLogin()`, `syncSettingsOnSignup()`.                                                                                                                                                                                     |
 
 ## auth.ts — Better Auth Configuration
 

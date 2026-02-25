@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import EditList from '$lib/components/wiki/edit-list.svelte';
 	import type { PageData } from './$types';
 
@@ -17,7 +18,36 @@
 		paginationUrl={`/wiki/${data.character.character}/history`}
 	>
 		{#snippet actions(item)}
-			{#if data.canReview}
+			<a
+				href={resolve(`/wiki/${data.character.character}/history/${item.id}`)}
+				class="view-entry-link"
+			>
+				View full entry
+			</a>
+
+			{#if data.canReview && item.status === 'pending'}
+				<div class="review-actions">
+					<form method="post" action="?/approveEdit" class="inline-form">
+						<input type="hidden" name="editId" value={item.id} />
+						<button type="submit" class="approve-button">Approve</button>
+					</form>
+					<form method="post" action="?/rejectEdit" class="inline-form">
+						<input type="hidden" name="editId" value={item.id} />
+						<label class="reject-label">
+							<input
+								type="text"
+								name="rejectComment"
+								placeholder="Reason for rejection..."
+								required
+								class="reject-input"
+							/>
+						</label>
+						<button type="submit" class="reject-button">Reject</button>
+					</form>
+				</div>
+			{/if}
+
+			{#if data.canReview && item.status === 'approved'}
 				<details class="rollback-details">
 					<summary class="rollback-trigger">Rollback to this version</summary>
 					<form method="post" action="?/rollback" class="rollback-form">
@@ -43,6 +73,74 @@
 <style>
 	.empty {
 		color: var(--muted-foreground);
+	}
+
+	.view-entry-link {
+		display: inline-block;
+		font-size: 0.8125rem;
+		color: var(--secondary-soft);
+		margin-top: 0.25rem;
+	}
+
+	.view-entry-link:hover {
+		text-decoration: underline;
+	}
+
+	.review-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-top: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.inline-form {
+		display: flex;
+		gap: 0.375rem;
+		align-items: center;
+	}
+
+	.approve-button {
+		padding: 0.25rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		border: 1px solid var(--success);
+		border-radius: var(--radius);
+		background: var(--success-bg);
+		color: var(--success);
+		cursor: pointer;
+	}
+
+	.approve-button:hover {
+		opacity: 0.9;
+	}
+
+	.reject-input {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.8125rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--background);
+		color: var(--foreground);
+	}
+
+	.reject-label {
+		display: contents;
+	}
+
+	.reject-button {
+		padding: 0.25rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		border: 1px solid var(--error);
+		border-radius: var(--radius);
+		background: var(--error-bg);
+		color: var(--error);
+		cursor: pointer;
+	}
+
+	.reject-button:hover {
+		opacity: 0.9;
 	}
 
 	.rollback-details {

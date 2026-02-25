@@ -5,13 +5,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const mockGetCharEditHistory = vi.fn();
 const mockGetCharManualById = vi.fn();
 const mockSubmitCharEdit = vi.fn();
+const mockApproveCharEdit = vi.fn();
+const mockRejectCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
 const mockResolveUserNames = vi.fn();
 
 vi.mock('$lib/server/services/char-edit', () => ({
 	getCharEditHistory: (...args: unknown[]) => mockGetCharEditHistory(...args),
 	getCharManualById: (...args: unknown[]) => mockGetCharManualById(...args),
-	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args)
+	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
+	approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
+	rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
 }));
 
 vi.mock('$lib/server/services/permissions', () => ({
@@ -213,7 +217,7 @@ describe('load', () => {
 			gloss: 'water',
 			changedFields: ['gloss']
 		});
-		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水', { limit: 50, offset: 0 });
+		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水', { limit: 51, offset: 0 });
 	});
 
 	it('uses char_base as baseline for a single edit', async () => {
@@ -471,5 +475,127 @@ describe('actions.rollback', () => {
 		const result = await actions!.rollback(event);
 
 		expect(result).toMatchObject({ status: 500 });
+	});
+});
+
+describe('actions.approveEdit', () => {
+	it('fails 401 when no user', async () => {
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: null });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 401 });
+	});
+
+	it('fails 403 when user lacks wikiEdit permission', async () => {
+		mockHasPermission.mockResolvedValue(false);
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 403 });
+		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
+	});
+
+	it('fails 400 when missing editId', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({}, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('returns approved: true on success', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockApproveCharEdit.mockResolvedValue(true);
+
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toEqual({ approved: true });
+		expect(mockApproveCharEdit).toHaveBeenCalledWith('edit-1', 'user-1');
+	});
+
+	it('fails 404 when edit not found or already reviewed', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockApproveCharEdit.mockResolvedValue(false);
+
+		const event = makeActionEvent({ editId: 'nonexistent' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 404 });
+	});
+});
+
+describe('actions.rejectEdit', () => {
+	it('fails 401 when no user', async () => {
+		const event = makeActionEvent({ editId: 'edit-1', rejectComment: 'Bad edit' }, { user: null });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 401 });
+	});
+
+	it('fails 403 when user lacks wikiEdit permission', async () => {
+		mockHasPermission.mockResolvedValue(false);
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: 'Bad edit' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 403 });
+		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
+	});
+
+	it('fails 400 when missing editId', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({ rejectComment: 'Bad edit' }, { user: { id: 'user-1' } });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('fails 400 when missing rejectComment', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('fails 400 when rejectComment is whitespace only', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: '   ' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('returns rejected: true on success', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockRejectCharEdit.mockResolvedValue(true);
+
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: 'Incorrect data' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toEqual({ rejected: true });
+		expect(mockRejectCharEdit).toHaveBeenCalledWith('edit-1', 'user-1', 'Incorrect data');
+	});
+
+	it('fails 404 when edit not found or already reviewed', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockRejectCharEdit.mockResolvedValue(false);
+
+		const event = makeActionEvent(
+			{ editId: 'nonexistent', rejectComment: 'Bad data' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 404 });
 	});
 });

@@ -32,7 +32,11 @@
 	<label for="sidebar-toggle" class="sidebar-backdrop" aria-hidden="true"></label>
 
 	<div class="sidebar-wrapper">
-		<WikiSidebar canReview={data.canReview} settings={data.settings} />
+		<WikiSidebar
+			canReview={data.canReview}
+			pendingBadgeCount={data.pendingBadgeCount}
+			settings={data.settings}
+		/>
 	</div>
 
 	<main

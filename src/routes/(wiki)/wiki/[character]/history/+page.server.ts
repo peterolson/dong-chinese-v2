@@ -3,7 +3,9 @@ import type { Actions, PageServerLoad } from './$types';
 import {
 	getCharEditHistory,
 	getCharManualById,
-	submitCharEdit
+	submitCharEdit,
+	approveCharEdit,
+	rejectCharEdit
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
@@ -28,8 +30,9 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const pageNum = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
 	const offset = (pageNum - 1) * PAGE_SIZE;
 
-	const [{ edits, total }, baseRow] = await Promise.all([
-		getCharEditHistory(char, { limit: PAGE_SIZE, offset }),
+	// Fetch one extra edit beyond the page to use as baseline for the oldest edit
+	const [{ edits: allEdits, total }, baseRow] = await Promise.all([
+		getCharEditHistory(char, { limit: PAGE_SIZE + 1, offset }),
 		db
 			.select()
 			.from(charBase)
@@ -37,6 +40,10 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 			.then((rows) => rows[0])
 	]);
 	const { canReview } = await parent();
+
+	// Separate the display edits from the extra predecessor
+	const edits = allEdits.slice(0, PAGE_SIZE);
+	const predecessorEdit = allEdits.length > PAGE_SIZE ? allEdits[PAGE_SIZE] : null;
 
 	// Resolve user names
 	const userIds = [
@@ -67,7 +74,15 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 		? pickEditableFields(baseRow as unknown as Record<string, unknown>)
 		: null;
 	for (let i = 0; i < edits.length; i++) {
-		const prev = i < edits.length - 1 ? edits[i + 1] : baseRow ? baseRow : null;
+		let prev;
+		if (i < edits.length - 1) {
+			prev = edits[i + 1];
+		} else if (predecessorEdit) {
+			// Oldest edit on this page: use the fetched predecessor from the next page
+			prev = predecessorEdit;
+		} else {
+			prev = baseRow ?? null;
+		}
 		if (prev) {
 			baselineMap[edits[i].id] = pickEditableFields(prev as unknown as Record<string, unknown>);
 		} else if (baseFields) {
@@ -88,6 +103,41 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 };
 
 export const actions: Actions = {
+	approveEdit: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { error: 'Login required' });
+
+		const canReview = await hasPermission(locals.user.id, 'wikiEdit');
+		if (!canReview) return fail(403, { error: 'wikiEdit permission required' });
+
+		const formData = await request.formData();
+		const editId = formData.get('editId')?.toString();
+		if (!editId) return fail(400, { error: 'Missing editId' });
+
+		const approved = await approveCharEdit(editId, locals.user.id);
+		if (!approved) return fail(404, { error: 'Edit not found or already reviewed' });
+
+		return { approved: true };
+	},
+
+	rejectEdit: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { error: 'Login required' });
+
+		const canReview = await hasPermission(locals.user.id, 'wikiEdit');
+		if (!canReview) return fail(403, { error: 'wikiEdit permission required' });
+
+		const formData = await request.formData();
+		const editId = formData.get('editId')?.toString();
+		const rejectComment = formData.get('rejectComment')?.toString()?.trim();
+
+		if (!editId) return fail(400, { error: 'Missing editId' });
+		if (!rejectComment) return fail(400, { error: 'Rejection comment is required' });
+
+		const rejected = await rejectCharEdit(editId, locals.user.id, rejectComment);
+		if (!rejected) return fail(404, { error: 'Edit not found or already reviewed' });
+
+		return { rejected: true };
+	},
+
 	rollback: async ({ request, params, locals }) => {
 		if (!locals.user) return fail(401, { error: 'Login required' });
 

@@ -28,6 +28,7 @@
 	}
 
 	h1 {
-		margin-bottom: 1.5rem;
+		font-size: 1.25rem;
+		margin-bottom: 0.75rem;
 	}
 </style>
