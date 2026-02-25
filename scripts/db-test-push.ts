@@ -12,7 +12,8 @@ import { execSync } from 'node:child_process';
 import postgres from 'postgres';
 import { CHAR_VIEW_SQL } from '../src/lib/server/db/char-view-sql.js';
 
-const TEST_DATABASE_URL = 'postgres://root:mysecretpassword@localhost:5435/test';
+const TEST_DATABASE_URL =
+	process.env.TEST_DATABASE_URL || 'postgres://root:mysecretpassword@localhost:5435/test';
 
 async function main() {
 	// Step 1: Create schemas
