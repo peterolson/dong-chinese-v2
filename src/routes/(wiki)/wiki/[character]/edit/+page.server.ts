@@ -4,7 +4,8 @@ import {
 	submitCharEdit,
 	getPendingEdits,
 	approveCharEdit,
-	rejectCharEdit
+	rejectCharEdit,
+	CharEditError
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
@@ -25,7 +26,8 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		id: edit.id,
 		editComment: edit.editComment,
 		editorName: edit.editedBy ? (nameMap.get(edit.editedBy) ?? 'Unknown') : 'Anonymous',
-		createdAt: edit.createdAt.toISOString()
+		createdAt: edit.createdAt.toISOString(),
+		changedFields: edit.changedFields
 	}));
 
 	return { canReview, pendingEdits: pendingItems };
@@ -77,11 +79,13 @@ export const actions: Actions = {
 
 		const canReview = userId ? await hasPermission(userId, 'wikiEdit') : false;
 
-		// Build the edit data from form fields
+		// Build the edit data from form fields.
+		// Text fields: '' = force-clear (stored as '' in char_manual, COALESCE preserves it),
+		// null = field not present (reset to base via COALESCE fallthrough).
 		const data = {
-			gloss: formData.get('gloss')?.toString() || null,
-			hint: formData.get('hint')?.toString() || null,
-			originalMeaning: formData.get('originalMeaning')?.toString() || null,
+			gloss: formData.get('gloss')?.toString()?.trim() ?? null,
+			hint: formData.get('hint')?.toString()?.trim() ?? null,
+			originalMeaning: formData.get('originalMeaning')?.toString()?.trim() ?? null,
 			isVerified: formData.has('isVerified'),
 			pinyin: safeJsonParse(formData.get('pinyin')?.toString() ?? null) as string[] | null,
 			simplifiedVariants: safeJsonParse(formData.get('simplifiedVariants')?.toString() ?? null) as
@@ -115,12 +119,12 @@ export const actions: Actions = {
 				autoApprove: canReview
 			});
 		} catch (err) {
-			return fail(500, {
-				error: err instanceof Error ? err.message : 'Failed to submit edit'
-			});
+			const message = err instanceof Error ? err.message : 'Failed to submit edit';
+			const status = err instanceof CharEditError && err.code === 'NO_FIELDS_CHANGED' ? 400 : 500;
+			return fail(status, { error: message });
 		}
 
-		redirect(303, `/wiki/${char}?edited=${editResult.status}`);
+		redirect(303, `/wiki/${encodeURIComponent(char)}?edited=${editResult.status}`);
 	},
 
 	approveEdit: async ({ request, locals }) => {

@@ -9,12 +9,16 @@ const mockRejectCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
 const mockResolveUserNames = vi.fn();
 
-vi.mock('$lib/server/services/char-edit', () => ({
-	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
-	getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
-	approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
-	rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
-}));
+vi.mock('$lib/server/services/char-edit', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/services/char-edit')>();
+	return {
+		CharEditError: actual.CharEditError,
+		submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
+		getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
+		approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
+		rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
+	};
+});
 
 vi.mock('$lib/server/services/permissions', () => ({
 	hasPermission: (...args: unknown[]) => mockHasPermission(...args)
@@ -46,6 +50,7 @@ function makePendingEdit(overrides: Record<string, unknown> = {}) {
 		createdAt: new Date('2025-01-15T10:00:00Z'),
 		reviewedAt: null,
 		anonymousSessionId: null,
+		changedFields: ['gloss'],
 		gloss: 'water',
 		hint: null,
 		originalMeaning: null,
@@ -117,7 +122,8 @@ describe('load', () => {
 			id: 'edit-1',
 			editComment: 'Updated gloss',
 			editorName: 'Alice',
-			createdAt: '2025-01-15T10:00:00.000Z'
+			createdAt: '2025-01-15T10:00:00.000Z',
+			changedFields: ['gloss']
 		});
 		expect(mockGetPendingEdits).toHaveBeenCalledWith('水');
 	});
@@ -444,7 +450,7 @@ describe('actions.submitEdit', () => {
 
 		await expect(actions!.submitEdit(event)).rejects.toMatchObject({
 			status: 303,
-			location: '/wiki/水?edited=pending'
+			location: `/wiki/${encodeURIComponent('水')}?edited=pending`
 		});
 	});
 
@@ -459,7 +465,7 @@ describe('actions.submitEdit', () => {
 
 		await expect(actions!.submitEdit(event)).rejects.toMatchObject({
 			status: 303,
-			location: '/wiki/水?edited=approved'
+			location: `/wiki/${encodeURIComponent('水')}?edited=approved`
 		});
 	});
 

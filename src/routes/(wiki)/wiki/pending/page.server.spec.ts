@@ -22,6 +22,52 @@ vi.mock('$lib/server/services/user', () => ({
 	resolveUserNames: (...args: unknown[]) => mockResolveUserNames(...args)
 }));
 
+// Mock the db chain for charView batch-load
+const mockDbThen = vi.fn();
+
+vi.mock('$lib/server/db', () => {
+	const chain = {
+		from: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+		then: (...args: unknown[]) => mockDbThen(...args)
+	};
+	return {
+		db: {
+			select: vi.fn(() => chain)
+		}
+	};
+});
+
+vi.mock('$lib/server/db/dictionary.views', () => ({
+	charView: { character: 'character' }
+}));
+
+vi.mock('drizzle-orm', () => ({
+	inArray: vi.fn()
+}));
+
+vi.mock('$lib/data/editable-fields', () => ({
+	EDITABLE_FIELDS: [
+		'gloss',
+		'hint',
+		'originalMeaning',
+		'isVerified',
+		'pinyin',
+		'simplifiedVariants',
+		'traditionalVariants',
+		'components',
+		'strokeCountSimp',
+		'strokeCountTrad',
+		'strokeDataSimp',
+		'strokeDataTrad',
+		'fragmentsSimp',
+		'fragmentsTrad',
+		'historicalImages',
+		'historicalPronunciations',
+		'customSources'
+	]
+}));
+
 const { load, actions } = await import('./+page.server');
 
 async function loadResult(...args: Parameters<typeof load>) {
@@ -39,6 +85,7 @@ function makeEdit(overrides: Record<string, unknown> = {}) {
 		editComment: 'Updated gloss',
 		editedBy: 'user-1',
 		createdAt: new Date('2025-01-15T10:00:00Z'),
+		changedFields: ['gloss'],
 		gloss: 'water',
 		hint: null,
 		originalMeaning: null,
@@ -89,6 +136,8 @@ beforeEach(() => {
 	mockGetPendingEdits.mockResolvedValue([]);
 	mockResolveUserNames.mockResolvedValue(new Map());
 	mockHasPermission.mockResolvedValue(false);
+	// Default: no charView rows found (empty batch load)
+	mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
 });
 
 describe('load', () => {
@@ -115,8 +164,10 @@ describe('load', () => {
 			character: '水',
 			gloss: 'water',
 			editorName: 'Alice',
-			createdAt: '2025-01-15T10:00:00.000Z'
+			createdAt: '2025-01-15T10:00:00.000Z',
+			changedFields: ['gloss']
 		});
+		expect(result.charBaseDataMap).toBeDefined();
 	});
 
 	it('resolves editor names from user IDs', async () => {
@@ -161,6 +212,44 @@ describe('load', () => {
 		const result = await loadResult(event);
 
 		expect(result.items[0].editorName).toBe('Unknown');
+	});
+
+	it('batch-loads charView data and returns charBaseDataMap', async () => {
+		const edit = makeEdit({ character: '水' });
+		mockGetPendingEdits.mockResolvedValue([edit]);
+		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) =>
+			cb([{ character: '水', gloss: 'water', hint: null, originalMeaning: null }])
+		);
+
+		const event = makeLoadEvent(true);
+		const result = await loadResult(event);
+
+		expect(result.charBaseDataMap).toHaveProperty('水');
+		expect(result.charBaseDataMap['水']).toMatchObject({ gloss: 'water' });
+	});
+
+	it('deduplicates characters for batch charView query', async () => {
+		const edits = [
+			makeEdit({ id: 'edit-1', character: '水' }),
+			makeEdit({ id: 'edit-2', character: '水' }),
+			makeEdit({ id: 'edit-3', character: '火' })
+		];
+		mockGetPendingEdits.mockResolvedValue(edits);
+		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) =>
+			cb([
+				{ character: '水', gloss: 'water' },
+				{ character: '火', gloss: 'fire' }
+			])
+		);
+
+		const event = makeLoadEvent(true);
+		const result = await loadResult(event);
+
+		expect(Object.keys(result.charBaseDataMap)).toHaveLength(2);
+		expect(result.charBaseDataMap['水']).toMatchObject({ gloss: 'water' });
+		expect(result.charBaseDataMap['火']).toMatchObject({ gloss: 'fire' });
 	});
 });
 

@@ -20,6 +20,10 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    # Playwright container has browsers + OS deps pre-installed (no 5-min install-deps step).
+    # Update the tag when upgrading @playwright/test in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     services:
       postgres:
         image: postgres
@@ -27,15 +31,13 @@ jobs:
           POSTGRES_USER: root
           POSTGRES_PASSWORD: mysecretpassword
           POSTGRES_DB: local
-        ports:
-          - 5434:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgres://root:mysecretpassword@localhost:5434/local
+      DATABASE_URL: postgres://root:mysecretpassword@postgres:5432/local
       BETTER_AUTH_SECRET: ci-test-secret
     steps:
       - uses: actions/checkout@v4
@@ -44,21 +46,6 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - name: Get Playwright version
-        id: playwright-version
-        run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.version }}
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - name: Install Playwright OS dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
       - name: Create schemas
         run: |
           node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
@@ -75,6 +62,8 @@ jobs:
 
   test-e2e:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     services:
       postgres:
         image: postgres
@@ -82,15 +71,13 @@ jobs:
           POSTGRES_USER: root
           POSTGRES_PASSWORD: mysecretpassword
           POSTGRES_DB: local
-        ports:
-          - 5434:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgres://root:mysecretpassword@localhost:5434/local
+      DATABASE_URL: postgres://root:mysecretpassword@postgres:5432/local
       ORIGIN: http://localhost:4173
       BETTER_AUTH_SECRET: ci-test-secret
     steps:
@@ -100,21 +87,6 @@ jobs:
           node-version-file: '.node-version'
           cache: 'npm'
       - run: npm ci
-      - name: Get Playwright version
-        id: playwright-version
-        run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.version }}
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - name: Install Playwright OS dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
       - name: Create schemas
         run: |
           node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"

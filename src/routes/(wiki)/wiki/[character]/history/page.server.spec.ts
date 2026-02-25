@@ -46,6 +46,28 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn()
 }));
 
+vi.mock('$lib/data/editable-fields', () => ({
+	EDITABLE_FIELDS: [
+		'gloss',
+		'hint',
+		'originalMeaning',
+		'isVerified',
+		'pinyin',
+		'simplifiedVariants',
+		'traditionalVariants',
+		'components',
+		'strokeCountSimp',
+		'strokeCountTrad',
+		'strokeDataSimp',
+		'strokeDataTrad',
+		'fragmentsSimp',
+		'fragmentsTrad',
+		'historicalImages',
+		'historicalPronunciations',
+		'customSources'
+	]
+}));
+
 const { load, actions } = await import('./+page.server');
 
 async function loadResult(...args: Parameters<typeof load>) {
@@ -68,6 +90,7 @@ function makeEdit(overrides: Record<string, unknown> = {}) {
 		createdAt: new Date('2025-01-15T10:00:00Z'),
 		reviewedAt: new Date('2025-01-15T11:00:00Z'),
 		anonymousSessionId: null,
+		changedFields: ['gloss'],
 		gloss: 'water',
 		hint: null,
 		originalMeaning: null,
@@ -184,7 +207,8 @@ describe('load', () => {
 			reviewerName: 'Bob',
 			createdAt: '2025-01-15T10:00:00.000Z',
 			reviewedAt: '2025-01-15T11:00:00.000Z',
-			gloss: 'water'
+			gloss: 'water',
+			changedFields: ['gloss']
 		});
 		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水');
 	});
@@ -375,7 +399,7 @@ describe('actions.rollback', () => {
 		// redirect() throws a Redirect object after successful submitCharEdit
 		await expect(actions!.rollback(event)).rejects.toMatchObject({
 			status: 303,
-			location: '/wiki/水/history'
+			location: `/wiki/${encodeURIComponent('水')}/history`
 		});
 
 		expect(mockSubmitCharEdit).toHaveBeenCalledWith(
@@ -399,6 +423,7 @@ describe('actions.rollback', () => {
 		expect(callArgs.data).not.toHaveProperty('editComment');
 		expect(callArgs.data).not.toHaveProperty('createdAt');
 		expect(callArgs.data).not.toHaveProperty('character');
+		expect(callArgs.data).not.toHaveProperty('changedFields');
 		// But SHOULD include data columns
 		expect(callArgs.data).toHaveProperty('gloss', 'water');
 		expect(callArgs.data).toHaveProperty('pinyin');

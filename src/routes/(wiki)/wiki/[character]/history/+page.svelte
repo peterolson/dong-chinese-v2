@@ -81,7 +81,12 @@
 
 				{#if expandedId === edit.id}
 					<div class="diff-panel">
-						<FieldDiff editData={edit} {baseData} character={data.character.character} />
+						<FieldDiff
+							editData={edit}
+							{baseData}
+							character={data.character.character}
+							changedFields={edit.changedFields}
+						/>
 					</div>
 				{/if}
 			</li>
