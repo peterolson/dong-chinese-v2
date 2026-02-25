@@ -40,7 +40,8 @@
 		"dictionary:sync": "npm run dictionary:import-unihan && npm run dictionary:import-cedict && npm run dictionary:import-shuowen && npm run dictionary:import-animcjk && npm run dictionary:import-makemeahanzi && npm run dictionary:import-baxter-sagart && npm run dictionary:import-zhengzhang && npm run dictionary:import-jun-da-char-freq && npm run dictionary:import-subtlex-ch && npm run dictionary:import-dong-dictionary",
 		"dictionary:rebuild-char": "tsx scripts/dictionary/rebuild-dict-char.ts",
 		"dictionary:create-char-view": "tsx scripts/dictionary/create-char-view.ts",
-		"import:permissions": "tsx scripts/import-permissions.ts"
+		"import:permissions": "tsx scripts/import-permissions.ts",
+		"import:legacy-history": "tsx scripts/dictionary/import-legacy-history.ts"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",

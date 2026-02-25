@@ -52,6 +52,12 @@ Every import script follows the same pattern:
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `import-permissions.ts` | Imports `wikiEdit` permissions from MongoDB `dong-chinese.permissions` collection. Matches by Meteor user ID. `ON CONFLICT DO NOTHING`. |
 
+## Legacy History Import
+
+| Script                                | Purpose                                                                                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dictionary/import-legacy-history.ts` | Imports char edit history from `stage.dong_dict_history_raw` into `dictionary.char_manual`. Maps MongoDB fields, computes changedFields diffs. Idempotent via `[mongo:<id>]` tag in edit_comment. |
+
 ## Running
 
 ```bash
@@ -60,6 +66,7 @@ npm run dictionary:rebuild-char     # Rebuild dict_char from stage tables (re-cr
 npm run dictionary:create-char-view # Create/replace the dictionary.char view
 npm run import:users                # Migrate Meteor users (requires MONGODB_URI)
 npm run import:permissions          # Import wikiEdit permissions (requires MONGODB_URI)
+npm run import:legacy-history       # Import char edit history from staging into char_manual
 ```
 
 Individual imports: `npm run dictionary:import-unihan`, `npm run dictionary:import-cedict`, etc.

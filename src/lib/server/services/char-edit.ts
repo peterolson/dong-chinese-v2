@@ -8,6 +8,11 @@ import { computeChangedFields } from '$lib/data/deep-equal';
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
 
+/** Strip internal import tags (e.g. "[mongo:abc123]") from edit comments for display. */
+function stripImportTag(comment: string): string {
+	return comment.replace(/^\[mongo:\S+\]\s*/, '');
+}
+
 export class CharEditError extends Error {
 	code: string;
 	constructor(code: string, message: string) {
@@ -241,23 +246,27 @@ export async function getPendingEdits(character?: string): Promise<CharManualRow
 		conditions.push(eq(charManual.character, character));
 	}
 
-	return db
+	const rows = await db
 		.select()
 		.from(charManual)
 		.where(and(...conditions))
 		.orderBy(desc(charManual.createdAt));
+
+	return rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) }));
 }
 
 /**
  * Get edit history for a character (all statuses), most recent first.
  */
 export async function getCharEditHistory(character: string, limit = 50): Promise<CharManualRow[]> {
-	return db
+	const rows = await db
 		.select()
 		.from(charManual)
 		.where(eq(charManual.character, character))
 		.orderBy(desc(charManual.createdAt))
 		.limit(limit);
+
+	return rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) }));
 }
 
 /**
@@ -265,7 +274,8 @@ export async function getCharEditHistory(character: string, limit = 50): Promise
  */
 export async function getCharManualById(editId: string): Promise<CharManualRow | null> {
 	const [row] = await db.select().from(charManual).where(eq(charManual.id, editId)).limit(1);
-	return row ?? null;
+	if (!row) return null;
+	return { ...row, editComment: stripImportTag(row.editComment) };
 }
 
 /**
@@ -300,7 +310,10 @@ export async function getRecentEdits({
 			.then((rows) => rows[0])
 	]);
 
-	return { edits, total: countResult.count };
+	return {
+		edits: edits.map((e) => ({ ...e, editComment: stripImportTag(e.editComment) })),
+		total: countResult.count
+	};
 }
 
 /**

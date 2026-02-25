@@ -52,7 +52,7 @@ interface CharRow {
 	codepoint: string;
 	strokeCount: number | null;
 	gloss: string | null;
-	data: string; // JSON string
+	data: Record<string, unknown>; // plain object for JSONB
 }
 
 interface WordRow {
@@ -60,7 +60,7 @@ interface WordRow {
 	simp: string;
 	trad: string;
 	gloss: string | null;
-	data: string; // JSON string
+	data: Record<string, unknown>; // plain object for JSONB
 }
 
 interface HistoryRow {
@@ -71,21 +71,25 @@ interface HistoryRow {
 	timestamp: Date;
 	comment: string;
 	isApproved: boolean | null;
-	data: string; // JSON string
+	data: Record<string, unknown>; // plain object for JSONB
 }
 
 // ---------------------------------------------------------------------------
 // MongoDB helpers
 // ---------------------------------------------------------------------------
 
-function serializeDoc(doc: Record<string, unknown>): string {
-	return JSON.stringify(doc, (_key, value) => {
-		// Convert ObjectId to hex string for JSON serialization
-		if (value && typeof value === 'object' && value.constructor?.name === 'ObjectId') {
-			return value.toString();
-		}
-		return value;
-	});
+/** Convert a MongoDB document to a plain object safe for JSONB storage.
+ *  Converts ObjectIds to hex strings; returns an object (not a JSON string). */
+function cleanDoc(doc: Record<string, unknown>): Record<string, unknown> {
+	return JSON.parse(
+		JSON.stringify(doc, (_key, value) => {
+			// Convert ObjectId to hex string for JSON serialization
+			if (value && typeof value === 'object' && value.constructor?.name === 'ObjectId') {
+				return value.toString();
+			}
+			return value;
+		})
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +108,7 @@ async function fetchChars(mongo: MongoClient): Promise<CharRow[]> {
 		codepoint: (doc.codepoint as string) || '',
 		strokeCount: typeof doc.strokeCount === 'number' ? doc.strokeCount : null,
 		gloss: typeof doc.gloss === 'string' ? doc.gloss : null,
-		data: serializeDoc(doc as Record<string, unknown>)
+		data: cleanDoc(doc as Record<string, unknown>)
 	}));
 }
 
@@ -119,7 +123,7 @@ async function fetchWords(mongo: MongoClient): Promise<WordRow[]> {
 		simp: (doc.simp as string) || '',
 		trad: (doc.trad as string) || '',
 		gloss: typeof doc.gloss === 'string' ? doc.gloss : null,
-		data: serializeDoc(doc as Record<string, unknown>)
+		data: cleanDoc(doc as Record<string, unknown>)
 	}));
 }
 
@@ -139,7 +143,7 @@ async function fetchHistory(mongo: MongoClient): Promise<HistoryRow[]> {
 			timestamp: new Date(doc.timestamp as number),
 			comment: typeof doc.comment === 'string' ? doc.comment : '',
 			isApproved: typeof doc.isApproved === 'boolean' ? doc.isApproved : null,
-			data: serializeDoc(doc as Record<string, unknown>)
+			data: cleanDoc(doc as Record<string, unknown>)
 		};
 	});
 }
@@ -165,7 +169,7 @@ async function upsertCharBatch(tx: Tx, batch: CharRow[], syncVersion: number): P
 		r.codepoint,
 		r.strokeCount,
 		r.gloss,
-		r.data,
+		JSON.stringify(r.data),
 		syncVersion
 	]);
 
@@ -202,7 +206,14 @@ async function upsertWordBatch(tx: Tx, batch: WordRow[], syncVersion: number): P
 		)
 		.join(', ');
 
-	const params = batch.flatMap((r) => [r.mongoId, r.simp, r.trad, r.gloss, r.data, syncVersion]);
+	const params = batch.flatMap((r) => [
+		r.mongoId,
+		r.simp,
+		r.trad,
+		r.gloss,
+		JSON.stringify(r.data),
+		syncVersion
+	]);
 
 	await tx.unsafe(
 		`INSERT INTO stage.dong_dict_word_raw
@@ -244,7 +255,7 @@ async function upsertHistoryBatch(tx: Tx, batch: HistoryRow[], syncVersion: numb
 		r.timestamp.toISOString(),
 		r.comment,
 		r.isApproved,
-		r.data,
+		JSON.stringify(r.data),
 		syncVersion
 	]);
 
@@ -305,9 +316,9 @@ async function main() {
 
 		// Compute checksum over all data
 		const hash = createHash('sha256');
-		for (const r of charRows) hash.update(r.data);
-		for (const r of wordRows) hash.update(r.data);
-		for (const r of historyRows) hash.update(r.data);
+		for (const r of charRows) hash.update(JSON.stringify(r.data));
+		for (const r of wordRows) hash.update(JSON.stringify(r.data));
+		for (const r of historyRows) hash.update(JSON.stringify(r.data));
 		const checksum = hash.digest('hex');
 		console.log(`Checksum: ${checksum}`);
 
@@ -404,6 +415,16 @@ async function main() {
 				[SOURCE_NAME, nextVersion, checksum, totalRows]
 			);
 		});
+
+		// Fix any previously double-encoded JSONB data (string-inside-jsonb from old serializeDoc)
+		for (const table of ['dong_dict_char_raw', 'dong_dict_word_raw', 'dong_dict_history_raw']) {
+			const fixed = await sql.unsafe(
+				`UPDATE stage.${table} SET data = (data#>>'{}')::jsonb WHERE jsonb_typeof(data) = 'string'`
+			);
+			if (Number(fixed.count) > 0) {
+				console.log(`  Fixed ${fixed.count} double-encoded rows in ${table}`);
+			}
+		}
 
 		// Summary
 		const meta = await sql`SELECT * FROM stage.sync_metadata WHERE source = ${SOURCE_NAME}`;

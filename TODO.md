@@ -41,7 +41,7 @@
   - [ ] **Hide other users' pending indicators** — Unauthorized users (no `wikiEdit` permission) should not see pending edit counts, badges, or other users' pending submissions.
   - [ ] **Scoped pending changes page** — Any user can see `/wiki/pending` with only their own pending edits. The full review queue (all users' edits) is restricted to `wikiEdit` users.
   - [ ] **Full entry view for historical edits** — Add a way to view the full rendered character page for any edit in the history, not just diffs. Render `CharacterView` with the edit snapshot overlaid on base data.
-- [ ] **Import legacy wiki history** (separate task) — Import `dictionary.char.history` from MongoDB into `char_manual` to preserve legacy edit attribution and timestamps.
+- [x] **Import legacy wiki history** — `import-legacy-history.ts` reads char edits from `stage.dong_dict_history_raw`, maps MongoDB fields → `char_manual` columns, computes `changedFields` diffs, handles status mapping (approved/rejected/pre-approval-system). Incremental idempotency via `[mongo:<id>]` tag in `edit_comment` (stripped from UI display). Added to weekly GitHub Action. Also fixed double-encoding bug in `import-dong-dictionary.ts` (JSONB columns were storing JSON strings instead of objects).
 
 - [ ] Dictionary data ingestion pipeline (Phase B) — design materialized views (`source_character`, `source_word`) based on imported data, create `setup-views.sql` + runner script, add `.existing()` Drizzle type definitions. Need to explore the imported data first (see exploration queries below).
 
