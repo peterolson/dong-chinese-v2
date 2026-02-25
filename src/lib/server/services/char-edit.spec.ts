@@ -268,15 +268,17 @@ describe('getCharEditHistory', () => {
 			autoApprove: false
 		});
 
-		const history = await getCharEditHistory('土');
-		expect(history).toHaveLength(2);
-		expect(history[0].editComment).toBe('second');
-		expect(history[1].editComment).toBe('first');
+		const { edits, total } = await getCharEditHistory('土');
+		expect(edits).toHaveLength(2);
+		expect(total).toBe(2);
+		expect(edits[0].editComment).toBe('second');
+		expect(edits[1].editComment).toBe('first');
 	});
 
-	it('returns empty array for character with no edits', async () => {
-		const history = await getCharEditHistory('龍');
-		expect(history).toEqual([]);
+	it('returns empty result for character with no edits', async () => {
+		const { edits, total } = await getCharEditHistory('龍');
+		expect(edits).toEqual([]);
+		expect(total).toBe(0);
 	});
 });
 

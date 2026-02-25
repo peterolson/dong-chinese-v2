@@ -9,8 +9,11 @@ import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
 import { db } from '$lib/server/db';
 import { charBase } from '$lib/server/db/dictionary.schema';
+import { charView } from '$lib/server/db/dictionary.views';
 import { eq } from 'drizzle-orm';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+
+const PAGE_SIZE = 50;
 
 /** Pick only the fields that edits can touch (no frequency, shuowen, etc.) */
 function pickEditableFields(row: Record<string, unknown>) {
@@ -21,15 +24,22 @@ function pickEditableFields(row: Record<string, unknown>) {
 	return result;
 }
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const char = params.character;
+	const pageNum = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+	const offset = (pageNum - 1) * PAGE_SIZE;
 
-	const [edits, baseRow] = await Promise.all([
-		getCharEditHistory(char),
+	const [{ edits, total }, baseRow, charViewRow] = await Promise.all([
+		getCharEditHistory(char, { limit: PAGE_SIZE, offset }),
 		db
 			.select()
 			.from(charBase)
 			.where(eq(charBase.character, char))
+			.then((rows) => rows[0]),
+		db
+			.select()
+			.from(charView)
+			.where(eq(charView.character, char))
 			.then((rows) => rows[0])
 	]);
 	const { canReview } = await parent();
@@ -53,16 +63,26 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		reviewedAt: edit.reviewedAt?.toISOString() ?? null,
 		changedFields: edit.changedFields,
 		// Include editable fields for diff display
-		...pickEditableFields(edit)
+		...pickEditableFields(edit as unknown as Record<string, unknown>)
 	}));
 
-	// Base data from char_base (before any manual edits) — used as baseline for the oldest edit
-	const charBaseData = baseRow ? pickEditableFields(baseRow) : null;
+	// Use char view as baseline for diffs (current effective state)
+	const charBaseDataMap: Record<string, Record<string, unknown>> = {};
+	if (charViewRow) {
+		charBaseDataMap[char] = pickEditableFields(charViewRow as unknown as Record<string, unknown>);
+	} else if (baseRow) {
+		charBaseDataMap[char] = pickEditableFields(baseRow as unknown as Record<string, unknown>);
+	}
+
+	const totalPages = Math.ceil(total / PAGE_SIZE);
 
 	return {
 		edits: items,
-		charBase: charBaseData,
-		canReview
+		charBaseDataMap,
+		canReview,
+		pageNum,
+		totalPages,
+		total
 	};
 };
 

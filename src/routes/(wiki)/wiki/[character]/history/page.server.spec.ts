@@ -22,7 +22,7 @@ vi.mock('$lib/server/services/user', () => ({
 	resolveUserNames: (...args: unknown[]) => mockResolveUserNames(...args)
 }));
 
-// Mock the db chain for: db.select().from(charBase).where(...).then(rows => rows[0])
+// Mock the db chain for: db.select().from(charBase/charView).where(...).then(rows => rows[0])
 const mockDbThen = vi.fn();
 
 vi.mock('$lib/server/db', () => {
@@ -40,6 +40,10 @@ vi.mock('$lib/server/db', () => {
 
 vi.mock('$lib/server/db/dictionary.schema', () => ({
 	charBase: { character: 'character' }
+}));
+
+vi.mock('$lib/server/db/dictionary.views', () => ({
+	charView: { character: 'character' }
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -149,9 +153,12 @@ function makeBaseRow(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function makeLoadEvent(character: string, canReview = false) {
+function makeLoadEvent(character: string, canReview = false, page = '1') {
+	const url = new URL(`http://localhost:5173/wiki/${character}/history`);
+	if (page !== '1') url.searchParams.set('page', page);
 	return {
 		params: { character },
+		url,
 		parent: () => Promise.resolve({ canReview })
 	} as unknown as Parameters<typeof load>[0];
 }
@@ -178,7 +185,7 @@ function makeActionEvent(
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockGetCharEditHistory.mockResolvedValue([]);
+	mockGetCharEditHistory.mockResolvedValue({ edits: [], total: 0 });
 	mockResolveUserNames.mockResolvedValue(new Map());
 	mockHasPermission.mockResolvedValue(false);
 	mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
@@ -187,7 +194,7 @@ beforeEach(() => {
 describe('load', () => {
 	it('returns edits with resolved names', async () => {
 		const edit = makeEdit();
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(
 			new Map([
 				['user-1', 'Alice'],
@@ -210,35 +217,35 @@ describe('load', () => {
 			gloss: 'water',
 			changedFields: ['gloss']
 		});
-		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水');
+		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水', { limit: 50, offset: 0 });
 	});
 
-	it('includes charBase data when base row exists', async () => {
+	it('includes charBaseDataMap when char view row exists', async () => {
 		const baseRow = makeBaseRow();
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBase).toMatchObject({
+		expect(result.charBaseDataMap['水']).toMatchObject({
 			gloss: 'base water',
 			isVerified: false,
 			strokeCountSimp: 4
 		});
 	});
 
-	it('returns null charBase when no base row', async () => {
+	it('returns empty charBaseDataMap when no rows found', async () => {
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBase).toBeNull();
+		expect(result.charBaseDataMap).toEqual({});
 	});
 
 	it('labels anonymous editors as "Anonymous"', async () => {
 		const edit = makeEdit({ editedBy: null, reviewedBy: null, reviewedAt: null });
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
@@ -250,7 +257,7 @@ describe('load', () => {
 
 	it('labels unknown user IDs as "Unknown"', async () => {
 		const edit = makeEdit({ editedBy: 'deleted-user', reviewedBy: 'deleted-reviewer' });
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
@@ -272,7 +279,7 @@ describe('load', () => {
 			makeEdit({ id: 'e1', editedBy: 'u1', reviewedBy: 'u2' }),
 			makeEdit({ id: 'e2', editedBy: 'u3', reviewedBy: null, reviewedAt: null })
 		];
-		mockGetCharEditHistory.mockResolvedValue(edits);
+		mockGetCharEditHistory.mockResolvedValue({ edits, total: 2 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');

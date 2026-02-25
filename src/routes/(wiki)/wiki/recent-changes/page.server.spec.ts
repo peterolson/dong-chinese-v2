@@ -13,6 +13,55 @@ vi.mock('$lib/server/services/user', () => ({
 	resolveUserNames: (...args: unknown[]) => mockResolveUserNames(...args)
 }));
 
+// Mock the db chain for: db.select().from(charView).where(inArray(...))
+const mockDbThen = vi.fn();
+
+vi.mock('$lib/server/db', () => {
+	const chain = {
+		from: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+		then: (onFulfilled: (value: unknown[]) => unknown) => {
+			const result = mockDbThen();
+			return Promise.resolve(result).then(onFulfilled);
+		}
+	};
+	return {
+		db: {
+			select: vi.fn(() => chain)
+		}
+	};
+});
+
+vi.mock('$lib/server/db/dictionary.views', () => ({
+	charView: { character: 'character' }
+}));
+
+vi.mock('drizzle-orm', () => ({
+	inArray: vi.fn()
+}));
+
+vi.mock('$lib/data/editable-fields', () => ({
+	EDITABLE_FIELDS: [
+		'gloss',
+		'hint',
+		'originalMeaning',
+		'isVerified',
+		'pinyin',
+		'simplifiedVariants',
+		'traditionalVariants',
+		'components',
+		'strokeCountSimp',
+		'strokeCountTrad',
+		'strokeDataSimp',
+		'strokeDataTrad',
+		'fragmentsSimp',
+		'fragmentsTrad',
+		'historicalImages',
+		'historicalPronunciations',
+		'customSources'
+	]
+}));
+
 const { load } = await import('./+page.server');
 
 async function loadResult(...args: Parameters<typeof load>) {
@@ -42,6 +91,8 @@ function makeFakeEdit(overrides: Record<string, unknown> = {}) {
 		reviewComment: 'Looks good',
 		createdAt: new Date('2025-01-15T10:00:00Z'),
 		reviewedAt: new Date('2025-01-15T11:00:00Z'),
+		changedFields: ['gloss'],
+		gloss: 'water',
 		...overrides
 	};
 }
@@ -52,6 +103,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetRecentEdits.mockResolvedValue({ edits: [], total: 0 });
 	mockResolveUserNames.mockResolvedValue(new Map());
+	mockDbThen.mockReturnValue([]);
 });
 
 describe('load', () => {
@@ -128,19 +180,18 @@ describe('load', () => {
 
 		const result = await loadResult(makeEvent());
 
-		expect(result.items).toEqual([
-			{
-				id: 'edit-1',
-				character: '\u6C34',
-				status: 'approved',
-				editComment: 'Fixed gloss',
-				editorName: 'Alice',
-				reviewerName: 'Bob',
-				reviewComment: 'Looks good',
-				createdAt: '2025-01-15T10:00:00.000Z',
-				reviewedAt: '2025-01-15T11:00:00.000Z'
-			}
-		]);
+		expect(result.items[0]).toMatchObject({
+			id: 'edit-1',
+			character: '\u6C34',
+			status: 'approved',
+			editComment: 'Fixed gloss',
+			editorName: 'Alice',
+			reviewerName: 'Bob',
+			reviewComment: 'Looks good',
+			createdAt: '2025-01-15T10:00:00.000Z',
+			reviewedAt: '2025-01-15T11:00:00.000Z',
+			changedFields: ['gloss']
+		});
 	});
 
 	it('handles anonymous editors (no editedBy)', async () => {
@@ -163,5 +214,13 @@ describe('load', () => {
 
 		expect(result.items[0].editorName).toBe('Unknown');
 		expect(result.items[0].reviewerName).toBe('Unknown');
+	});
+
+	it('returns charBaseDataMap', async () => {
+		mockGetRecentEdits.mockResolvedValue({ edits: [], total: 0 });
+
+		const result = await loadResult(makeEvent());
+
+		expect(result.charBaseDataMap).toEqual({});
 	});
 });

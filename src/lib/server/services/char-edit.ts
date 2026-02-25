@@ -257,16 +257,31 @@ export async function getPendingEdits(character?: string): Promise<CharManualRow
 
 /**
  * Get edit history for a character (all statuses), most recent first.
+ * Returns paginated results with total count.
  */
-export async function getCharEditHistory(character: string, limit = 50): Promise<CharManualRow[]> {
-	const rows = await db
-		.select()
-		.from(charManual)
-		.where(eq(charManual.character, character))
-		.orderBy(desc(charManual.createdAt))
-		.limit(limit);
+export async function getCharEditHistory(
+	character: string,
+	{ limit = 50, offset = 0 }: { limit?: number; offset?: number } = {}
+): Promise<{ edits: CharManualRow[]; total: number }> {
+	const [rows, countResult] = await Promise.all([
+		db
+			.select()
+			.from(charManual)
+			.where(eq(charManual.character, character))
+			.orderBy(desc(charManual.createdAt))
+			.limit(limit)
+			.offset(offset),
+		db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(charManual)
+			.where(eq(charManual.character, character))
+			.then((rows) => rows[0])
+	]);
 
-	return rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) }));
+	return {
+		edits: rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) })),
+		total: countResult.count
+	};
 }
 
 /**
@@ -280,30 +295,14 @@ export async function getCharManualById(editId: string): Promise<CharManualRow |
 
 /**
  * Get recent edits across all characters, paginated. Includes all statuses.
- * Only selects columns needed for the recent-changes listing (no large JSONB data).
+ * Returns full rows (needed for diff display).
  */
 export async function getRecentEdits({
 	limit = 50,
 	offset = 0
 }: { limit?: number; offset?: number } = {}) {
 	const [edits, countResult] = await Promise.all([
-		db
-			.select({
-				id: charManual.id,
-				character: charManual.character,
-				status: charManual.status,
-				editComment: charManual.editComment,
-				editedBy: charManual.editedBy,
-				reviewedBy: charManual.reviewedBy,
-				reviewComment: charManual.reviewComment,
-				createdAt: charManual.createdAt,
-				reviewedAt: charManual.reviewedAt,
-				changedFields: charManual.changedFields
-			})
-			.from(charManual)
-			.orderBy(desc(charManual.createdAt))
-			.limit(limit)
-			.offset(offset),
+		db.select().from(charManual).orderBy(desc(charManual.createdAt)).limit(limit).offset(offset),
 		db
 			.select({ count: sql<number>`count(*)::int` })
 			.from(charManual)

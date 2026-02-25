@@ -88,6 +88,7 @@ interface CharManualRow {
 	status: string;
 	reviewedBy: string | null;
 	reviewedAt: Date | null;
+	reviewComment: string | null;
 	editedBy: string | null;
 	editComment: string;
 	createdAt: Date;
@@ -302,6 +303,9 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 	const approvalTimestamp = data.approvalTimestamp as number | null | undefined;
 	const reviewedBy = approver && approver !== '' ? approver : null;
 	const reviewedAt = approvalTimestamp != null ? new Date(approvalTimestamp) : null;
+	const rejectionReason = data.rejectionReason as string | null | undefined;
+	const reviewComment =
+		rejectionReason && rejectionReason.trim() !== '' ? rejectionReason.trim() : null;
 
 	// Changed fields
 	const changedFields = computeChangedFields(changes, previous);
@@ -333,6 +337,7 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 		status,
 		reviewedBy,
 		reviewedAt,
+		reviewComment,
 		editedBy: row.user_id || null,
 		editComment,
 		createdAt: row.timestamp
@@ -367,6 +372,7 @@ const INSERT_COLUMNS = [
 	'status',
 	'reviewed_by',
 	'reviewed_at',
+	'review_comment',
 	'edited_by',
 	'edit_comment',
 	'created_at'
@@ -397,6 +403,7 @@ function toDbRow(r: CharManualRow): Record<string, unknown> {
 		status: r.status,
 		reviewed_by: r.reviewedBy,
 		reviewed_at: r.reviewedAt,
+		review_comment: r.reviewComment,
 		edited_by: r.editedBy,
 		edit_comment: r.editComment,
 		created_at: r.createdAt
