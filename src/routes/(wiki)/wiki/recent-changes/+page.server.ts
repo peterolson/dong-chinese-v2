@@ -39,8 +39,10 @@ export const load: PageServerLoad = async ({ url }) => {
 	const baselineMap: Record<string, Record<string, unknown>> = {};
 
 	if (edits.length > 0) {
-		// Step A: Among the displayed edits, later edits for the same character use earlier edits
-		// as baselines. Group by character, sort chronologically (oldest first).
+		// Step A: Among the displayed edits, later edits for the same character use earlier
+		// *approved* edits as baselines. Only approved edits affect the actual character state,
+		// so rejected edits must not be used as baselines (their values were never applied).
+		// Group by character, sort chronologically (oldest first).
 		const byChar = new Map<string, typeof edits>();
 		for (const edit of edits) {
 			const arr = byChar.get(edit.character) ?? [];
@@ -54,19 +56,24 @@ export const load: PageServerLoad = async ({ url }) => {
 		for (const [, charEdits] of byChar) {
 			// Sort chronologically (oldest first) to wire up predecessors
 			const sorted = [...charEdits].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-			for (let i = 0; i < sorted.length; i++) {
-				if (i > 0) {
-					// Use the preceding same-character edit on this page as baseline
-					baselineMap[sorted[i].id] = pickEditableFields(
-						sorted[i - 1] as unknown as Record<string, unknown>
+			// Track the last approved edit seen so far for this character on this page
+			let lastApproved: (typeof sorted)[number] | null = null;
+			for (const edit of sorted) {
+				if (lastApproved) {
+					// Use the most recent approved edit on this page as baseline
+					baselineMap[edit.id] = pickEditableFields(
+						lastApproved as unknown as Record<string, unknown>
 					);
 				} else {
-					// Oldest edit for this character on this page — need DB lookup
+					// No approved predecessor on this page yet — need DB lookup
 					needsPredecessor.push({
-						id: sorted[i].id,
-						character: sorted[i].character,
-						createdAt: sorted[i].createdAt
+						id: edit.id,
+						character: edit.character,
+						createdAt: edit.createdAt
 					});
+				}
+				if (edit.status === 'approved') {
+					lastApproved = edit;
 				}
 			}
 		}
