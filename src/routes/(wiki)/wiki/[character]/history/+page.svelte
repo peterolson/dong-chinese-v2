@@ -10,7 +10,7 @@
 {:else}
 	<EditList
 		items={data.edits}
-		baseDataMap={data.charBaseDataMap}
+		baselineMap={data.baselineMap}
 		showCharacter={false}
 		pageNum={data.pageNum}
 		totalPages={data.totalPages}

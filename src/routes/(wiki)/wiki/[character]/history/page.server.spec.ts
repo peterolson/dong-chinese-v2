@@ -22,7 +22,7 @@ vi.mock('$lib/server/services/user', () => ({
 	resolveUserNames: (...args: unknown[]) => mockResolveUserNames(...args)
 }));
 
-// Mock the db chain for: db.select().from(charBase/charView).where(...).then(rows => rows[0])
+// Mock the db chain for: db.select().from(charBase).where(...).then(rows => rows[0])
 const mockDbThen = vi.fn();
 
 vi.mock('$lib/server/db', () => {
@@ -40,10 +40,6 @@ vi.mock('$lib/server/db', () => {
 
 vi.mock('$lib/server/db/dictionary.schema', () => ({
 	charBase: { character: 'character' }
-}));
-
-vi.mock('$lib/server/db/dictionary.views', () => ({
-	charView: { character: 'character' }
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -220,27 +216,54 @@ describe('load', () => {
 		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水', { limit: 50, offset: 0 });
 	});
 
-	it('includes charBaseDataMap when char view row exists', async () => {
+	it('uses char_base as baseline for a single edit', async () => {
+		const edit = makeEdit();
 		const baseRow = makeBaseRow();
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBaseDataMap['水']).toMatchObject({
+		expect(result.baselineMap['edit-1']).toMatchObject({
 			gloss: 'base water',
 			isVerified: false,
 			strokeCountSimp: 4
 		});
 	});
 
-	it('returns empty charBaseDataMap when no rows found', async () => {
+	it('uses preceding edit as baseline for sequential edits', async () => {
+		const edit2 = makeEdit({
+			id: 'edit-2',
+			gloss: 'water (updated)',
+			createdAt: new Date('2025-01-16T10:00:00Z')
+		});
+		const edit1 = makeEdit({
+			id: 'edit-1',
+			gloss: 'water',
+			createdAt: new Date('2025-01-15T10:00:00Z')
+		});
+		// Edits returned newest-first: [edit2, edit1]
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit2, edit1], total: 2 });
+		const baseRow = makeBaseRow();
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
+
+		const event = makeLoadEvent('水');
+		const result = await loadResult(event);
+
+		// edit-2's baseline should be edit-1's data
+		expect(result.baselineMap['edit-2']).toMatchObject({ gloss: 'water' });
+		// edit-1's baseline should be char_base data
+		expect(result.baselineMap['edit-1']).toMatchObject({ gloss: 'base water' });
+	});
+
+	it('returns empty baselineMap when no char_base found', async () => {
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBaseDataMap).toEqual({});
+		expect(result.baselineMap).toEqual({});
 	});
 
 	it('labels anonymous editors as "Anonymous"', async () => {

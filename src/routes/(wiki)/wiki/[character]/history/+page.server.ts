@@ -9,7 +9,6 @@ import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
 import { db } from '$lib/server/db';
 import { charBase } from '$lib/server/db/dictionary.schema';
-import { charView } from '$lib/server/db/dictionary.views';
 import { eq } from 'drizzle-orm';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 
@@ -29,17 +28,12 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const pageNum = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
 	const offset = (pageNum - 1) * PAGE_SIZE;
 
-	const [{ edits, total }, baseRow, charViewRow] = await Promise.all([
+	const [{ edits, total }, baseRow] = await Promise.all([
 		getCharEditHistory(char, { limit: PAGE_SIZE, offset }),
 		db
 			.select()
 			.from(charBase)
 			.where(eq(charBase.character, char))
-			.then((rows) => rows[0]),
-		db
-			.select()
-			.from(charView)
-			.where(eq(charView.character, char))
 			.then((rows) => rows[0])
 	]);
 	const { canReview } = await parent();
@@ -66,19 +60,26 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 		...pickEditableFields(edit as unknown as Record<string, unknown>)
 	}));
 
-	// Use char view as baseline for diffs (current effective state)
-	const charBaseDataMap: Record<string, Record<string, unknown>> = {};
-	if (charViewRow) {
-		charBaseDataMap[char] = pickEditableFields(charViewRow as unknown as Record<string, unknown>);
-	} else if (baseRow) {
-		charBaseDataMap[char] = pickEditableFields(baseRow as unknown as Record<string, unknown>);
+	// Build per-edit baselines: each edit's baseline is the preceding edit (or char_base for the oldest)
+	// Edits are ordered newest-first, so edit[i]'s predecessor is edit[i+1]
+	const baselineMap: Record<string, Record<string, unknown>> = {};
+	const baseFields = baseRow
+		? pickEditableFields(baseRow as unknown as Record<string, unknown>)
+		: null;
+	for (let i = 0; i < edits.length; i++) {
+		const prev = i < edits.length - 1 ? edits[i + 1] : baseRow ? baseRow : null;
+		if (prev) {
+			baselineMap[edits[i].id] = pickEditableFields(prev as unknown as Record<string, unknown>);
+		} else if (baseFields) {
+			baselineMap[edits[i].id] = baseFields;
+		}
 	}
 
 	const totalPages = Math.ceil(total / PAGE_SIZE);
 
 	return {
 		edits: items,
-		charBaseDataMap,
+		baselineMap,
 		canReview,
 		pageNum,
 		totalPages,

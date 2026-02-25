@@ -14,7 +14,7 @@
 
 	<EditList
 		items={data.items}
-		baseDataMap={data.charBaseDataMap}
+		baselineMap={data.baselineMap}
 		showCharacter={true}
 		pageNum={data.pageNum}
 		totalPages={data.totalPages}

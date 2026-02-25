@@ -40,7 +40,7 @@
 
 	let {
 		items,
-		baseDataMap,
+		baselineMap,
 		showCharacter = true,
 		pageNum = 1,
 		totalPages = 1,
@@ -48,7 +48,7 @@
 		actions
 	}: {
 		items: EditItem[];
-		baseDataMap: Record<string, Record<string, unknown>>;
+		baselineMap: Record<string, Record<string, unknown>>;
 		showCharacter?: boolean;
 		pageNum?: number;
 		totalPages?: number;
@@ -77,7 +77,7 @@
 {:else}
 	<ul class="edit-list">
 		{#each items as item (item.id)}
-			{@const baseData = baseDataMap[item.character] ?? null}
+			{@const baseData = baselineMap[item.id] ?? null}
 			<li class="edit-item">
 				<div class="edit-header">
 					{#if showCharacter}
