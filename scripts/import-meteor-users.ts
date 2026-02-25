@@ -33,6 +33,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DATABASE_URL = process.env.DATABASE_URL;
 const BATCH_SIZE = 100;
 const PLACEHOLDER_DOMAIN = 'noemail.dong-chinese.com';
+const MONGO_DB_NAME = 'dong-chinese';
 
 if (!MONGODB_URI) {
 	console.error('Error: MONGODB_URI environment variable is required');
@@ -231,7 +232,7 @@ async function main() {
 	console.log('Connecting to MongoDB...');
 	const mongo = new MongoClient(MONGODB_URI!);
 	await mongo.connect();
-	const mongoDb = mongo.db();
+	const mongoDb = mongo.db(MONGO_DB_NAME);
 	const usersCollection = mongoDb.collection<MeteorUser>('users');
 
 	console.log('Connecting to Postgres...');

@@ -19,18 +19,20 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 
 	const { canReview } = await parent();
 
-	const editedBy = {
-		userId: locals.user?.id,
-		anonymousSessionId: locals.anonymousSessionId
-	};
+	const hasIdentity = Boolean(locals.user?.id || locals.anonymousSessionId);
+	const editedBy = hasIdentity
+		? { userId: locals.user?.id, anonymousSessionId: locals.anonymousSessionId }
+		: undefined;
 
 	// Scope pending count: reviewers see all, others see only their own
 	const pendingCount = canReview
 		? await countPendingEdits(chars[0])
-		: await countPendingEdits(chars[0], editedBy);
+		: hasIdentity
+			? await countPendingEdits(chars[0], editedBy)
+			: 0;
 
 	// Load user's pending edit (if any)
-	const pendingEdit = await getUserPendingEdit(chars[0], editedBy);
+	const pendingEdit = hasIdentity ? await getUserPendingEdit(chars[0], editedBy!) : null;
 
 	// Serialize only editable fields + metadata for the pending edit
 	const userPendingEdit = pendingEdit

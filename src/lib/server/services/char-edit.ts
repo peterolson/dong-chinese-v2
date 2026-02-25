@@ -487,9 +487,12 @@ export async function countPendingEdits(
 						or(isNull(charManual.editedBy), eq(charManual.editedBy, ''))
 					)
 				: null;
-		if (authorCondition) {
-			conditions.push(authorCondition);
-		}
+
+		// If editedBy was provided but has no identity, return 0 rather than
+		// falling through to an unscoped global count.
+		if (!authorCondition) return 0;
+
+		conditions.push(authorCondition);
 	}
 
 	const [result] = await db

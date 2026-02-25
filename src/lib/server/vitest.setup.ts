@@ -10,7 +10,10 @@
 import { vi } from 'vitest';
 
 if (!process.env.CI) {
-	process.env.DATABASE_URL = 'postgres://root:mysecretpassword@localhost:5435/test';
+	if (!process.env.TEST_DATABASE_URL) {
+		throw new Error('TEST_DATABASE_URL environment variable is required for local test runs');
+	}
+	process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 }
 
 vi.mock('$env/dynamic/private', () => ({

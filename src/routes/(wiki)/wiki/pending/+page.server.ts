@@ -11,15 +11,7 @@ import { resolveUserNames } from '$lib/server/services/user';
 import { charView } from '$lib/server/db/dictionary.views';
 import { db } from '$lib/server/db';
 import { inArray } from 'drizzle-orm';
-import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
-
-function pickEditableFields(row: Record<string, unknown>) {
-	const result: Record<string, unknown> = {};
-	for (const field of EDITABLE_FIELDS) {
-		result[field] = row[field as keyof typeof row] ?? null;
-	}
-	return result;
-}
+import { pickEditableFields } from '$lib/data/editable-fields';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { canReview } = await parent();

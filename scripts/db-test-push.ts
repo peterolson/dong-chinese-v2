@@ -13,9 +13,13 @@ import postgres from 'postgres';
 import { CHAR_VIEW_SQL } from '../src/lib/server/db/char-view-sql.js';
 
 const TEST_DATABASE_URL =
-	process.env.TEST_DATABASE_URL || 'postgres://root:mysecretpassword@localhost:5435/test';
+	process.env.TEST_DATABASE_URL;
 
 async function main() {
+	if (!TEST_DATABASE_URL) {
+		console.error('TEST_DATABASE_URL is not set in environment variables.');
+		process.exit(1);
+	}
 	// Step 1: Create schemas
 	console.log('Creating stage and dictionary schemas...');
 	const sql = postgres(TEST_DATABASE_URL);

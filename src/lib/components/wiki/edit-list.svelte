@@ -121,9 +121,6 @@
 							{/if}
 						</span>
 					{/if}
-					<details class="diff-details">
-						<summary class="diff-toggle">Show changes</summary>
-					</details>
 					{#if actions}
 						<div class="header-actions">
 							{@render actions(item)}
@@ -137,7 +134,8 @@
 					</div>
 				{/if}
 
-				<div class="diff-panel-wrapper">
+				<details class="diff-details">
+					<summary class="diff-toggle">Show changes</summary>
 					<div class="diff-panel">
 						{#if item.editComment}
 							<p class="diff-comment">&ldquo;{item.editComment}&rdquo;</p>
@@ -152,7 +150,7 @@
 							changedFields={item.changedFields}
 						/>
 					</div>
-				</div>
+				</details>
 			</li>
 		{/each}
 	</ul>
@@ -255,8 +253,7 @@
 	}
 
 	.diff-details {
-		display: inline;
-		flex-shrink: 0;
+		margin-top: 0.125rem;
 	}
 
 	.diff-toggle {
@@ -279,14 +276,6 @@
 		display: flex;
 		justify-content: flex-end;
 		margin-top: 0.25rem;
-	}
-
-	.diff-panel-wrapper {
-		display: none;
-	}
-
-	.edit-item:has(.diff-details[open]) .diff-panel-wrapper {
-		display: block;
 	}
 
 	.diff-panel {

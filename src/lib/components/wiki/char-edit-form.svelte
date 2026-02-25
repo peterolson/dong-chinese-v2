@@ -119,6 +119,7 @@
 		Array.isArray(init.customSources) ? init.customSources.map(parseSource) : []
 	);
 
+	// svelte-ignore state_referenced_locally
 	let editComment = $state((pendingEdit?.editComment as string) ?? '');
 	const hasSources = $derived(sources.some((s) => s.name.trim()));
 

@@ -181,7 +181,11 @@ function derivePinyin(pf: Array<{ pinyin: string; count: number }> | undefined):
 	return result.length > 0 ? result : null;
 }
 
-/** Fields we can diff between changes and previous to compute changedFields */
+/**
+ * Fields we can diff between changes and previous to compute changedFields.
+ * Intentionally broader than EDITABLE_FIELDS — legacy edits could modify fields
+ * like codepoint, pinyinFrequencies, and shuowenExplanation that are now read-only.
+ */
 const DIFFABLE_FIELDS: Array<{
 	mongoKey: string;
 	manualKey: string;
@@ -303,6 +307,7 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 	const approvalTimestamp = data.approvalTimestamp as number | null | undefined;
 	const reviewedBy = approver && approver !== '' ? approver : null;
 	const reviewedAt = approvalTimestamp != null ? new Date(approvalTimestamp) : null;
+	// The legacy MongoDB schema only stored rejectionReason — approved edits had no comment field.
 	const rejectionReason = data.rejectionReason as string | null | undefined;
 	const reviewComment =
 		rejectionReason && rejectionReason.trim() !== '' ? rejectionReason.trim() : null;
@@ -313,6 +318,7 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 	// Tag the edit comment with the mongo ID for idempotency
 	const editComment = `[mongo:${row.mongo_id}] ${row.comment}`;
 
+	// simplifiedVariants / traditionalVariants are omitted — the legacy schema didn't track them.
 	return {
 		character: row.entry_key,
 		codepoint,
@@ -427,6 +433,16 @@ async function main() {
 	const sql = postgres(DATABASE_URL!);
 
 	try {
+		// Fix double-encoded JSONB data (string-inside-jsonb from old import)
+		const fixed = await sql`
+			UPDATE stage.dong_dict_history_raw
+			SET data = (data#>>'{}')::jsonb
+			WHERE jsonb_typeof(data) = 'string'
+		`;
+		if (Number(fixed.count) > 0) {
+			console.log(`Fixed ${fixed.count} double-encoded rows in dong_dict_history_raw`);
+		}
+
 		// Load already-imported mongo IDs for incremental idempotency
 		console.log('Checking for existing legacy imports...');
 		const existingRows = await sql`

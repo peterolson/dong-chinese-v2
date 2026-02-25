@@ -6,7 +6,8 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let showDraft = $state(data.showDraft);
+	let showDraftOverride: boolean | undefined = $state();
+	const showDraft = $derived(showDraftOverride ?? data.showDraft);
 
 	function buildDraftCharacter(
 		base: CharacterData,
@@ -48,7 +49,7 @@
 				type="button"
 				class="toggle-btn"
 				class:active={!showDraft}
-				onclick={() => (showDraft = false)}
+				onclick={() => (showDraftOverride = false)}
 			>
 				Published
 			</button>
@@ -56,7 +57,7 @@
 				type="button"
 				class="toggle-btn"
 				class:active={showDraft}
-				onclick={() => (showDraft = true)}
+				onclick={() => (showDraftOverride = true)}
 			>
 				Draft
 			</button>

@@ -4,17 +4,9 @@ import { resolveUserNames } from '$lib/server/services/user';
 import { db } from '$lib/server/db';
 import { charBase } from '$lib/server/db/dictionary.schema';
 import { inArray, sql } from 'drizzle-orm';
-import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+import { pickEditableFields } from '$lib/data/editable-fields';
 
 const PAGE_SIZE = 50;
-
-function pickEditableFields(row: Record<string, unknown>) {
-	const result: Record<string, unknown> = {};
-	for (const field of EDITABLE_FIELDS) {
-		result[field] = row[field as keyof typeof row] ?? null;
-	}
-	return result;
-}
 
 export const load: PageServerLoad = async ({ url }) => {
 	const pageNum = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);

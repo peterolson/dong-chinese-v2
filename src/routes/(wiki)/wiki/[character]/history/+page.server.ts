@@ -12,18 +12,9 @@ import { resolveUserNames } from '$lib/server/services/user';
 import { db } from '$lib/server/db';
 import { charBase } from '$lib/server/db/dictionary.schema';
 import { eq } from 'drizzle-orm';
-import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+import { pickEditableFields } from '$lib/data/editable-fields';
 
 const PAGE_SIZE = 50;
-
-/** Pick only the fields that edits can touch (no frequency, shuowen, etc.) */
-function pickEditableFields(row: Record<string, unknown>) {
-	const result: Record<string, unknown> = {};
-	for (const field of EDITABLE_FIELDS) {
-		result[field] = row[field as keyof typeof row] ?? null;
-	}
-	return result;
-}
 
 export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const char = params.character;
