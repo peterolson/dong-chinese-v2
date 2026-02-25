@@ -47,26 +47,35 @@ vi.mock('drizzle-orm', () => ({
 	)
 }));
 
+const EDITABLE_FIELDS = [
+	'gloss',
+	'hint',
+	'originalMeaning',
+	'isVerified',
+	'pinyin',
+	'simplifiedVariants',
+	'traditionalVariants',
+	'components',
+	'strokeCountSimp',
+	'strokeCountTrad',
+	'strokeDataSimp',
+	'strokeDataTrad',
+	'fragmentsSimp',
+	'fragmentsTrad',
+	'historicalImages',
+	'historicalPronunciations',
+	'customSources'
+] as const;
+
 vi.mock('$lib/data/editable-fields', () => ({
-	EDITABLE_FIELDS: [
-		'gloss',
-		'hint',
-		'originalMeaning',
-		'isVerified',
-		'pinyin',
-		'simplifiedVariants',
-		'traditionalVariants',
-		'components',
-		'strokeCountSimp',
-		'strokeCountTrad',
-		'strokeDataSimp',
-		'strokeDataTrad',
-		'fragmentsSimp',
-		'fragmentsTrad',
-		'historicalImages',
-		'historicalPronunciations',
-		'customSources'
-	]
+	EDITABLE_FIELDS,
+	pickEditableFields: (row: Record<string, unknown>) => {
+		const result: Record<string, unknown> = {};
+		for (const field of EDITABLE_FIELDS) {
+			result[field] = row[field] ?? null;
+		}
+		return result;
+	}
 }));
 
 const { load } = await import('./+page.server');
