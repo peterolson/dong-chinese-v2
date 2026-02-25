@@ -12,8 +12,7 @@ import { execSync } from 'node:child_process';
 import postgres from 'postgres';
 import { CHAR_VIEW_SQL } from '../src/lib/server/db/char-view-sql.js';
 
-const TEST_DATABASE_URL =
-	process.env.TEST_DATABASE_URL;
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 async function main() {
 	if (!TEST_DATABASE_URL) {
