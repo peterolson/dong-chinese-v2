@@ -150,10 +150,11 @@ scripts/
 ## Getting Started
 
 1. `npm install` — install dependencies
-2. `npm run db:start` — start the Postgres Docker container (port 5434)
-3. `npm run db:push` — push Drizzle schema to the database (use `--force` if schema is out of sync)
-4. Copy `.env.example` to `.env` and fill in secrets (DATABASE_URL must use port 5434)
-5. `npm run dev` — start the dev server
+2. `npm run db:start` — start the Postgres Docker containers (dev on port 5434, test on port 5435)
+3. `npm run db:push` — push Drizzle schema to the dev database (use `--force` if schema is out of sync)
+4. `npm run db:test:push` — push Drizzle schema to the test database (used by `vitest` integration tests)
+5. Copy `.env.example` to `.env` and fill in secrets (DATABASE_URL must use port 5434)
+6. `npm run dev` — start the dev server
 
 For dictionary data: `npm run dictionary:sync` runs all import scripts. Individual scripts: `npm run dictionary:import-unihan`, etc.
 
@@ -216,7 +217,7 @@ Import script at `scripts/import-meteor-users.ts` (`npm run import:users`). Migr
 
 - **Vitest**: 3 test projects configured in `vite.config.ts`:
   - `client` (browser environment) — component and client-side logic tests
-  - `server` (node environment) — service, auth, and server-side tests
+  - `server` (node environment) — service, auth, and server-side tests. Uses a **separate test database** (port 5435) to avoid wiping dev data. The `vitest.setup.ts` file mocks `$env/dynamic/private` to redirect `DATABASE_URL`. In CI, the override is skipped (CI uses its own ephemeral Postgres).
   - `storybook` (browser) — auto-runs all story play functions
 - **Playwright**: E2E tests in `e2e/` directory, tests both JS-enabled and JS-disabled modes
 - **CI**: GitHub Actions runs lint, type-check, Vitest, and Playwright on every push/PR to master

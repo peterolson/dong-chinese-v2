@@ -25,8 +25,9 @@ A Chinese language learning app at [dong-chinese.com](https://dong-chinese.com).
 
 ```sh
 npm install
-npm run db:start          # Start Postgres on port 5434
-npm run db:push           # Push Drizzle schema
+npm run db:start          # Start Postgres on port 5434 + test DB on 5435
+npm run db:push           # Push Drizzle schema to dev DB
+npm run db:test:push      # Push Drizzle schema to test DB (for vitest)
 cp .env.example .env      # Configure environment variables
 npm run dev               # Start dev server at localhost:5173
 ```

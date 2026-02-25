@@ -52,6 +52,12 @@ Every import script follows the same pattern:
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `import-permissions.ts` | Imports `wikiEdit` permissions from MongoDB `dong-chinese.permissions` collection. Matches by Meteor user ID. `ON CONFLICT DO NOTHING`. |
 
+## Test Database
+
+| Script            | Purpose                                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `db-test-push.ts` | Initializes the test database (port 5435): creates `stage`/`dictionary` schemas, runs `drizzle-kit push --force`, creates the char view. |
+
 ## Legacy History Import
 
 | Script                                | Purpose                                                                                                                                                                                           |
