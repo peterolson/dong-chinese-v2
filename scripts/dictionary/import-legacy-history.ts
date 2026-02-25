@@ -241,13 +241,13 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 	const previous = parseSnapshot(data.previous);
 
 	// Extract fields from changes snapshot
-	const gloss = (changes?.gloss as string) || null;
-	const hint = (changes?.hint as string) || null;
-	const originalMeaning = (changes?.originalMeaning as string) || null;
+	const gloss = (changes?.gloss as string | null | undefined) ?? null;
+	const hint = (changes?.hint as string | null | undefined) ?? null;
+	const originalMeaning = (changes?.originalMeaning as string | null | undefined) ?? null;
 	const isVerified = changes?.isVerified != null ? Boolean(changes.isVerified) : null;
 	const components = changes?.components ? parseJson(changes.components) : null;
 	const customSources = changes?.customSources ? parseJson(changes.customSources) : null;
-	const codepoint = (changes?.codepoint as string) || null;
+	const codepoint = (changes?.codepoint as string | null | undefined) ?? null;
 	const strokeCountSimp = typeof changes?.strokeCount === 'number' ? changes.strokeCount : null;
 
 	// Images → stroke data + historical images

@@ -8,9 +8,9 @@ import { computeChangedFields } from '$lib/data/deep-equal';
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
 
-/** Strip internal import tags (e.g. "[mongo:abc123]") from edit comments for display. */
+/** Strip internal import tags (e.g. "[mongo:cb6rRRWzdwKX4NdAb]") from edit comments for display. */
 function stripImportTag(comment: string): string {
-	return comment.replace(/^\[mongo:\S+\]\s*/, '');
+	return comment.replace(/^\[mongo:[A-Za-z0-9]{17,24}\]\s*/, '');
 }
 
 export class CharEditError extends Error {

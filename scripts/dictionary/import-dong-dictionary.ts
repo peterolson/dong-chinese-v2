@@ -334,6 +334,17 @@ async function main() {
 						version: storedRows[0].version as number
 					};
 
+		// Fix any previously double-encoded JSONB data (string-inside-jsonb from old serializeDoc).
+		// Runs before the checksum early-return so existing data is always fixed.
+		for (const table of ['dong_dict_char_raw', 'dong_dict_word_raw', 'dong_dict_history_raw']) {
+			const fixed = await sql.unsafe(
+				`UPDATE stage.${table} SET data = (data#>>'{}')::jsonb WHERE jsonb_typeof(data) = 'string'`
+			);
+			if (Number(fixed.count) > 0) {
+				console.log(`  Fixed ${fixed.count} double-encoded rows in ${table}`);
+			}
+		}
+
 		if (stored.checksum === checksum) {
 			console.log('Checksum matches stored version — skipping import.');
 			await sql.end();
@@ -415,16 +426,6 @@ async function main() {
 				[SOURCE_NAME, nextVersion, checksum, totalRows]
 			);
 		});
-
-		// Fix any previously double-encoded JSONB data (string-inside-jsonb from old serializeDoc)
-		for (const table of ['dong_dict_char_raw', 'dong_dict_word_raw', 'dong_dict_history_raw']) {
-			const fixed = await sql.unsafe(
-				`UPDATE stage.${table} SET data = (data#>>'{}')::jsonb WHERE jsonb_typeof(data) = 'string'`
-			);
-			if (Number(fixed.count) > 0) {
-				console.log(`  Fixed ${fixed.count} double-encoded rows in ${table}`);
-			}
-		}
 
 		// Summary
 		const meta = await sql`SELECT * FROM stage.sync_metadata WHERE source = ${SOURCE_NAME}`;
