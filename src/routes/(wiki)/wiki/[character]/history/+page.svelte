@@ -24,7 +24,8 @@
 			>
 				View full entry
 			</a>
-
+		{/snippet}
+		{#snippet secondaryActions(item)}
 			{#if data.canReview && item.status === 'pending'}
 				<div class="review-actions">
 					<form method="post" action="?/approveEdit" class="inline-form">

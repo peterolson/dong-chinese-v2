@@ -45,7 +45,8 @@
 		pageNum = 1,
 		totalPages = 1,
 		paginationUrl = null,
-		actions
+		actions,
+		secondaryActions
 	}: {
 		items: EditItem[];
 		baselineMap: Record<string, Record<string, unknown>>;
@@ -54,6 +55,7 @@
 		totalPages?: number;
 		paginationUrl?: string | null;
 		actions?: Snippet<[EditItem]>;
+		secondaryActions?: Snippet<[EditItem]>;
 	} = $props();
 
 	function formatDate(iso: string): string {
@@ -128,6 +130,12 @@
 						</div>
 					{/if}
 				</div>
+
+				{#if secondaryActions}
+					<div class="secondary-actions">
+						{@render secondaryActions(item)}
+					</div>
+				{/if}
 
 				<div class="diff-panel-wrapper">
 					<div class="diff-panel">
@@ -265,6 +273,12 @@
 	.header-actions {
 		flex-shrink: 0;
 		margin-left: auto;
+	}
+
+	.secondary-actions {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 0.25rem;
 	}
 
 	.diff-panel-wrapper {
