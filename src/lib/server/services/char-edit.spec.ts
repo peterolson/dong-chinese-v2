@@ -434,6 +434,46 @@ describe('submitCharEdit — changedFields', () => {
 			})
 		).rejects.toThrow('No fields were changed');
 	});
+
+	it('treats null submission as no-op when base has a value (COALESCE semantics)', async () => {
+		// char_base has gloss='test'. Submitting gloss=null would produce no visible change
+		// because COALESCE(null, 'test') = 'test' in the view.
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { gloss: null },
+				editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000046' },
+				editComment: 'clear gloss',
+				autoApprove: false
+			})
+		).rejects.toThrow('No fields were changed');
+	});
+
+	it('detects clearing a manual override as a real change', async () => {
+		// First: create an approved edit overriding gloss to 'you'
+		const userId = await createTestUser('coalesce-test');
+		await submitCharEdit({
+			character: '你',
+			data: { gloss: 'you' },
+			editedBy: { userId },
+			editComment: 'override gloss',
+			autoApprove: true
+		});
+
+		// Now: submit gloss=null. Since current view shows 'you' (manual override)
+		// and the effective post-approval value would be 'test' (base), this IS a change.
+		const result = await submitCharEdit({
+			character: '你',
+			data: { gloss: null },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000047' },
+			editComment: 'reset to base',
+			autoApprove: false
+		});
+
+		expect(result.status).toBe('pending');
+		const row = await getCharManualById(result.id);
+		expect(row!.changedFields).toContain('gloss');
+	});
 });
 
 describe('approveCharEdit — merge', () => {

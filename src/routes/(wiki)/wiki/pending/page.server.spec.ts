@@ -213,6 +213,44 @@ describe('load', () => {
 
 		expect(result.items[0].editorName).toBe('Unknown');
 	});
+
+	it('batch-loads charView data and returns charBaseDataMap', async () => {
+		const edit = makeEdit({ character: '水' });
+		mockGetPendingEdits.mockResolvedValue([edit]);
+		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) =>
+			cb([{ character: '水', gloss: 'water', hint: null, originalMeaning: null }])
+		);
+
+		const event = makeLoadEvent(true);
+		const result = await loadResult(event);
+
+		expect(result.charBaseDataMap).toHaveProperty('水');
+		expect(result.charBaseDataMap['水']).toMatchObject({ gloss: 'water' });
+	});
+
+	it('deduplicates characters for batch charView query', async () => {
+		const edits = [
+			makeEdit({ id: 'edit-1', character: '水' }),
+			makeEdit({ id: 'edit-2', character: '水' }),
+			makeEdit({ id: 'edit-3', character: '火' })
+		];
+		mockGetPendingEdits.mockResolvedValue(edits);
+		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) =>
+			cb([
+				{ character: '水', gloss: 'water' },
+				{ character: '火', gloss: 'fire' }
+			])
+		);
+
+		const event = makeLoadEvent(true);
+		const result = await loadResult(event);
+
+		expect(Object.keys(result.charBaseDataMap)).toHaveLength(2);
+		expect(result.charBaseDataMap['水']).toMatchObject({ gloss: 'water' });
+		expect(result.charBaseDataMap['火']).toMatchObject({ gloss: 'fire' });
+	});
 });
 
 describe('actions.approve', () => {

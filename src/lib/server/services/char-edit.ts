@@ -51,30 +51,36 @@ export async function submitCharEdit(params: {
 		throw new Error('At least one of userId or anonymousSessionId is required');
 	}
 
-	// Load current state from the char view (need full row for changedFields computation)
+	// Load char_base (needed for existence check + COALESCE-aware change detection)
+	const [baseState] = await db
+		.select()
+		.from(charBase)
+		.where(eq(charBase.character, params.character));
+	if (!baseState) {
+		throw new Error(`Character '${params.character}' does not exist in char_base`);
+	}
+
+	// Load current state from the char view (COALESCE overlay of manual on base)
 	const [currentState] = await db
 		.select()
 		.from(charView)
 		.where(eq(charView.character, params.character));
-	if (!currentState) {
-		// Fall back to checking char_base for a better error message
-		const [baseExists] = await db
-			.select({ character: charBase.character })
-			.from(charBase)
-			.where(eq(charBase.character, params.character));
-		if (!baseExists) {
-			throw new Error(`Character '${params.character}' does not exist in char_base`);
+
+	// Build effective post-approval values. The char view uses COALESCE(manual, base),
+	// so a null in char_manual falls through to char_base. We must diff against the
+	// effective value (submitted ?? base) to avoid recording no-op changes where a user
+	// clears a field that has a base value — approving null just exposes the base value.
+	const submittedRecord = params.data as unknown as Record<string, unknown>;
+	const baseRecord = baseState as unknown as Record<string, unknown>;
+	const effectiveSubmitted: Record<string, unknown> = {};
+	for (const field of EDITABLE_FIELDS) {
+		if (field in submittedRecord) {
+			effectiveSubmitted[field] = submittedRecord[field] ?? baseRecord[field];
 		}
 	}
 
-	// Compute which fields actually changed
-	const changedFields = currentState
-		? computeChangedFields(
-				currentState as unknown as Record<string, unknown>,
-				params.data as unknown as Record<string, unknown>,
-				EDITABLE_FIELDS
-			)
-		: EDITABLE_FIELDS.filter((f) => f in (params.data as Record<string, unknown>)); // no current state = treat all submitted fields as changed
+	const referenceState = (currentState ?? baseState) as unknown as Record<string, unknown>;
+	const changedFields = computeChangedFields(referenceState, effectiveSubmitted, EDITABLE_FIELDS);
 
 	if (changedFields.length === 0) {
 		throw new CharEditError('NO_FIELDS_CHANGED', 'No fields were changed');
