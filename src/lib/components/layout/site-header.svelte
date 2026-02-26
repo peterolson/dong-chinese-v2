@@ -17,7 +17,7 @@
 			<img src={logoTransparent} alt="懂中文 Dong Chinese" class="site-logo" />
 		</a>
 	</div>
-	<AuthStatus {user} />
+	<AuthStatus {user} variant="on-primary" />
 </header>
 
 <style>
