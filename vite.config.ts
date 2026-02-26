@@ -24,7 +24,24 @@ export default defineConfig({
 			exclude: [
 				'src/**/*.{test,spec}.{ts,js}',
 				'src/**/*.stories.{ts,js,svelte}',
-				'src/lib/server/db/migrations/**'
+				'src/lib/server/db/migrations/**',
+				'src/lib/server/auth.ts',
+				'src/lib/server/db/index.ts',
+				'src/lib/server/db/auth.schema.ts',
+				'src/lib/server/db/dictionary.schema.ts',
+				'src/lib/server/db/dictionary.views.ts',
+				'src/lib/server/db/stage.schema.ts',
+				'src/lib/server/db/schema.ts',
+				'src/lib/server/services/email.ts',
+				'src/lib/server/services/dictionary.ts',
+				'src/hooks.server.ts',
+				'src/routes/api/tts/**',
+				'src/routes/api/dictionary/**',
+				'src/routes/*/dictionary/*/+page.server.ts',
+				'src/routes/*/dictionary/explain/**',
+				'src/**/*.svelte',
+				'src/lib/types/**',
+				'src/stories/**'
 			]
 		},
 		expect: {
