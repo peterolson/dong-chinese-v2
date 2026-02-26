@@ -254,6 +254,38 @@ export const dongDictHistoryRaw = stage.table('dong_dict_history_raw', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// --- Seed lists (scripts/seed/*.csv) ---
+
+// Dong Chinese character ordering
+export const dongChars = stage.table('dong_chars', {
+	char: text('char').primaryKey(),
+	order: integer('order').notNull()
+});
+
+// HSK 2.0 character levels
+export const hsk2Chars = stage.table('hsk_2_chars', {
+	char: text('char').primaryKey(),
+	level: integer('level').notNull()
+});
+
+// HSK 3.0 character levels
+export const hsk3Chars = stage.table('hsk_3_chars', {
+	char: text('char').primaryKey(),
+	level: integer('level').notNull()
+});
+
+// HSK 2.0 word levels
+export const hsk2Words = stage.table('hsk_2_words', {
+	word: text('word').primaryKey(),
+	level: integer('level').notNull()
+});
+
+// HSK 3.0 word levels
+export const hsk3Words = stage.table('hsk_3_words', {
+	word: text('word').primaryKey(),
+	level: integer('level').notNull()
+});
+
 // Sync metadata: tracks last download per source
 export const syncMetadata = stage.table('sync_metadata', {
 	source: text('source').primaryKey(),

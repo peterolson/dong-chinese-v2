@@ -1,0 +1,27 @@
+name: Seed List Import
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/seed/**'
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - run: npm ci
+      - name: Create schemas
+        run: |
+          node -e "import('postgres').then(m => { const s = m.default(process.env.DATABASE_URL); s\`CREATE SCHEMA IF NOT EXISTS stage\`.then(() => s\`CREATE SCHEMA IF NOT EXISTS dictionary\`.then(() => process.exit(0))) })"
+      - run: npx drizzle-kit push --force
+      - run: npm run import:seed-lists

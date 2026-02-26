@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Pagination from '$lib/components/ui/pagination.svelte';
 	import EditStatusBadge from './edit-status-badge.svelte';
 	import FieldDiff from './field-diff.svelte';
 	import type { Snippet } from 'svelte';
@@ -156,19 +157,9 @@
 	</ul>
 
 	{#if totalPages > 1 && paginationUrl}
-		<nav class="pagination" aria-label="Page navigation">
-			{#if pageNum > 1}
-				<a href={resolve(`${paginationUrl}?page=${pageNum - 1}`)} class="page-link">Previous</a>
-			{:else}
-				<span class="page-link disabled">Previous</span>
-			{/if}
-			<span class="page-info">Page {pageNum} of {totalPages}</span>
-			{#if pageNum < totalPages}
-				<a href={resolve(`${paginationUrl}?page=${pageNum + 1}`)} class="page-link">Next</a>
-			{:else}
-				<span class="page-link disabled">Next</span>
-			{/if}
-		</nav>
+		<div class="pagination-wrapper">
+			<Pagination currentPage={pageNum} {totalPages} href={(p) => `${paginationUrl}?page=${p}`} />
+		</div>
 	{/if}
 {/if}
 
@@ -299,36 +290,7 @@
 		margin: 0 0 0.5rem;
 	}
 
-	.pagination {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
+	.pagination-wrapper {
 		margin-top: 1.5rem;
-	}
-
-	.page-link {
-		display: inline-block;
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		font-size: 0.875rem;
-		color: var(--secondary-soft);
-		text-decoration: none;
-	}
-
-	.page-link:hover:not(.disabled) {
-		background: var(--surface);
-		text-decoration: none;
-	}
-
-	.page-link.disabled {
-		color: var(--muted-foreground);
-		opacity: 0.5;
-		cursor: default;
-	}
-
-	.page-info {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
 	}
 </style>

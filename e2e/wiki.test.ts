@@ -71,32 +71,30 @@ for (const jsEnabled of [true, false]) {
 		});
 
 		test.describe('Lists', () => {
-			test('renders list index page with 4 list types', async ({ page }) => {
+			test('lists index redirects to first list type', async ({ page }) => {
 				await page.goto('/wiki/lists');
-				await expect(page.locator('h1')).toHaveText('Character Lists');
-				const cards = page.locator('.list-card');
-				await expect(cards).toHaveCount(4);
+				await expect(page).toHaveURL(/\/wiki\/lists\/movie-contexts\/0\/100/);
 			});
 
-			test('list cards have correct headings', async ({ page }) => {
-				await page.goto('/wiki/lists');
-				await expect(page.getByRole('heading', { name: 'Movie Frequency' })).toBeVisible();
-				await expect(page.getByRole('heading', { name: 'Context Diversity' })).toBeVisible();
-				await expect(page.getByRole('heading', { name: 'Book Frequency' })).toBeVisible();
-				await expect(page.getByRole('heading', { name: 'Most Common Components' })).toBeVisible();
+			test('list page shows nav pills for all 7 list types', async ({ page }) => {
+				await page.goto('/wiki/lists/movie-contexts/0/100');
+				const pills = page.locator('.list-pill');
+				await expect(pills).toHaveCount(7);
 			});
 
-			test('list cards are links to list pages', async ({ page }) => {
-				await page.goto('/wiki/lists');
-				const firstCard = page.locator('.list-card').first();
-				const href = await firstCard.getAttribute('href');
+			test('nav pills link to other list types', async ({ page }) => {
+				await page.goto('/wiki/lists/movie-contexts/0/100');
+				const links = page.locator('a.list-pill');
+				// 6 links (all except current type which is a span)
+				await expect(links).toHaveCount(6);
+				const href = await links.first().getAttribute('href');
 				expect(href).toMatch(/\/wiki\/lists\/.+/);
 			});
 
-			test('subtlex-rank list page loads without error', async ({ page }) => {
-				// In CI the database may be empty. Verify the page loads (h1 renders).
-				await page.goto('/wiki/lists/subtlex-rank/0/100');
-				await expect(page.locator('h1')).toBeVisible();
+			test('list page loads without error', async ({ page }) => {
+				// In CI the database may be empty. Verify the page renders (h2 heading).
+				await page.goto('/wiki/lists/movie-count/0/100');
+				await expect(page.locator('h2')).toBeVisible();
 			});
 		});
 
@@ -149,8 +147,8 @@ for (const jsEnabled of [true, false]) {
 			test('wiki home → lists via quick link', async ({ page }) => {
 				await page.goto('/wiki');
 				await page.getByRole('link', { name: 'Browse frequency lists' }).click();
-				await expect(page).toHaveURL(/\/wiki\/lists/);
-				await expect(page.locator('h1')).toHaveText('Character Lists');
+				await expect(page).toHaveURL(/\/wiki\/lists\//);
+				await expect(page.locator('h2')).toBeVisible();
 			});
 
 			test('wiki home → recent changes via quick link', async ({ page }) => {

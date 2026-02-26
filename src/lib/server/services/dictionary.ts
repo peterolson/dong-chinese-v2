@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { charView } from '$lib/server/db/dictionary.views';
+import { dongChars, hsk2Chars, hsk3Chars } from '$lib/server/db/stage.schema';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type {
 	CharacterData,
@@ -186,26 +187,54 @@ export async function searchCharacters(
 	return rows;
 }
 
+/** Total number of films in the SUBTLEX-CH corpus */
+const SUBTLEX_TOTAL_FILMS = 6243;
+
+/** Sum of subtlex_count across all characters in the char view */
+const SUBTLEX_TOTAL_COUNT = 44_227_786;
+
+/** Sum of jun_da_frequency across all characters in the char view */
+const JUN_DA_TOTAL_FREQUENCY = 187_182_367;
+
 export const LIST_TYPES = {
-	'subtlex-rank': {
+	'movie-contexts': {
+		label: '% of Movies',
+		navLabel: '% Movies',
+		description:
+			'Characters ranked by the percentage of films they appear in (SUBTLEX-CH corpus, 6,243 films).'
+	},
+	'movie-count': {
 		label: 'Movie Frequency',
-		orderBy: 'subtlex_rank ASC NULLS LAST',
-		legacyCamelCase: 'movieFrequency'
+		navLabel: 'Movie Freq.',
+		description:
+			'Characters ranked by how often they appear in Chinese film subtitles (SUBTLEX-CH corpus, 6,243 films).'
 	},
-	'subtlex-context-diversity': {
-		label: 'Context Diversity',
-		orderBy: 'subtlex_context_diversity DESC NULLS LAST',
-		legacyCamelCase: 'contextDiversity'
-	},
-	'jun-da-rank': {
+	'book-count': {
 		label: 'Book Frequency',
-		orderBy: 'jun_da_rank ASC NULLS LAST',
-		legacyCamelCase: 'bookCount'
+		navLabel: 'Book Freq.',
+		description:
+			'Characters ranked by how often they appear in modern Chinese books (Jun Da corpus).'
 	},
-	'common-components': {
+	hsk: {
+		label: 'HSK 2.0',
+		navLabel: 'HSK 2.0',
+		description: 'Characters from the HSK 2.0 standard, organized by level (1–6).'
+	},
+	'hsk-3': {
+		label: 'HSK 3.0',
+		navLabel: 'HSK 3.0',
+		description: 'Characters from the HSK 3.0 standard, organized by level (1–7+).'
+	},
+	'dong-chinese': {
+		label: '懂中文 Order',
+		navLabel: '懂中文',
+		description:
+			'Characters in the order taught by 懂中文 (Dong Chinese), created from a balanced mix of frequency, graded readers, and standardized tests.'
+	},
+	components: {
 		label: 'Most Common Components',
-		orderBy: null, // custom query
-		legacyCamelCase: null
+		navLabel: 'Components',
+		description: 'Characters that appear most frequently as building blocks of other characters.'
 	}
 } as const;
 
@@ -215,6 +244,7 @@ export interface CharacterListItem {
 	character: string;
 	pinyin: string[] | null;
 	gloss: string | null;
+	isVerified: boolean;
 	subtlexRank: number | null;
 	subtlexPerMillion: number | null;
 	subtlexContextDiversity: number | null;
@@ -222,6 +252,10 @@ export interface CharacterListItem {
 	junDaPerMillion: number | null;
 	simplifiedVariants: string[] | null;
 	traditionalVariants: string[] | null;
+	level: number | null;
+	moviePercentage: number | null;
+	usageCount: number | null;
+	cumulativePercent: number | null;
 }
 
 /**
@@ -232,36 +266,185 @@ export async function getCharacterList(
 	offset: number,
 	limit: number
 ): Promise<{ items: CharacterListItem[]; total: number }> {
-	const selectCols = {
-		character: charView.character,
-		pinyin: charView.pinyin,
-		gloss: charView.gloss,
-		subtlexRank: charView.subtlexRank,
-		subtlexPerMillion: charView.subtlexPerMillion,
-		subtlexContextDiversity: charView.subtlexContextDiversity,
-		junDaRank: charView.junDaRank,
-		junDaPerMillion: charView.junDaPerMillion,
-		simplifiedVariants: charView.simplifiedVariants,
-		traditionalVariants: charView.traditionalVariants
-	};
-
-	let orderClause: ReturnType<typeof sql>;
-	let whereClause: ReturnType<typeof sql> | undefined;
-
 	switch (listType) {
-		case 'subtlex-rank':
-			orderClause = sql`${charView.subtlexRank} ASC NULLS LAST`;
-			whereClause = sql`${charView.subtlexRank} IS NOT NULL`;
-			break;
-		case 'subtlex-context-diversity':
-			orderClause = sql`${charView.subtlexContextDiversity} DESC NULLS LAST`;
-			whereClause = sql`${charView.subtlexContextDiversity} IS NOT NULL`;
-			break;
-		case 'jun-da-rank':
-			orderClause = sql`${charView.junDaRank} ASC NULLS LAST`;
-			whereClause = sql`${charView.junDaRank} IS NOT NULL`;
-			break;
-		case 'common-components': {
+		case 'movie-contexts': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					ROUND(c.subtlex_context_diversity::numeric / ${SUBTLEX_TOTAL_FILMS} * 100, 2)::float AS "moviePercentage",
+					count(*) OVER()::int AS total
+				FROM ${charView} c
+				WHERE c.subtlex_context_diversity IS NOT NULL
+				ORDER BY c.subtlex_context_diversity DESC NULLS LAST
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({ ...r, level: null, usageCount: null, cumulativePercent: null })),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'movie-count': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					ROUND(
+						(SUM(c.subtlex_count) OVER (ORDER BY c.subtlex_rank ASC)
+						::numeric / ${SUBTLEX_TOTAL_COUNT} * 100), 2
+					)::float AS "cumulativePercent",
+					count(*) OVER()::int AS total
+				FROM ${charView} c
+				WHERE c.subtlex_rank IS NOT NULL
+				ORDER BY c.subtlex_rank ASC NULLS LAST
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({ ...r, level: null, moviePercentage: null, usageCount: null })),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'book-count': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					ROUND(
+						(SUM(c.jun_da_frequency) OVER (ORDER BY c.jun_da_rank ASC)
+						::numeric / ${JUN_DA_TOTAL_FREQUENCY} * 100), 2
+					)::float AS "cumulativePercent",
+					count(*) OVER()::int AS total
+				FROM ${charView} c
+				WHERE c.jun_da_rank IS NOT NULL
+				ORDER BY c.jun_da_rank ASC NULLS LAST
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({ ...r, level: null, moviePercentage: null, usageCount: null })),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'hsk': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					h.level,
+					count(*) OVER()::int AS total
+				FROM ${hsk2Chars} h
+				JOIN ${charView} c ON c.character = h.char
+				ORDER BY h.level ASC, h.char ASC
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({
+					...r,
+					moviePercentage: null,
+					usageCount: null,
+					cumulativePercent: null
+				})),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'hsk-3': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					h.level,
+					count(*) OVER()::int AS total
+				FROM ${hsk3Chars} h
+				JOIN ${charView} c ON c.character = h.char
+				ORDER BY h.level ASC, h.char ASC
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({
+					...r,
+					moviePercentage: null,
+					usageCount: null,
+					cumulativePercent: null
+				})),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'dong-chinese': {
+			const rows = await db.execute<Record<string, unknown>>(sql`
+				SELECT
+					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
+					c.subtlex_rank AS "subtlexRank",
+					c.subtlex_per_million AS "subtlexPerMillion",
+					c.subtlex_context_diversity AS "subtlexContextDiversity",
+					c.jun_da_rank AS "junDaRank",
+					c.jun_da_per_million AS "junDaPerMillion",
+					c.simplified_variants AS "simplifiedVariants",
+					c.traditional_variants AS "traditionalVariants",
+					count(*) OVER()::int AS total
+				FROM ${dongChars} d
+				JOIN ${charView} c ON c.character = d.char
+				ORDER BY d."order" ASC
+				OFFSET ${offset}
+				LIMIT ${limit}
+			`);
+			const typed = rows as unknown as (CharacterListItem & { total: number })[];
+			return {
+				items: typed.map((r) => ({
+					...r,
+					level: null,
+					moviePercentage: null,
+					usageCount: null,
+					cumulativePercent: null
+				})),
+				total: typed.length > 0 ? typed[0].total : 0
+			};
+		}
+		case 'components': {
 			// Characters that appear most frequently as components in other characters.
 			// Precompute counts in a single aggregate rather than a correlated subquery per row.
 			const rows = await db.execute<Record<string, unknown>>(sql`
@@ -273,6 +456,7 @@ export async function getCharacterList(
 				)
 				SELECT
 					c.character, c.pinyin, c.gloss,
+					COALESCE(c.is_verified, false) AS "isVerified",
 					c.subtlex_rank AS "subtlexRank",
 					c.subtlex_per_million AS "subtlexPerMillion",
 					c.subtlex_context_diversity AS "subtlexContextDiversity",
@@ -280,6 +464,7 @@ export async function getCharacterList(
 					c.jun_da_per_million AS "junDaPerMillion",
 					c.simplified_variants AS "simplifiedVariants",
 					c.traditional_variants AS "traditionalVariants",
+					cc.usage_count AS "usageCount",
 					count(*) OVER()::int AS total
 				FROM component_counts cc
 				JOIN ${charView} c ON c.character = cc.character
@@ -289,33 +474,14 @@ export async function getCharacterList(
 			`);
 			const typed = rows as unknown as (CharacterListItem & { total: number })[];
 			return {
-				items: typed,
+				items: typed.map((r) => ({
+					...r,
+					level: null,
+					moviePercentage: null,
+					cumulativePercent: null
+				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
 		}
 	}
-
-	const [items, countResult] = await Promise.all([
-		db
-			.select(selectCols)
-			.from(charView)
-			.where(whereClause)
-			.orderBy(orderClause)
-			.offset(offset)
-			.limit(limit),
-		db
-			.select({ count: sql<number>`count(*)::int` })
-			.from(charView)
-			.where(whereClause)
-			.then((rows) => rows[0])
-	]);
-
-	return {
-		items: items.map((row) => ({
-			...row,
-			simplifiedVariants: row.simplifiedVariants as string[] | null,
-			traditionalVariants: row.traditionalVariants as string[] | null
-		})),
-		total: countResult.count
-	};
 }

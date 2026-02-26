@@ -35,8 +35,8 @@ describe('searchCharacters', () => {
 });
 
 describe('getCharacterList', () => {
-	it('returns items and total for subtlex-rank', async () => {
-		const result = await getCharacterList('subtlex-rank', 0, 5);
+	it('returns items and total for movie-count', async () => {
+		const result = await getCharacterList('movie-count', 0, 5);
 		expect(result).toHaveProperty('items');
 		expect(result).toHaveProperty('total');
 		expect(Array.isArray(result.items)).toBe(true);
@@ -47,30 +47,51 @@ describe('getCharacterList', () => {
 		}
 	});
 
-	it('returns items and total for jun-da-rank', async () => {
-		const result = await getCharacterList('jun-da-rank', 0, 5);
+	it('returns items and total for book-count', async () => {
+		const result = await getCharacterList('book-count', 0, 5);
 		expect(result).toHaveProperty('items');
 		expect(result).toHaveProperty('total');
 		expect(Array.isArray(result.items)).toBe(true);
 	});
 
-	it('returns items and total for subtlex-context-diversity', async () => {
-		const result = await getCharacterList('subtlex-context-diversity', 0, 5);
+	it('returns items and total for movie-contexts', async () => {
+		const result = await getCharacterList('movie-contexts', 0, 5);
 		expect(result).toHaveProperty('items');
 		expect(result).toHaveProperty('total');
 		expect(Array.isArray(result.items)).toBe(true);
 	});
 
-	it('returns items and total for common-components', async () => {
-		const result = await getCharacterList('common-components', 0, 5);
+	it('returns items and total for components', async () => {
+		const result = await getCharacterList('components', 0, 5);
+		expect(result).toHaveProperty('items');
+		expect(result).toHaveProperty('total');
+		expect(Array.isArray(result.items)).toBe(true);
+	});
+
+	it('returns items and total for hsk', async () => {
+		const result = await getCharacterList('hsk', 0, 5);
+		expect(result).toHaveProperty('items');
+		expect(result).toHaveProperty('total');
+		expect(Array.isArray(result.items)).toBe(true);
+	});
+
+	it('returns items and total for hsk-3', async () => {
+		const result = await getCharacterList('hsk-3', 0, 5);
+		expect(result).toHaveProperty('items');
+		expect(result).toHaveProperty('total');
+		expect(Array.isArray(result.items)).toBe(true);
+	});
+
+	it('returns items and total for dong-chinese', async () => {
+		const result = await getCharacterList('dong-chinese', 0, 5);
 		expect(result).toHaveProperty('items');
 		expect(result).toHaveProperty('total');
 		expect(Array.isArray(result.items)).toBe(true);
 	});
 
 	it('respects offset parameter', async () => {
-		const page1 = await getCharacterList('subtlex-rank', 0, 3);
-		const page2 = await getCharacterList('subtlex-rank', 3, 3);
+		const page1 = await getCharacterList('movie-count', 0, 3);
+		const page2 = await getCharacterList('movie-count', 3, 3);
 		// Both queries should return valid results
 		expect(Array.isArray(page1.items)).toBe(true);
 		expect(Array.isArray(page2.items)).toBe(true);
@@ -82,20 +103,24 @@ describe('getCharacterList', () => {
 });
 
 describe('LIST_TYPES', () => {
-	it('has 4 list types', () => {
-		expect(Object.keys(LIST_TYPES)).toHaveLength(4);
+	it('has 7 list types', () => {
+		expect(Object.keys(LIST_TYPES)).toHaveLength(7);
 	});
 
 	it('has expected keys', () => {
-		expect(LIST_TYPES).toHaveProperty('subtlex-rank');
-		expect(LIST_TYPES).toHaveProperty('subtlex-context-diversity');
-		expect(LIST_TYPES).toHaveProperty('jun-da-rank');
-		expect(LIST_TYPES).toHaveProperty('common-components');
+		expect(LIST_TYPES).toHaveProperty('movie-contexts');
+		expect(LIST_TYPES).toHaveProperty('movie-count');
+		expect(LIST_TYPES).toHaveProperty('book-count');
+		expect(LIST_TYPES).toHaveProperty('hsk');
+		expect(LIST_TYPES).toHaveProperty('hsk-3');
+		expect(LIST_TYPES).toHaveProperty('dong-chinese');
+		expect(LIST_TYPES).toHaveProperty('components');
 	});
 
-	it('each type has a label', () => {
+	it('each type has a label and navLabel', () => {
 		for (const type of Object.values(LIST_TYPES)) {
 			expect(type.label).toBeTruthy();
+			expect(type.navLabel).toBeTruthy();
 		}
 	});
 });
