@@ -42,7 +42,8 @@
 		"dictionary:rebuild-char": "tsx scripts/dictionary/rebuild-dict-char.ts",
 		"dictionary:create-char-view": "tsx scripts/dictionary/create-char-view.ts",
 		"import:permissions": "tsx scripts/import-permissions.ts",
-		"import:legacy-history": "tsx scripts/dictionary/import-legacy-history.ts"
+		"import:legacy-history": "tsx scripts/dictionary/import-legacy-history.ts",
+		"import:seed-lists": "tsx scripts/import-seed-lists.ts"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.1",
