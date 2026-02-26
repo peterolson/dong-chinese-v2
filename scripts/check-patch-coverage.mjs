@@ -52,13 +52,23 @@ for (const line of lcovContent.split('\n')) {
 
 let diffOutput;
 try {
+	// Three-dot diff uses the merge base — preferred but requires sufficient history
 	diffOutput = execSync(`git diff ${base}...HEAD --unified=0 --diff-filter=ACM`, {
 		encoding: 'utf-8',
 		maxBuffer: 50 * 1024 * 1024
 	});
-} catch (e) {
-	console.error(`Failed to run git diff: ${e.message}`);
-	process.exit(1);
+} catch {
+	try {
+		// Fall back to two-dot diff (direct comparison) in shallow clones
+		console.log('Three-dot diff failed, falling back to two-dot diff');
+		diffOutput = execSync(`git diff ${base}..HEAD --unified=0 --diff-filter=ACM`, {
+			encoding: 'utf-8',
+			maxBuffer: 50 * 1024 * 1024
+		});
+	} catch (e) {
+		console.error(`Failed to run git diff: ${e.message}`);
+		process.exit(1);
+	}
 }
 
 /** @type {Map<string, Set<number>>} file → set of added line numbers */

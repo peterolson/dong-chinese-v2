@@ -19,6 +19,8 @@ jobs:
       - run: npm run check
 
   test:
+    permissions:
+      pull-requests: write
     runs-on: ubuntu-latest
     # Playwright container has browsers + OS deps pre-installed (no 5-min install-deps step).
     # Update the tag when upgrading @playwright/test in package.json.
@@ -67,7 +69,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git fetch origin ${{ github.base_ref }} --depth=1
+          git fetch origin ${{ github.base_ref }} --deepen=50
           node scripts/check-patch-coverage.mjs \
             --threshold=70 \
             --base=origin/${{ github.base_ref }}
