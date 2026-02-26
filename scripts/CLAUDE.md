@@ -52,6 +52,12 @@ Every import script follows the same pattern:
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `import-permissions.ts` | Imports `wikiEdit` permissions from MongoDB `dong-chinese.permissions` collection. Matches by Meteor user ID. `ON CONFLICT DO NOTHING`. |
 
+## CI Coverage
+
+| Script                     | Purpose                                                                                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-patch-coverage.mjs` | Checks that new/changed lines (via `git diff`) meet a coverage threshold. Parses `coverage/lcov.info`, cross-references with diff hunks. No dependencies. |
+
 ## Test Database
 
 | Script            | Purpose                                                                                                                                  |

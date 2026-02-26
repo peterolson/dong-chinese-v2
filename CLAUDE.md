@@ -47,20 +47,20 @@ When JavaScript IS available, the app should feel instant:
 
 ## Tech Stack
 
-| Layer                | Technology                         | Notes                                                                                                |
-| -------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Framework            | SvelteKit (Svelte 5)               | TypeScript throughout, adapter-node for deployment                                                   |
-| Database             | PostgreSQL                         | Docker Compose for local dev (port 5434), Supabase for prod                                          |
-| ORM                  | Drizzle ORM                        | postgres.js client. 3 schemas: `public`, `stage`, `dictionary`. `drizzle-kit push` for dev.          |
-| Auth                 | Better Auth                        | bcrypt-compatible with Meteor hashes. Email/password + GitHub/Google/Facebook OAuth + magic links.   |
-| Styling              | Vanilla CSS with custom properties | No Tailwind. Dark mode via `data-theme` attribute on `<html>`. CSS custom properties for all tokens. |
-| Testing - Unit       | Vitest                             | 3 projects: client (browser), server (node), storybook (browser)                                     |
-| Testing - E2E        | Playwright                         | Test both with-JS and without-JS scenarios                                                           |
-| Testing - Components | Storybook 10                       | Svelte CSF with `defineMeta` + `<Story>` pattern. Play functions auto-run as Vitest tests.           |
-| Mobile               | Capacitor                          | For Android initially. iOS as PWA first, native later.                                               |
-| CI/CD                | GitHub Actions                     | Lint, type-check, unit tests, Playwright with Postgres service container. Dictionary sync crons.     |
-| Linting/Formatting   | ESLint + Prettier                  | Flat config with Svelte and Storybook plugins                                                        |
-| TTS                  | Azure Speech Services              | Token endpoint at `/api/tts/token`, browser SpeechSynthesis as fallback                              |
+| Layer                | Technology                         | Notes                                                                                                                                                                                               |
+| -------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework            | SvelteKit (Svelte 5)               | TypeScript throughout, adapter-node for deployment                                                                                                                                                  |
+| Database             | PostgreSQL                         | Docker Compose for local dev (port 5434), Supabase for prod                                                                                                                                         |
+| ORM                  | Drizzle ORM                        | postgres.js client. 3 schemas: `public`, `stage`, `dictionary`. `drizzle-kit push` for dev.                                                                                                         |
+| Auth                 | Better Auth                        | bcrypt-compatible with Meteor hashes. Email/password + GitHub/Google/Facebook OAuth + magic links.                                                                                                  |
+| Styling              | Vanilla CSS with custom properties | No Tailwind. Dark mode via `data-theme` attribute on `<html>`. CSS custom properties for all tokens.                                                                                                |
+| Testing - Unit       | Vitest                             | 3 projects: client (browser), server (node), storybook (browser)                                                                                                                                    |
+| Testing - E2E        | Playwright                         | Test both with-JS and without-JS scenarios                                                                                                                                                          |
+| Testing - Components | Storybook 10                       | Svelte CSF with `defineMeta` + `<Story>` pattern. Play functions auto-run as Vitest tests.                                                                                                          |
+| Mobile               | Capacitor                          | For Android initially. iOS as PWA first, native later.                                                                                                                                              |
+| CI/CD                | GitHub Actions                     | Lint, type-check, unit tests, Playwright with Postgres service container. Self-hosted coverage checks (patch + regression via Gist baseline, PR comments, shields.io badge). Dictionary sync crons. |
+| Linting/Formatting   | ESLint + Prettier                  | Flat config with Svelte and Storybook plugins                                                                                                                                                       |
+| TTS                  | Azure Speech Services              | Token endpoint at `/api/tts/token`, browser SpeechSynthesis as fallback                                                                                                                             |
 
 ## Project Structure
 

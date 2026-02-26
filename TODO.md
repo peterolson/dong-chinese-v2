@@ -37,6 +37,8 @@
 
 - [x] **Wiki editing UX improvements** — No duplicate pending edits (update-in-place with `updateCharEdit`), draft/published toggle on character view, scoped pending page (any user sees own edits, reviewers see all), full entry view for historical snapshots (`/wiki/[char]/history/[editId]`), pending edits excluded from Recent Changes, approve/reject moved to history page. Sidebar always shows pending link (labeled "My Edits" or "Review Queue"). Badge count for reviewers only.
 
+- [x] **Replace Codecov with self-hosted coverage checks** — Removed `codecov.yml` and codecov upload step. Added `scripts/check-patch-coverage.mjs` (LCOV + git diff cross-reference), `vitest-coverage-report-action` for PR comments, `schneegans/dynamic-badges-action` for shields.io badge via Gist, project regression check against Gist baseline. `json-summary` reporter added to Vitest config.
+
 ## In Progress
 
 (none)
