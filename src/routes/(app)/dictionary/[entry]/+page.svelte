@@ -12,6 +12,7 @@
 {#if data.type === 'character'}
 	<CharacterView
 		character={data.character}
+		componentUses={data.componentUses}
 		characterSet={data.settings.characterSet ?? 'simplified'}
 		phoneticScript={data.settings.phoneticScript}
 	/>

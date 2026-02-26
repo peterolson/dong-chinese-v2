@@ -67,6 +67,7 @@
 
 <CharacterView
 	character={displayCharacter}
+	componentUses={data.componentUses}
 	characterSet={data.settings.characterSet ?? 'simplified'}
 	phoneticScript={data.settings.phoneticScript}
 />

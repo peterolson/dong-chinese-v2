@@ -45,6 +45,19 @@ export interface PinyinFrequency {
 	count: number;
 }
 
+/** A character that uses a given component */
+export interface ComponentUse {
+	character: string;
+	isVerified: boolean;
+}
+
+/** Component uses grouped by the role the component plays */
+export interface ComponentUseGroup {
+	type: string;
+	characters: ComponentUse[];
+	verifiedCount: number;
+}
+
 /** Full character data as returned by the dictionary service */
 export interface CharacterData {
 	character: string;
