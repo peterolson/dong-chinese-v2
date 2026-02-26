@@ -5,7 +5,8 @@ import {
 	getCharManualById,
 	submitCharEdit,
 	approveCharEdit,
-	rejectCharEdit
+	rejectCharEdit,
+	CharEditError
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
@@ -104,8 +105,15 @@ export const actions: Actions = {
 		const editId = formData.get('editId')?.toString();
 		if (!editId) return fail(400, { error: 'Missing editId' });
 
-		const approved = await approveCharEdit(editId, locals.user.id);
-		if (!approved) return fail(404, { error: 'Edit not found or already reviewed' });
+		try {
+			const approved = await approveCharEdit(editId, locals.user.id);
+			if (!approved) return fail(404, { error: 'Edit not found or already reviewed' });
+		} catch (err) {
+			if (err instanceof CharEditError && err.code === 'INVALID_VARIANT_OF') {
+				return fail(400, { error: err.message });
+			}
+			throw err;
+		}
 
 		return { approved: true };
 	},

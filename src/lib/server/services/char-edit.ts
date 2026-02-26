@@ -395,6 +395,12 @@ export async function approveCharEdit(
 		}
 	}
 
+	// Re-validate variantOf at approval time — dictionary state may have changed
+	// since the edit was submitted (e.g., chains or cycles introduced by other edits)
+	if (changedSet.has('variantOf') && mergedValues['variantOf'] != null) {
+		await validateVariantOf(edit.character, mergedValues['variantOf'] as string);
+	}
+
 	// Update the edit row with merged data + approved status
 	// Use WHERE status = 'pending' as an optimistic lock
 	const rows = await db

@@ -80,18 +80,32 @@ jobs:
         if: github.event_name == 'pull_request'
         id: project
         run: |
-          BASELINE=$(curl -sf "https://gist.githubusercontent.com/peterolson/${{ secrets.GIST_ID }}/raw/dong-chinese-v2-baseline.json" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).message.replace('%',''))})" 2>/dev/null || echo "0")
           CURRENT=${{ steps.coverage.outputs.percentage }}
-          DIFF=$(node -e "const d = parseFloat('$CURRENT') - parseFloat('$BASELINE'); console.log((d >= 0 ? '+' : '') + d.toFixed(2))")
-          PASS=$(node -e "
-            const base = parseFloat('$BASELINE');
+          node -e "
+            const fs = require('fs');
+            const out = process.env.GITHUB_OUTPUT;
+            let baseline = 0;
+            try {
+              const raw = require('child_process').execSync(
+                'curl -sf \"https://gist.githubusercontent.com/peterolson/\${{ secrets.GIST_ID }}/raw/dong-chinese-v2-baseline.json\"',
+                { encoding: 'utf-8' }
+              );
+              const parsed = JSON.parse(raw);
+              baseline = parseFloat(parsed.message) || 0;
+            } catch {}
             const curr = parseFloat('$CURRENT');
-            console.log(base <= 0 || curr >= base - 1 ? 'true' : 'false');
-          ")
-          echo "baseline=$BASELINE" >> "$GITHUB_OUTPUT"
-          echo "diff=$DIFF" >> "$GITHUB_OUTPUT"
-          echo "pass=$PASS" >> "$GITHUB_OUTPUT"
-          echo "description=${CURRENT}% (${DIFF}% from baseline)" >> "$GITHUB_OUTPUT"
+            const diff = curr - baseline;
+            const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(2);
+            const pass = baseline <= 0 || curr >= baseline - 1;
+            const desc = baseline > 0
+              ? curr + '% (' + diffStr + '% from baseline)'
+              : curr + '% (no baseline yet)';
+            fs.appendFileSync(out, 'baseline=' + baseline + '\n');
+            fs.appendFileSync(out, 'diff=' + diffStr + '\n');
+            fs.appendFileSync(out, 'pass=' + pass + '\n');
+            fs.appendFileSync(out, 'description=' + desc + '\n');
+            console.log('Project coverage: ' + desc);
+          "
 
       - name: Post coverage status checks
         if: github.event_name == 'pull_request' && always()
