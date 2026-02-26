@@ -66,6 +66,7 @@ jobs:
       - name: Check patch coverage
         if: github.event_name == 'pull_request'
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch origin ${{ github.base_ref }} --depth=1
           node scripts/check-patch-coverage.mjs \
             --threshold=70 \
