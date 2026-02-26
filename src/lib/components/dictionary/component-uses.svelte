@@ -4,14 +4,14 @@
 	import { getCharLinkBase } from './char-link-context';
 
 	const TYPE_LABELS: Record<string, string> = {
-		meaning: 'Meaning component',
-		sound: 'Sound component',
-		iconic: 'Iconic component',
-		simplified: 'Simplified component',
-		deleted: 'Deleted component',
-		remnant: 'Remnant component',
-		distinguishing: 'Distinguishing component',
-		unknown: 'Unknown role'
+		meaning: 'Meaning',
+		sound: 'Sound',
+		iconic: 'Iconic',
+		simplified: 'Simplified',
+		deleted: 'Deleted',
+		remnant: 'Remnant',
+		distinguishing: 'Distinguishing',
+		unknown: 'Unknown'
 	};
 
 	const COLLAPSED_LIMIT = 20;
@@ -34,9 +34,12 @@
 		{@const checkboxId = `cu-${gi}`}
 		<div class="type-group">
 			<h3>
-				{label} in {total}
-				{total === 1 ? 'character' : 'characters'}
-				({group.verifiedCount} verified)
+				{label}
+				{#if group.verifiedCount === total}
+					({total})
+				{:else}
+					({group.verifiedCount} of {total} verified)
+				{/if}
 			</h3>
 			{#if needsCollapse}
 				<input type="checkbox" id={checkboxId} class="expand-toggle" />
