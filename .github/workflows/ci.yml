@@ -95,26 +95,24 @@ jobs:
 
       - name: Post coverage status checks
         if: github.event_name == 'pull_request' && always()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           SHA=${{ github.event.pull_request.head.sha }}
+          API="https://api.github.com/repos/${{ github.repository }}/statuses/$SHA"
+          AUTH="Authorization: Bearer ${{ github.token }}"
 
           # Patch coverage status
           PATCH_STATE=${{ steps.patch.outputs.pass == 'true' && 'success' || 'failure' }}
           PATCH_DESC="${{ steps.patch.outputs.description || 'no instrumentable new lines' }}"
-          gh api "repos/${{ github.repository }}/statuses/$SHA" \
-            -f state="$PATCH_STATE" \
-            -f description="$PATCH_DESC" \
-            -f context="coverage/patch"
+          curl -sf -X POST "$API" \
+            -H "$AUTH" -H "Accept: application/vnd.github+json" \
+            -d "{\"state\":\"$PATCH_STATE\",\"description\":\"$PATCH_DESC\",\"context\":\"coverage/patch\"}"
 
           # Project coverage status
           PROJECT_STATE=${{ steps.project.outputs.pass == 'true' && 'success' || 'failure' }}
           PROJECT_DESC="${{ steps.project.outputs.description || 'unknown' }}"
-          gh api "repos/${{ github.repository }}/statuses/$SHA" \
-            -f state="$PROJECT_STATE" \
-            -f description="$PROJECT_DESC" \
-            -f context="coverage/project"
+          curl -sf -X POST "$API" \
+            -H "$AUTH" -H "Accept: application/vnd.github+json" \
+            -d "{\"state\":\"$PROJECT_STATE\",\"description\":\"$PROJECT_DESC\",\"context\":\"coverage/project\"}"
 
       - name: Coverage PR comment
         if: github.event_name == 'pull_request' && always()
