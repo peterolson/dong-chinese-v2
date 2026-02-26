@@ -1,5 +1,5 @@
 [![CI](https://github.com/peterolson/dong-chinese-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/peterolson/dong-chinese-v2/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/peterolson/dong-chinese-v2/branch/main/graph/badge.svg?token=2U4UWZS7N2)](https://codecov.io/gh/peterolson/dong-chinese-v2)
+[![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/peterolson/aa3ceb9bfb1e9ac8a283ab50d313b0ca/raw/dong-chinese-v2-coverage.json)](https://github.com/peterolson/dong-chinese-v2/actions/workflows/ci.yml)
 
 # Dong Chinese
 

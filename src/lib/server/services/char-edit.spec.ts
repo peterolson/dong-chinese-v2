@@ -923,3 +923,100 @@ describe('getRecentEdits — excludes pending', () => {
 		expect(result.edits[0].status).toBe('approved');
 	});
 });
+
+describe('variantOf validation', () => {
+	it('rejects multi-character variantOf', async () => {
+		const userId = await createTestUser('variant-multi');
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { variantOf: '好人' },
+				editedBy: { userId },
+				editComment: 'multi-char',
+				autoApprove: true
+			})
+		).rejects.toThrow('variantOf must be a single character');
+	});
+
+	it('rejects self-referencing variantOf', async () => {
+		const userId = await createTestUser('variant-self');
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { variantOf: '你' },
+				editedBy: { userId },
+				editComment: 'self-ref',
+				autoApprove: true
+			})
+		).rejects.toThrow('variantOf cannot point to self');
+	});
+
+	it('rejects variantOf pointing to nonexistent character', async () => {
+		const userId = await createTestUser('variant-missing');
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { variantOf: '鑫' },
+				editedBy: { userId },
+				editComment: 'missing target',
+				autoApprove: true
+			})
+		).rejects.toThrow('target character does not exist');
+	});
+
+	it('rejects variantOf that would create a chain', async () => {
+		const userId = await createTestUser('variant-chain');
+		// First, set 好 → 中
+		await submitCharEdit({
+			character: '好',
+			data: { variantOf: '中' },
+			editedBy: { userId },
+			editComment: 'set variant',
+			autoApprove: true
+		});
+		// Now try to set 你 → 好 (would create chain 你→好→中)
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { variantOf: '好' },
+				editedBy: { userId },
+				editComment: 'chain attempt',
+				autoApprove: true
+			})
+		).rejects.toThrow('it is itself a variant of');
+	});
+
+	it('rejects variantOf when character is already a canonical target', async () => {
+		const userId = await createTestUser('variant-reverse');
+		// First, set 好 → 你
+		await submitCharEdit({
+			character: '好',
+			data: { variantOf: '你' },
+			editedBy: { userId },
+			editComment: 'set variant',
+			autoApprove: true
+		});
+		// Now try to set 你 → 中 (你 is already a canonical for 好)
+		await expect(
+			submitCharEdit({
+				character: '你',
+				data: { variantOf: '中' },
+				editedBy: { userId },
+				editComment: 'reverse chain',
+				autoApprove: true
+			})
+		).rejects.toThrow('points to this character as its canonical form');
+	});
+
+	it('accepts valid variantOf', async () => {
+		const userId = await createTestUser('variant-valid');
+		const edit = await submitCharEdit({
+			character: '你',
+			data: { variantOf: '好' },
+			editedBy: { userId },
+			editComment: 'valid variant',
+			autoApprove: true
+		});
+		expect(edit.id).toMatch(UUID_REGEX);
+	});
+});

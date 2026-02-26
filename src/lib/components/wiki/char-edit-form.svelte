@@ -64,6 +64,7 @@
 	let gloss = $state(init.gloss ?? '');
 	let hint = $state(init.hint ?? '');
 	let originalMeaning = $state(init.originalMeaning ?? '');
+	let variantOf = $state(init.variantOf ?? '');
 	let isVerified = $state(init.isVerified ?? false);
 	let pinyin = $state<string[]>(init.pinyin ?? []);
 	let simplifiedVariants = $state<string[]>(init.simplifiedVariants ?? []);
@@ -240,6 +241,17 @@
 				oninput={(v) => (traditionalVariants = v)}
 			/>
 		</div>
+		<label class="field variant-of-field">
+			<span class="field-label">Variant Of</span>
+			<input
+				type="text"
+				name="variantOf"
+				bind:value={variantOf}
+				class="field-input"
+				maxlength="2"
+				placeholder="Canonical character (e.g. 心 for 忄)"
+			/>
+		</label>
 	</fieldset>
 
 	<ListEditor label="Components" items={components} onadd={addComponent} onremove={removeComponent}>
@@ -411,6 +423,10 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr 1fr;
 		gap: 0.5rem;
+	}
+
+	.variant-of-field {
+		max-width: 16rem;
 	}
 
 	@media (max-width: 600px) {

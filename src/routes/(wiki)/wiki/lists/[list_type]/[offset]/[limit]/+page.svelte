@@ -97,9 +97,16 @@
 					<tr>
 						<td class="rank-col">{data.offset + i + 1}</td>
 						<td class="char-col">
-							{#each uniqueChars(item) as char (char)}
-								<a href={resolve(`/wiki/${char}`)}>{char}</a>
-							{/each}
+							{#if showUsageCount && item.variants?.length}
+								<a href={resolve(`/wiki/${item.character}`)}>{item.character}</a>
+								{#each item.variants as v (v)}
+									<a href={resolve(`/wiki/${v}`)}>{v}</a>
+								{/each}
+							{:else}
+								{#each uniqueChars(item) as char (char)}
+									<a href={resolve(`/wiki/${char}`)}>{char}</a>
+								{/each}
+							{/if}
 						</td>
 						<td>{formatPinyinList(item.pinyin, data.settings.phoneticScript)}</td>
 						<td>{item.gloss ?? ''}</td>

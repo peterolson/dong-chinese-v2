@@ -5,6 +5,51 @@ import { eq, desc, and, sql, ne, or, isNull } from 'drizzle-orm';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 import { computeChangedFields } from '$lib/data/deep-equal';
 
+/**
+ * Validate a variantOf value for a character edit.
+ * Prevents self-references, multi-char values, transitive chains, and cycles.
+ */
+async function validateVariantOf(character: string, value: string): Promise<void> {
+	// Must be a single character
+	if ([...value].length !== 1) {
+		throw new CharEditError('INVALID_VARIANT_OF', 'variantOf must be a single character');
+	}
+	// Must not point to self
+	if (value === character) {
+		throw new CharEditError('INVALID_VARIANT_OF', 'variantOf cannot point to self');
+	}
+	// Target must exist in the dictionary
+	const [targetRow] = await db
+		.select({ variantOf: charView.variantOf })
+		.from(charView)
+		.where(eq(charView.character, value));
+	if (!targetRow) {
+		throw new CharEditError(
+			'INVALID_VARIANT_OF',
+			`Cannot set variantOf to '${value}' because the target character does not exist.`
+		);
+	}
+	// Target must not itself have a variantOf (no chains)
+	if (targetRow.variantOf) {
+		throw new CharEditError(
+			'INVALID_VARIANT_OF',
+			`Cannot set variantOf to '${value}' because it is itself a variant of '${targetRow.variantOf}'. Point directly to '${targetRow.variantOf}' instead.`
+		);
+	}
+	// Character must not be a target of other characters' variantOf (no chains)
+	const [hasChildren] = await db
+		.select({ character: charView.character })
+		.from(charView)
+		.where(eq(charView.variantOf, character))
+		.limit(1);
+	if (hasChildren) {
+		throw new CharEditError(
+			'INVALID_VARIANT_OF',
+			`Cannot set variantOf because '${hasChildren.character}' points to this character as its canonical form. Remove that reference first.`
+		);
+	}
+}
+
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
 
@@ -71,11 +116,16 @@ export async function submitCharEdit(params: {
 		.from(charView)
 		.where(eq(charView.character, params.character));
 
+	// Validate variantOf before computing changes
+	const submittedRecord = params.data as unknown as Record<string, unknown>;
+	if ('variantOf' in submittedRecord && submittedRecord.variantOf != null) {
+		await validateVariantOf(params.character, submittedRecord.variantOf as string);
+	}
+
 	// Build effective post-approval values. The char view uses COALESCE(manual, base),
 	// so a null in char_manual falls through to char_base. We must diff against the
 	// effective value (submitted ?? base) to avoid recording no-op changes where a user
 	// clears a field that has a base value — approving null just exposes the base value.
-	const submittedRecord = params.data as unknown as Record<string, unknown>;
 	const baseRecord = baseState as unknown as Record<string, unknown>;
 	const effectiveSubmitted: Record<string, unknown> = {};
 	for (const field of EDITABLE_FIELDS) {
@@ -184,8 +234,13 @@ export async function updateCharEdit(params: {
 		.from(charView)
 		.where(eq(charView.character, params.character));
 
-	// Build effective post-approval values (same logic as submitCharEdit)
+	// Validate variantOf before computing changes
 	const submittedRecord = params.data as unknown as Record<string, unknown>;
+	if ('variantOf' in submittedRecord && submittedRecord.variantOf != null) {
+		await validateVariantOf(params.character, submittedRecord.variantOf as string);
+	}
+
+	// Build effective post-approval values (same logic as submitCharEdit)
 	const baseRecord = baseState as unknown as Record<string, unknown>;
 	const effectiveSubmitted: Record<string, unknown> = {};
 	for (const field of EDITABLE_FIELDS) {
@@ -338,6 +393,12 @@ export async function approveCharEdit(
 		} else {
 			mergedValues[field] = editRecord[field];
 		}
+	}
+
+	// Re-validate variantOf at approval time — dictionary state may have changed
+	// since the edit was submitted (e.g., chains or cycles introduced by other edits)
+	if (changedSet.has('variantOf') && mergedValues['variantOf'] != null) {
+		await validateVariantOf(edit.character, mergedValues['variantOf'] as string);
 	}
 
 	// Update the edit row with merged data + approved status

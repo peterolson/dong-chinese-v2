@@ -30,6 +30,7 @@ export const CHAR_VIEW_BODY = `
 		COALESCE(m.custom_sources, b.custom_sources) AS custom_sources,
 		COALESCE(m.simplified_variants, b.simplified_variants) AS simplified_variants,
 		COALESCE(m.traditional_variants, b.traditional_variants) AS traditional_variants,
+		COALESCE(m.variant_of, b.variant_of) AS variant_of,
 		COALESCE(m.jun_da_rank, b.jun_da_rank) AS jun_da_rank,
 		COALESCE(m.jun_da_frequency, b.jun_da_frequency) AS jun_da_frequency,
 		COALESCE(m.jun_da_per_million, b.jun_da_per_million) AS jun_da_per_million,

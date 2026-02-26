@@ -81,7 +81,7 @@ Components for the `/wiki` route group's editing and review UI.
 
 | Component                                | Notes                                                                                                           |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `char-edit-form.svelte`                  | Structured edit form for character data (components, strokes, pronunciation, sources).                          |
+| `char-edit-form.svelte`                  | Structured edit form for character data (components, strokes, pronunciation, sources, variantOf).               |
 | `component-editor.svelte`                | Sub-editor for character component tree (add/remove/reorder components with type and stroke data).              |
 | `edit-list.svelte`                       | Shared compact edit list used by recent-changes and history pages. Supports diffs, pagination, actions snippet. |
 | `edit-status-badge.svelte`               | Colored badge showing pending/approved/rejected status.                                                         |

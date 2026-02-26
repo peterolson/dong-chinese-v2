@@ -76,6 +76,7 @@ export interface CharacterData {
 	// Variants
 	simplifiedVariants: string[] | null;
 	traditionalVariants: string[] | null;
+	variantOf: string | null;
 
 	// Jun Da frequency
 	junDaRank: number | null;

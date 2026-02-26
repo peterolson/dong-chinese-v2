@@ -35,6 +35,7 @@ export const charBase = dictionary.table(
 		// Variant forms
 		simplifiedVariants: jsonb('simplified_variants'), // string[]
 		traditionalVariants: jsonb('traditional_variants'), // string[]
+		variantOf: text('variant_of'), // canonical character this is a variant of
 
 		// Jun Da character frequency (modern corpus, ~193M chars)
 		junDaRank: integer('jun_da_rank'),
@@ -105,6 +106,7 @@ export const charManual = dictionary.table(
 		customSources: jsonb('custom_sources'),
 		simplifiedVariants: jsonb('simplified_variants'),
 		traditionalVariants: jsonb('traditional_variants'),
+		variantOf: text('variant_of'),
 		junDaRank: integer('jun_da_rank'),
 		junDaFrequency: integer('jun_da_frequency'),
 		junDaPerMillion: doublePrecision('jun_da_per_million'),

@@ -10,6 +10,7 @@ export const EDITABLE_FIELDS = [
 	'pinyin',
 	'simplifiedVariants',
 	'traditionalVariants',
+	'variantOf',
 	'components',
 	'strokeCountSimp',
 	'strokeCountTrad',

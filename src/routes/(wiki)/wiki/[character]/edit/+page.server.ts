@@ -59,6 +59,7 @@ export const actions: Actions = {
 			gloss: formData.get('gloss')?.toString()?.trim() ?? null,
 			hint: formData.get('hint')?.toString()?.trim() ?? null,
 			originalMeaning: formData.get('originalMeaning')?.toString()?.trim() ?? null,
+			variantOf: formData.get('variantOf')?.toString()?.trim() || null,
 			isVerified: formData.has('isVerified'),
 			pinyin: safeJsonParse(formData.get('pinyin')?.toString() ?? null) as string[] | null,
 			simplifiedVariants: safeJsonParse(formData.get('simplifiedVariants')?.toString() ?? null) as
