@@ -25,6 +25,7 @@ export const charView = dictionary
 		customSources: jsonb('custom_sources'),
 		simplifiedVariants: jsonb('simplified_variants'),
 		traditionalVariants: jsonb('traditional_variants'),
+		variantOf: text('variant_of'),
 		junDaRank: integer('jun_da_rank'),
 		junDaFrequency: integer('jun_da_frequency'),
 		junDaPerMillion: doublePrecision('jun_da_per_million'),

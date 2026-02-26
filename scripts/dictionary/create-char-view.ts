@@ -25,7 +25,20 @@ async function main() {
 
 	try {
 		console.log('Creating dictionary.char view...');
-		await sql.unsafe(CHAR_VIEW_SQL);
+		try {
+			await sql.unsafe(CHAR_VIEW_SQL);
+		} catch (err: unknown) {
+			// CREATE OR REPLACE VIEW cannot add/reorder columns on an existing view.
+			// If that's the error, drop and recreate.
+			const pgErr = err as { code?: string };
+			if (pgErr.code === '42P16') {
+				console.log('Column mismatch detected — dropping and recreating view...');
+				await sql`DROP VIEW IF EXISTS dictionary.char`;
+				await sql.unsafe(CHAR_VIEW_SQL);
+			} else {
+				throw err;
+			}
+		}
 		console.log('View created successfully.');
 
 		// Verify

@@ -452,6 +452,7 @@ interface CharBaseRow {
 	customSources: unknown; // jsonb — parsed JS value
 	simplifiedVariants: unknown; // jsonb — parsed JS value
 	traditionalVariants: unknown; // jsonb — parsed JS value
+	variantOf: string | null;
 	junDaRank: number | null;
 	junDaFrequency: number | null;
 	junDaPerMillion: number | null;
@@ -519,6 +520,17 @@ function buildRow(
 	const tradFromDong = (dongData?.tradVariants as string[]) || [];
 	const simplifiedVariants = [...new Set([...simpFromDong, ...simpFromUnihan])];
 	const traditionalVariants = [...new Set([...tradFromDong, ...tradFromUnihan])];
+
+	// --- variantOf: extract from dongData, skip invalid values ---
+	let variantOf: string | null = null;
+	const rawVariantOf = dongData?.variantOf;
+	if (typeof rawVariantOf === 'string' && rawVariantOf.length > 0) {
+		const chars = [...rawVariantOf];
+		if (chars.length === 1) {
+			variantOf = chars[0];
+		}
+		// Skip multi-char values silently
+	}
 
 	// --- Stroke data: dong_dict images > animcjk > makemeahanzi_raw ---
 	const animSimp = animcjk.simplified.get(char);
@@ -689,6 +701,7 @@ function buildRow(
 		customSources,
 		simplifiedVariants: simplifiedVariants.length > 0 ? simplifiedVariants : null,
 		traditionalVariants: traditionalVariants.length > 0 ? traditionalVariants : null,
+		variantOf,
 		junDaRank: jd?.rank ?? null,
 		junDaFrequency: jd?.rawFrequency ?? null,
 		junDaPerMillion,
@@ -728,6 +741,7 @@ const COLUMNS = [
 	'custom_sources',
 	'simplified_variants',
 	'traditional_variants',
+	'variant_of',
 	'jun_da_rank',
 	'jun_da_frequency',
 	'jun_da_per_million',
@@ -764,6 +778,7 @@ function toDbRow(r: CharBaseRow): Record<string, unknown> {
 		custom_sources: r.customSources,
 		simplified_variants: r.simplifiedVariants,
 		traditional_variants: r.traditionalVariants,
+		variant_of: r.variantOf,
 		jun_da_rank: r.junDaRank,
 		jun_da_frequency: r.junDaFrequency,
 		jun_da_per_million: r.junDaPerMillion,
@@ -825,6 +840,7 @@ async function main() {
 				custom_sources jsonb,
 				simplified_variants jsonb,
 				traditional_variants jsonb,
+				variant_of text,
 				jun_da_rank integer,
 				jun_da_frequency integer,
 				jun_da_per_million double precision,
@@ -929,6 +945,61 @@ async function main() {
 			);
 		}
 		console.log(`Built ${allRows.length.toLocaleString()} rows`);
+
+		// 3b. Post-process variantOf: resolve transitive chains and break cycles
+		{
+			const variantMap = new Map<string, string>();
+			for (const row of allRows) {
+				if (row.variantOf) variantMap.set(row.character, row.variantOf);
+			}
+
+			let resolved = 0;
+			let cycles = 0;
+			for (const row of allRows) {
+				if (!row.variantOf) continue;
+
+				// Follow the chain to find the root canonical
+				let current = row.variantOf;
+				const visited = new Set<string>([row.character]);
+				let hops = 0;
+				while (variantMap.has(current) && hops < 10) {
+					if (visited.has(current)) {
+						// Cycle detected — null out this entry
+						row.variantOf = null;
+						cycles++;
+						break;
+					}
+					visited.add(current);
+					current = variantMap.get(current)!;
+					hops++;
+				}
+
+				if (row.variantOf === null) continue; // was nulled by cycle
+
+				// Validate resolved target
+				const resolvedChars = [...current];
+				if (resolvedChars.length !== 1 || !current) {
+					row.variantOf = null;
+					continue;
+				}
+
+				// Don't allow self-reference after resolution
+				if (current === row.character) {
+					row.variantOf = null;
+					continue;
+				}
+
+				if (current !== row.variantOf) {
+					resolved++;
+				}
+				row.variantOf = current;
+			}
+
+			const total = allRows.filter((r) => r.variantOf).length;
+			console.log(
+				`  variantOf: ${total} entries, ${resolved} transitive chains resolved, ${cycles} cycles broken`
+			);
+		}
 
 		// 4. Insert into shadow table (char_base_new), then atomic swap
 		console.log('\n--- Inserting into shadow table ---\n');

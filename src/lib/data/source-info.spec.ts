@@ -16,6 +16,7 @@ function makeChar(overrides: Partial<CharacterData> = {}): CharacterData {
 		customSources: null,
 		simplifiedVariants: null,
 		traditionalVariants: null,
+		variantOf: null,
 		junDaRank: null,
 		junDaFrequency: null,
 		junDaPerMillion: null,

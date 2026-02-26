@@ -66,6 +66,7 @@ export async function getCharacterData(char: string): Promise<CharacterData | nu
 		customSources: row.customSources as CharacterData['customSources'],
 		simplifiedVariants: row.simplifiedVariants as CharacterData['simplifiedVariants'],
 		traditionalVariants: row.traditionalVariants as CharacterData['traditionalVariants'],
+		variantOf: row.variantOf,
 		junDaRank: row.junDaRank,
 		junDaFrequency: row.junDaFrequency,
 		junDaPerMillion: row.junDaPerMillion,
@@ -256,6 +257,7 @@ export interface CharacterListItem {
 	moviePercentage: number | null;
 	usageCount: number | null;
 	cumulativePercent: number | null;
+	variants: string[] | null;
 }
 
 /**
@@ -289,7 +291,13 @@ export async function getCharacterList(
 			`);
 			const typed = rows as unknown as (CharacterListItem & { total: number })[];
 			return {
-				items: typed.map((r) => ({ ...r, level: null, usageCount: null, cumulativePercent: null })),
+				items: typed.map((r) => ({
+					...r,
+					level: null,
+					usageCount: null,
+					cumulativePercent: null,
+					variants: null
+				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
 		}
@@ -318,7 +326,13 @@ export async function getCharacterList(
 			`);
 			const typed = rows as unknown as (CharacterListItem & { total: number })[];
 			return {
-				items: typed.map((r) => ({ ...r, level: null, moviePercentage: null, usageCount: null })),
+				items: typed.map((r) => ({
+					...r,
+					level: null,
+					moviePercentage: null,
+					usageCount: null,
+					variants: null
+				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
 		}
@@ -347,7 +361,13 @@ export async function getCharacterList(
 			`);
 			const typed = rows as unknown as (CharacterListItem & { total: number })[];
 			return {
-				items: typed.map((r) => ({ ...r, level: null, moviePercentage: null, usageCount: null })),
+				items: typed.map((r) => ({
+					...r,
+					level: null,
+					moviePercentage: null,
+					usageCount: null,
+					variants: null
+				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
 		}
@@ -377,7 +397,8 @@ export async function getCharacterList(
 					...r,
 					moviePercentage: null,
 					usageCount: null,
-					cumulativePercent: null
+					cumulativePercent: null,
+					variants: null
 				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
@@ -408,7 +429,8 @@ export async function getCharacterList(
 					...r,
 					moviePercentage: null,
 					usageCount: null,
-					cumulativePercent: null
+					cumulativePercent: null,
+					variants: null
 				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
@@ -439,20 +461,34 @@ export async function getCharacterList(
 					level: null,
 					moviePercentage: null,
 					usageCount: null,
-					cumulativePercent: null
+					cumulativePercent: null,
+					variants: null
 				})),
 				total: typed.length > 0 ? typed[0].total : 0
 			};
 		}
 		case 'components': {
 			// Characters that appear most frequently as components in other characters.
-			// Precompute counts in a single aggregate rather than a correlated subquery per row.
+			// Groups variant forms (e.g. 心/忄/⺗) under the canonical character using variant_of.
 			const rows = await db.execute<Record<string, unknown>>(sql`
 				WITH component_counts AS (
-					SELECT comp->>'character' AS character, count(*)::int AS usage_count
-					FROM ${charView} AS src, jsonb_array_elements(src.components) AS comp
+					SELECT
+						COALESCE(cv.variant_of, comp->>'character') AS canonical,
+						comp->>'character' AS original,
+						count(*)::int AS usage_count
+					FROM ${charView} AS src,
+						jsonb_array_elements(src.components) AS comp
+						LEFT JOIN ${charView} cv ON cv.character = comp->>'character'
 					WHERE src.components IS NOT NULL
-					GROUP BY comp->>'character'
+					GROUP BY COALESCE(cv.variant_of, comp->>'character'), comp->>'character'
+				),
+				grouped AS (
+					SELECT
+						canonical AS character,
+						sum(usage_count)::int AS usage_count,
+						array_agg(DISTINCT original) FILTER (WHERE original != canonical) AS variants
+					FROM component_counts
+					GROUP BY canonical
 				)
 				SELECT
 					c.character, c.pinyin, c.gloss,
@@ -464,11 +500,12 @@ export async function getCharacterList(
 					c.jun_da_per_million AS "junDaPerMillion",
 					c.simplified_variants AS "simplifiedVariants",
 					c.traditional_variants AS "traditionalVariants",
-					cc.usage_count AS "usageCount",
+					g.usage_count AS "usageCount",
+					g.variants,
 					count(*) OVER()::int AS total
-				FROM component_counts cc
-				JOIN ${charView} c ON c.character = cc.character
-				ORDER BY cc.usage_count DESC
+				FROM grouped g
+				JOIN ${charView} c ON c.character = g.character
+				ORDER BY g.usage_count DESC, c.character ASC
 				OFFSET ${offset}
 				LIMIT ${limit}
 			`);

@@ -166,7 +166,7 @@ The project uses 3 Postgres schemas:
 
 - **`public`** — Auth tables (Better Auth managed), `anonymous_session`, `user_settings`, `user_permission`, progress tables
 - **`stage`** — Raw imported data: `unihan_raw` (EAV, 1.56M rows), `cedict_raw` (124k entries), `sync_metadata`. Used for data exploration and materialized view generation.
-- **`dictionary`** — `char_base` (materialized from stage sources), `char_manual` (append-only edit log with approval workflow), `char` (view overlaying approved edits on base). Serves the actual app queries.
+- **`dictionary`** — `char_base` (materialized from stage sources), `char_manual` (append-only edit log with approval workflow), `char` (view overlaying approved edits on base). Serves the actual app queries. Both `char_base` and `char_manual` have a `variant_of` column mapping variant forms to their canonical character (e.g. 忄 → 心).
 
 Drizzle config (`drizzle.config.ts`) has `schemaFilter: ['public', 'stage', 'dictionary']`.
 
