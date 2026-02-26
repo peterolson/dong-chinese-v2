@@ -121,7 +121,7 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           json-summary-path: coverage/coverage-summary.json
-          file-coverage-mode: all
+          file-coverage-mode: changes
 
       - name: Update coverage badge
         if: github.ref == 'refs/heads/main' && always()
