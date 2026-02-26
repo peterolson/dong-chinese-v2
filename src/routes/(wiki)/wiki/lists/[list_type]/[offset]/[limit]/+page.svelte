@@ -99,7 +99,7 @@
 						<td class="char-col">
 							{#if showUsageCount && item.variants?.length}
 								<a href={resolve(`/wiki/${item.character}`)}>{item.character}</a>
-								{#each item.variants as v}
+								{#each item.variants as v (v)}
 									<a href={resolve(`/wiki/${v}`)}>{v}</a>
 								{/each}
 							{:else}
