@@ -12,20 +12,54 @@
 	let totalStrokes = $derived(strokeData.strokes.length);
 
 	// ── Tuning constants ──
-	const DRAW_MS = 600; // time to draw each stroke along its median
+	const BASE_DRAW_MS = 600; // average stroke draw time — actual time scales with median length
+	const MIN_DRAW_MS = 350; // floor so very short strokes (dots) aren't instant
+	const MAX_DRAW_MS = 1400; // ceiling so very long strokes don't drag
 	const PAUSE_MS = 300; // pause after a stroke finishes before the next begins
 	const HOLD_MS = 1500; // all strokes stay visible after the last finishes
 	const GAP_MS = 800; // blank time before the cycle restarts
-	const EASING = 'ease-in-out'; // CSS timing function for the draw ('ease-in-out', 'linear', or a cubic-bezier)
-
-	const STEP = DRAW_MS + PAUSE_MS; // time between consecutive stroke starts
-	// cycle = gap → draw 0 → draw 1 → … → draw N-1 → hold → [clear at boundary]
-	let cycle = $derived(GAP_MS + Math.max(totalStrokes - 1, 0) * STEP + DRAW_MS + HOLD_MS);
+	const EASING = 'ease-in-out'; // CSS timing function for the draw
 
 	function medianToPath(points: number[][]): string {
 		if (points.length === 0) return '';
 		return 'M' + points.map(([x, y]) => `${x},${y}`).join('L');
 	}
+
+	function medianLength(points: number[][]): number {
+		let len = 0;
+		for (let i = 1; i < points.length; i++) {
+			const dx = points[i][0] - points[i - 1][0];
+			const dy = points[i][1] - points[i - 1][1];
+			len += Math.sqrt(dx * dx + dy * dy);
+		}
+		return len;
+	}
+
+	// Per-stroke draw time proportional to median length
+	let drawTimes = $derived.by(() => {
+		const lengths = strokeData.medians.map(medianLength);
+		const avg = lengths.reduce((a, b) => a + b, 0) / (lengths.length || 1);
+		return lengths.map((len) => {
+			const t = avg > 0 ? BASE_DRAW_MS * (len / avg) : BASE_DRAW_MS;
+			return Math.max(MIN_DRAW_MS, Math.min(MAX_DRAW_MS, t));
+		});
+	});
+
+	// Cumulative start times: gap → draw 0 → pause → draw 1 → …
+	let strokeStarts = $derived.by(() => {
+		const starts: number[] = [];
+		for (let i = 0; i < drawTimes.length; i++) {
+			starts.push(i === 0 ? GAP_MS : starts[i - 1] + drawTimes[i - 1] + PAUSE_MS);
+		}
+		return starts;
+	});
+
+	// cycle = gap → draw 0 → … → draw N-1 → hold → [clear at boundary]
+	let cycle = $derived(
+		totalStrokes > 0
+			? strokeStarts[totalStrokes - 1] + drawTimes[totalStrokes - 1] + HOLD_MS
+			: GAP_MS + HOLD_MS
+	);
 
 	// Per-stroke keyframes animate stroke-dashoffset on the mask's median path.
 	// Each stroke draws at its staggered time; all clear simultaneously at the
@@ -33,8 +67,8 @@
 	let animCSS = $derived(
 		strokeData.strokes
 			.map((_, i) => {
-				const startPct = ((GAP_MS + i * STEP) / cycle) * 100;
-				const endPct = ((GAP_MS + i * STEP + DRAW_MS) / cycle) * 100;
+				const startPct = (strokeStarts[i] / cycle) * 100;
+				const endPct = ((strokeStarts[i] + drawTimes[i]) / cycle) * 100;
 				return (
 					`.stroke-anim .m${id}-${i}{` +
 					`stroke-dasharray:1;stroke-dashoffset:1;` +
