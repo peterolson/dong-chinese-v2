@@ -144,7 +144,7 @@
 		border-radius: var(--radius);
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: white;
+		color: var(--primary-foreground);
 		background: var(--badge-color);
 		flex-shrink: 0;
 	}

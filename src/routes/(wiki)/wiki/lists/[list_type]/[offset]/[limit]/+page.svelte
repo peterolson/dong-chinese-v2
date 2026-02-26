@@ -1,102 +1,140 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Pagination from '$lib/components/ui/pagination.svelte';
 	import { formatPinyinList } from '$lib/orthography';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const hasPrev = $derived(data.offset > 0);
-	const hasNext = $derived(data.offset + data.limit < data.total);
-	const prevHref = $derived(
-		`/wiki/lists/${data.listType}/${Math.max(0, data.offset - data.limit)}/${data.limit}`
-	);
-	const nextHref = $derived(
-		`/wiki/lists/${data.listType}/${data.offset + data.limit}/${data.limit}`
+	const currentPage = $derived(Math.floor(data.offset / data.limit) + 1);
+	const totalPages = $derived(Math.ceil(data.total / data.limit));
+	const paginationHref = $derived(
+		(page: number) => `/wiki/lists/${data.listType}/${(page - 1) * data.limit}/${data.limit}`
 	);
 	const startRank = $derived(data.offset + 1);
 	const endRank = $derived(Math.min(data.offset + data.limit, data.total));
+
+	const showMoviesPerMillion = $derived(data.listType === 'movie-count');
+	const showMoviePercentage = $derived(data.listType === 'movie-contexts');
+	const showBooksPerMillion = $derived(data.listType === 'book-count');
+	const showLevel = $derived(data.listType === 'hsk' || data.listType === 'hsk-3');
+	const showUsageCount = $derived(data.listType === 'components');
+	const showCumulative = $derived(
+		data.listType === 'movie-count' || data.listType === 'book-count'
+	);
+
+	function uniqueChars(item: (typeof data.items)[number]): string[] {
+		const trad = data.settings.characterSet === 'traditional';
+		const primary = trad ? (item.traditionalVariants ?? []) : [item.character];
+		const secondary = trad ? [item.character] : (item.traditionalVariants ?? []);
+		const result: string[] = [];
+		for (const c of [...primary, ...secondary]) {
+			if (!result.includes(c)) {
+				result.push(c);
+			}
+		}
+		return result;
+	}
 </script>
 
 <svelte:head>
-	<title>{data.listLabel} ({startRank}–{endRank}) — Chinese Character Wiki</title>
+	<title>{data.listLabel} ({startRank}–{endRank}) — Character Lists</title>
 </svelte:head>
 
 <article class="list-page">
-	<h1>{data.listLabel}</h1>
+	<nav class="list-nav" aria-label="List types">
+		{#each data.allLists as list (list.slug)}
+			{#if list.slug === data.listType}
+				<span class="list-pill active">{list.navLabel}</span>
+			{:else}
+				<a href={resolve(`/wiki/lists/${list.slug}/0/${data.limit}`)} class="list-pill"
+					>{list.navLabel}</a
+				>
+			{/if}
+		{/each}
+	</nav>
+
+	<h2>{data.listLabel}</h2>
+	<p class="list-description">{data.listDescription}</p>
 
 	<p class="range-info">
 		Showing {startRank}–{endRank} of {data.total.toLocaleString()} characters
 	</p>
 
-	<nav class="pagination" aria-label="List navigation">
-		{#if hasPrev}
-			<a href={resolve(prevHref)} class="page-link">Previous {data.limit}</a>
-		{:else}
-			<span class="page-link disabled">Previous {data.limit}</span>
-		{/if}
-		{#if hasNext}
-			<a href={resolve(nextHref)} class="page-link">Next {data.limit}</a>
-		{:else}
-			<span class="page-link disabled">Next {data.limit}</span>
-		{/if}
-	</nav>
+	<Pagination {currentPage} {totalPages} href={paginationHref} />
 
-	<table class="char-list-table">
-		<thead>
-			<tr>
-				<th class="rank-col">#</th>
-				<th class="char-col">Character</th>
-				<th>Pinyin</th>
-				<th>Gloss</th>
-				{#if data.listType === 'subtlex-rank' || data.listType === 'subtlex-context-diversity'}
-					<th class="num-col">Movies/M</th>
-				{/if}
-				{#if data.listType === 'subtlex-context-diversity'}
-					<th class="num-col">Context Div.</th>
-				{/if}
-				{#if data.listType === 'jun-da-rank'}
-					<th class="num-col">Books/M</th>
-				{/if}
-			</tr>
-		</thead>
-		<tbody>
-			{#each data.items as item, i (item.character)}
+	<div class="table-scroll">
+		<table class="char-list-table">
+			<thead>
 				<tr>
-					<td class="rank-col">{data.offset + i + 1}</td>
-					<td class="char-col">
-						<a href={resolve(`/wiki/${item.character}`)}>{item.character}</a>
-						{#if item.traditionalVariants?.length}
-							<span class="variants" lang="zh-Hant">({item.traditionalVariants.join(', ')})</span>
-						{/if}
-					</td>
-					<td>{formatPinyinList(item.pinyin, data.settings.phoneticScript)}</td>
-					<td>{item.gloss ?? ''}</td>
-					{#if data.listType === 'subtlex-rank' || data.listType === 'subtlex-context-diversity'}
-						<td class="num-col">{item.subtlexPerMillion?.toFixed(1) ?? '—'}</td>
+					<th class="rank-col">#</th>
+					<th class="char-col">Character</th>
+					<th>Pinyin</th>
+					<th>Gloss</th>
+					{#if showMoviePercentage}
+						<th class="num-col">% of Movies</th>
 					{/if}
-					{#if data.listType === 'subtlex-context-diversity'}
-						<td class="num-col">{item.subtlexContextDiversity ?? '—'}</td>
+					{#if showMoviesPerMillion}
+						<th class="num-col">Uses/M</th>
 					{/if}
-					{#if data.listType === 'jun-da-rank'}
-						<td class="num-col">{item.junDaPerMillion?.toFixed(1) ?? '—'}</td>
+					{#if showBooksPerMillion}
+						<th class="num-col">Uses/M</th>
 					{/if}
+					{#if showCumulative}
+						<th class="num-col">Cum. Freq</th>
+					{/if}
+					{#if showLevel}
+						<th class="num-col">Level</th>
+					{/if}
+					{#if showUsageCount}
+						<th class="num-col">Uses</th>
+					{/if}
+					<th class="verified-col">Verified</th>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each data.items as item, i (item.character)}
+					<tr>
+						<td class="rank-col">{data.offset + i + 1}</td>
+						<td class="char-col">
+							{#each uniqueChars(item) as char (char)}
+								<a href={resolve(`/wiki/${char}`)}>{char}</a>
+							{/each}
+						</td>
+						<td>{formatPinyinList(item.pinyin, data.settings.phoneticScript)}</td>
+						<td>{item.gloss ?? ''}</td>
+						{#if showMoviePercentage}
+							<td class="num-col">{item.moviePercentage?.toFixed(1) ?? '—'}%</td>
+						{/if}
+						{#if showMoviesPerMillion}
+							<td class="num-col">{item.subtlexPerMillion?.toFixed(1) ?? '—'}</td>
+						{/if}
+						{#if showBooksPerMillion}
+							<td class="num-col">{item.junDaPerMillion?.toFixed(1) ?? '—'}</td>
+						{/if}
+						{#if showCumulative}
+							<td class="num-col">{item.cumulativePercent ?? '—'}%</td>
+						{/if}
+						{#if showLevel}
+							<td class="num-col">{item.level ?? '—'}</td>
+						{/if}
+						{#if showUsageCount}
+							<td class="num-col">{item.usageCount?.toLocaleString() ?? '—'}</td>
+						{/if}
+						{#if item.isVerified}
+							<td class="verified-col verified">✓</td>
+						{:else}
+							<td class="verified-col unverified">⚠</td>
+						{/if}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 
-	<nav class="pagination bottom" aria-label="List navigation">
-		{#if hasPrev}
-			<a href={resolve(prevHref)} class="page-link">Previous {data.limit}</a>
-		{:else}
-			<span class="page-link disabled">Previous {data.limit}</span>
-		{/if}
-		{#if hasNext}
-			<a href={resolve(nextHref)} class="page-link">Next {data.limit}</a>
-		{:else}
-			<span class="page-link disabled">Next {data.limit}</span>
-		{/if}
-	</nav>
+	<div class="pagination-bottom">
+		<Pagination {currentPage} {totalPages} href={paginationHref} />
+	</div>
 </article>
 
 <style>
@@ -104,46 +142,58 @@
 		max-width: 900px;
 	}
 
-	h1 {
-		margin-bottom: 0.5rem;
+	.list-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.list-pill {
+		display: inline-block;
+		padding: 0.3rem 0.7rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		font-size: 0.8125rem;
+		color: var(--foreground);
+		text-decoration: none;
+		background: var(--background);
+		transition:
+			background 0.15s,
+			border-color 0.15s;
+	}
+
+	.list-pill:hover:not(.active) {
+		background: var(--surface);
+		border-color: var(--secondary-soft);
+		text-decoration: none;
+	}
+
+	.list-pill.active {
+		background: var(--secondary-soft);
+		border-color: var(--secondary-soft);
+		color: var(--primary-foreground);
+	}
+
+	h2 {
+		font-size: 1.25rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.list-description {
+		color: var(--muted-foreground);
+		font-size: 0.8125rem;
+		margin-bottom: 0.75rem;
 	}
 
 	.range-info {
 		color: var(--muted-foreground);
-		font-size: 0.875rem;
-		margin-bottom: 1rem;
+		font-size: 0.8125rem;
+		margin-bottom: 0.75rem;
 	}
 
-	.pagination {
-		display: flex;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.pagination.bottom {
+	.pagination-bottom {
 		margin-top: 1rem;
-		margin-bottom: 0;
-	}
-
-	.page-link {
-		display: inline-block;
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		font-size: 0.875rem;
-		color: var(--secondary-soft);
-		text-decoration: none;
-	}
-
-	.page-link:hover:not(.disabled) {
-		background: var(--surface);
-		text-decoration: none;
-	}
-
-	.page-link.disabled {
-		color: var(--muted-foreground);
-		opacity: 0.5;
-		cursor: default;
 	}
 
 	.char-list-table {
@@ -151,11 +201,19 @@
 		border-collapse: collapse;
 	}
 
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	.char-list-table {
+		font-size: 0.8125rem;
+	}
+
 	.char-list-table th {
 		text-align: left;
-		padding: 0.5rem 0.75rem;
+		padding: 0.3rem 0.5rem;
 		border-bottom: 2px solid var(--border);
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--muted-foreground);
 		text-transform: uppercase;
@@ -163,17 +221,17 @@
 	}
 
 	.char-list-table td {
-		padding: 0.5rem 0.75rem;
+		padding: 0.25rem 0.5rem;
 		border-bottom: 1px solid var(--border);
 	}
 
 	.rank-col {
-		width: 3rem;
+		width: 2.5rem;
 		color: var(--muted-foreground);
 	}
 
 	.char-col {
-		font-size: 1.25rem;
+		font-size: 1.05rem;
 	}
 
 	.char-col a {
@@ -184,13 +242,25 @@
 		text-decoration: underline;
 	}
 
-	.variants {
-		font-size: 0.875rem;
-		color: var(--muted-foreground);
-	}
-
 	.num-col {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+	}
+
+	th.num-col {
+		text-align: right;
+	}
+
+	.verified-col {
+		width: 4rem;
+		text-align: center;
+	}
+
+	.verified-col.verified {
+		color: var(--success);
+	}
+
+	.verified-col.unverified {
+		color: var(--warning);
 	}
 </style>

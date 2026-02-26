@@ -32,6 +32,9 @@
 	--info: #0066ab;
 	--info-bg: #d6eaf8;
 
+	/* Overlay */
+	--overlay: rgb(0 0 0 / 0.4);
+
 	/* Layout */
 	--header-height: 56px;
 	--sidebar-width: 260px;

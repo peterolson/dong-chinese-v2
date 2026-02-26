@@ -74,7 +74,7 @@
 		position: fixed;
 		inset: 0;
 		top: var(--header-height);
-		background: rgb(0 0 0 / 0.4);
+		background: var(--overlay);
 		z-index: 15;
 		cursor: default;
 	}

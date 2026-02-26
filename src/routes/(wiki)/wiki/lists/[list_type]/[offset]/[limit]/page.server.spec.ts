@@ -7,8 +7,13 @@ const mockGetCharacterList = vi.fn();
 vi.mock('$lib/server/services/dictionary', () => ({
 	getCharacterList: (...args: unknown[]) => mockGetCharacterList(...args),
 	LIST_TYPES: {
-		'subtlex-rank': { label: 'Movie Frequency', orderBy: 'subtlex_rank ASC NULLS LAST' },
-		'jun-da-rank': { label: 'Book Frequency', orderBy: 'jun_da_rank ASC NULLS LAST' }
+		'movie-contexts': { label: '% of Movies', navLabel: '% Movies', description: 'desc' },
+		'movie-count': { label: 'Movie Frequency', navLabel: 'Movie Freq.', description: 'desc' },
+		'book-count': { label: 'Book Frequency', navLabel: 'Book Freq.', description: 'desc' },
+		hsk: { label: 'HSK 2.0', navLabel: 'HSK 2.0', description: 'desc' },
+		'hsk-3': { label: 'HSK 3.0', navLabel: 'HSK 3.0', description: 'desc' },
+		'dong-chinese': { label: '懂中文 Order', navLabel: '懂中文', description: 'desc' },
+		components: { label: 'Most Common Components', navLabel: 'Components', description: 'desc' }
 	}
 }));
 
@@ -22,8 +27,19 @@ async function loadResult(...args: Parameters<typeof load>) {
 
 // ── Helpers ────────────────────────────────────────────────────
 
-function makeEvent(params: { list_type: string; offset: string; limit: string }) {
-	return { params } as unknown as Parameters<typeof load>[0];
+function makeEvent(
+	params: { list_type: string; offset: string; limit: string },
+	searchParams?: Record<string, string>
+) {
+	const url = new URL(
+		`http://localhost/wiki/lists/${params.list_type}/${params.offset}/${params.limit}`
+	);
+	if (searchParams) {
+		for (const [k, v] of Object.entries(searchParams)) {
+			url.searchParams.set(k, v);
+		}
+	}
+	return { params, url } as unknown as Parameters<typeof load>[0];
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -42,31 +58,31 @@ describe('load', () => {
 
 	it('throws 400 for negative offset', async () => {
 		await expect(
-			load(makeEvent({ list_type: 'subtlex-rank', offset: '-1', limit: '50' }))
+			load(makeEvent({ list_type: 'movie-count', offset: '-1', limit: '50' }))
 		).rejects.toMatchObject({ status: 400 });
 	});
 
 	it('throws 400 for NaN offset', async () => {
 		await expect(
-			load(makeEvent({ list_type: 'subtlex-rank', offset: 'abc', limit: '50' }))
+			load(makeEvent({ list_type: 'movie-count', offset: 'abc', limit: '50' }))
 		).rejects.toMatchObject({ status: 400 });
 	});
 
 	it('throws 400 for limit 0', async () => {
 		await expect(
-			load(makeEvent({ list_type: 'subtlex-rank', offset: '0', limit: '0' }))
+			load(makeEvent({ list_type: 'movie-count', offset: '0', limit: '0' }))
 		).rejects.toMatchObject({ status: 400 });
 	});
 
 	it('throws 400 for limit > 500', async () => {
 		await expect(
-			load(makeEvent({ list_type: 'subtlex-rank', offset: '0', limit: '501' }))
+			load(makeEvent({ list_type: 'movie-count', offset: '0', limit: '501' }))
 		).rejects.toMatchObject({ status: 400 });
 	});
 
 	it('throws 400 for NaN limit', async () => {
 		await expect(
-			load(makeEvent({ list_type: 'subtlex-rank', offset: '0', limit: 'xyz' }))
+			load(makeEvent({ list_type: 'movie-count', offset: '0', limit: 'xyz' }))
 		).rejects.toMatchObject({ status: 400 });
 	});
 
@@ -75,29 +91,62 @@ describe('load', () => {
 		mockGetCharacterList.mockResolvedValue({ items: fakeItems, total: 100 });
 
 		const result = await loadResult(
-			makeEvent({ list_type: 'subtlex-rank', offset: '10', limit: '50' })
+			makeEvent({ list_type: 'movie-count', offset: '10', limit: '50' })
 		);
 
-		expect(mockGetCharacterList).toHaveBeenCalledWith('subtlex-rank', 10, 50);
-		expect(result).toEqual({
-			listType: 'subtlex-rank',
+		expect(mockGetCharacterList).toHaveBeenCalledWith('movie-count', 10, 50);
+		expect(result).toMatchObject({
+			listType: 'movie-count',
 			listLabel: 'Movie Frequency',
 			items: fakeItems,
 			total: 100,
 			offset: 10,
 			limit: 50
 		});
+		expect(result.allLists).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ slug: 'movie-count', navLabel: 'Movie Freq.' })
+			])
+		);
 	});
 
 	it('accepts offset of 0', async () => {
 		mockGetCharacterList.mockResolvedValue({ items: [], total: 0 });
 
 		const result = await loadResult(
-			makeEvent({ list_type: 'jun-da-rank', offset: '0', limit: '100' })
+			makeEvent({ list_type: 'book-count', offset: '0', limit: '100' })
 		);
 
 		expect(result.offset).toBe(0);
-		expect(result.listType).toBe('jun-da-rank');
+		expect(result.listType).toBe('book-count');
 		expect(result.listLabel).toBe('Book Frequency');
+	});
+
+	it('returns allLists with all 7 list types', async () => {
+		const result = await loadResult(makeEvent({ list_type: 'hsk', offset: '0', limit: '100' }));
+
+		expect(result.allLists).toHaveLength(7);
+		expect(result.allLists.map((l: { slug: string }) => l.slug)).toEqual([
+			'movie-contexts',
+			'movie-count',
+			'book-count',
+			'hsk',
+			'hsk-3',
+			'dong-chinese',
+			'components'
+		]);
+	});
+
+	it('redirects when ?page param is present', async () => {
+		await expect(
+			load(makeEvent({ list_type: 'movie-count', offset: '0', limit: '100' }, { page: '3' }))
+		).rejects.toMatchObject({ status: 302, location: '/wiki/lists/movie-count/200/100' });
+	});
+
+	it('ignores invalid ?page param', async () => {
+		const result = await loadResult(
+			makeEvent({ list_type: 'movie-count', offset: '0', limit: '50' }, { page: 'abc' })
+		);
+		expect(result.offset).toBe(0);
 	});
 });
