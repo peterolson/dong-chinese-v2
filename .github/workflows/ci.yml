@@ -21,6 +21,7 @@ jobs:
   test:
     permissions:
       pull-requests: write
+      statuses: write
     runs-on: ubuntu-latest
     # Playwright container has browsers + OS deps pre-installed (no 5-min install-deps step).
     # Update the tag when upgrading @playwright/test in package.json.
@@ -67,27 +68,53 @@ jobs:
 
       - name: Check patch coverage
         if: github.event_name == 'pull_request'
+        id: patch
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch origin ${{ github.base_ref }} --deepen=50
           node scripts/check-patch-coverage.mjs \
             --threshold=70 \
-            --base=origin/${{ github.base_ref }}
+            --base=origin/${{ github.base_ref }} || true
 
       - name: Check project coverage regression
         if: github.event_name == 'pull_request'
+        id: project
         run: |
           BASELINE=$(curl -sf "https://gist.githubusercontent.com/peterolson/${{ secrets.GIST_ID }}/raw/dong-chinese-v2-baseline.json" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).message.replace('%',''))})" 2>/dev/null || echo "0")
           CURRENT=${{ steps.coverage.outputs.percentage }}
-          node -e "
+          DIFF=$(node -e "const d = parseFloat('$CURRENT') - parseFloat('$BASELINE'); console.log((d >= 0 ? '+' : '') + d.toFixed(2))")
+          PASS=$(node -e "
             const base = parseFloat('$BASELINE');
             const curr = parseFloat('$CURRENT');
-            console.log('Project coverage: ' + curr + '% (baseline: ' + base + '%)');
-            if (base > 0 && curr < base - 1) {
-              console.error('Coverage regressed by more than 1%');
-              process.exit(1);
-            }
-          "
+            console.log(base <= 0 || curr >= base - 1 ? 'true' : 'false');
+          ")
+          echo "baseline=$BASELINE" >> "$GITHUB_OUTPUT"
+          echo "diff=$DIFF" >> "$GITHUB_OUTPUT"
+          echo "pass=$PASS" >> "$GITHUB_OUTPUT"
+          echo "description=${CURRENT}% (${DIFF}% from baseline)" >> "$GITHUB_OUTPUT"
+
+      - name: Post coverage status checks
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=${{ github.event.pull_request.head.sha }}
+
+          # Patch coverage status
+          PATCH_STATE=${{ steps.patch.outputs.pass == 'true' && 'success' || 'failure' }}
+          PATCH_DESC="${{ steps.patch.outputs.description || 'no instrumentable new lines' }}"
+          gh api "repos/${{ github.repository }}/statuses/$SHA" \
+            -f state="$PATCH_STATE" \
+            -f description="$PATCH_DESC" \
+            -f context="coverage/patch"
+
+          # Project coverage status
+          PROJECT_STATE=${{ steps.project.outputs.pass == 'true' && 'success' || 'failure' }}
+          PROJECT_DESC="${{ steps.project.outputs.description || 'unknown' }}"
+          gh api "repos/${{ github.repository }}/statuses/$SHA" \
+            -f state="$PROJECT_STATE" \
+            -f description="$PROJECT_DESC" \
+            -f context="coverage/project"
 
       - name: Coverage PR comment
         if: github.event_name == 'pull_request' && always()

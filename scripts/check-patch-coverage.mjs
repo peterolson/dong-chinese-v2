@@ -9,7 +9,7 @@
  * Usage: node scripts/check-patch-coverage.mjs --threshold=70 --base=origin/main
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, appendFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
@@ -116,18 +116,27 @@ for (const [file, lines] of addedLines) {
 }
 
 const total = covered + uncovered;
+const outputFile = process.env.GITHUB_OUTPUT;
 
 if (total === 0) {
 	console.log('Patch coverage: N/A (no instrumentable new lines)');
+	writeOutput(outputFile, 'description', 'N/A (no instrumentable new lines)');
+	writeOutput(outputFile, 'pass', 'true');
 	process.exit(0);
 }
 
 const pct = (covered / total) * 100;
 const rounded = Math.round(pct * 100) / 100;
+const pass = rounded >= threshold;
 
 console.log(`Patch coverage: ${rounded}% (${covered}/${total} lines covered)`);
 
-if (rounded < threshold) {
+const description = `${rounded}% of new lines covered (${covered}/${total})${!pass ? ` — under ${threshold}% threshold` : ''}`;
+writeOutput(outputFile, 'percentage', String(rounded));
+writeOutput(outputFile, 'description', description);
+writeOutput(outputFile, 'pass', String(pass));
+
+if (!pass) {
 	console.error(`Below threshold of ${threshold}%`);
 	process.exit(1);
 }
@@ -138,6 +147,12 @@ function getArg(argv, name) {
 	const prefix = name + '=';
 	const arg = argv.find((a) => a.startsWith(prefix));
 	return arg ? arg.slice(prefix.length) : undefined;
+}
+
+function writeOutput(file, key, value) {
+	if (file) {
+		appendFileSync(file, `${key}=${value}\n`);
+	}
 }
 
 function normalizePath(p) {
