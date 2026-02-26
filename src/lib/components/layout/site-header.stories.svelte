@@ -40,7 +40,11 @@
 	}}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.getByText('Jane Doe')).toBeInTheDocument();
-		await expect(canvas.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+		await expect(canvas.getByLabelText('Account menu')).toBeInTheDocument();
+		// Open the popover
+		const toggle = canvas.getByRole('checkbox');
+		toggle.click();
+		await expect(canvas.getByText('Jane Doe')).toBeVisible();
+		await expect(canvas.getByRole('button', { name: /sign out/i })).toBeVisible();
 	}}
 />

@@ -25,8 +25,13 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		await expect(canvas.getByText('Chinese Character Wiki')).toBeInTheDocument();
-		await expect(canvas.getByText('Alice')).toBeInTheDocument();
-		await expect(canvas.getByText('Sign out')).toBeInTheDocument();
+		await expect(canvas.getByLabelText('Account menu')).toBeInTheDocument();
+
+		// Open the popover by clicking the account button
+		const toggle = canvas.getByRole('checkbox');
+		toggle.click();
+		await expect(canvas.getByText('Alice')).toBeVisible();
+		await expect(canvas.getByText('Sign out')).toBeVisible();
 	}}
 >
 	<WikiHeader

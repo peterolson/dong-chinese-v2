@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Menu } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
+	import AuthStatus from '$lib/components/layout/auth-status.svelte';
 	import type { AuthUser } from '$lib/server/auth';
 
 	let { user }: { user: AuthUser | null } = $props();
@@ -13,19 +14,11 @@
 		</label>
 		<a href={resolve('/wiki')} class="wiki-brand">
 			<span class="wiki-brand-zh" aria-hidden="true">字</span>
-			<span class="wiki-brand-text">Chinese Character Wiki</span>
+			<span class="wiki-brand-text brand-full">Chinese Character Wiki</span>
+			<span class="wiki-brand-text brand-short">Wiki</span>
 		</a>
 	</div>
-	<div class="header-right">
-		{#if user}
-			<span class="user-name">{user.name || user.username || user.email}</span>
-			<form method="post" action="/login?/signOut">
-				<button type="submit" class="header-link">Sign out</button>
-			</form>
-		{:else}
-			<a href={resolve('/login')} class="header-link">Log in</a>
-		{/if}
-	</div>
+	<AuthStatus {user} />
 </header>
 
 <style>
@@ -91,46 +84,17 @@
 		letter-spacing: -0.01em;
 	}
 
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.875rem;
-		user-select: none;
-	}
-
-	.user-name {
-		color: var(--muted-foreground);
-	}
-
-	form {
-		display: inline;
-	}
-
-	.header-link {
-		color: var(--muted-foreground);
-		background: none;
-		border: 1px solid var(--border);
-		padding: 0.25rem 0.75rem;
-		font-size: inherit;
-		border-radius: var(--radius);
-		text-decoration: none;
-		transition:
-			background-color 0.15s,
-			border-color 0.15s,
-			color 0.15s;
-	}
-
-	.header-link:hover {
-		background: var(--surface);
-		border-color: var(--muted-foreground);
-		color: var(--foreground);
-		text-decoration: none;
+	.brand-short {
+		display: none;
 	}
 
 	@media (max-width: 480px) {
-		.wiki-brand-text {
-			font-size: 0.9375rem;
+		.brand-full {
+			display: none;
+		}
+
+		.brand-short {
+			display: inline;
 		}
 
 		.wiki-brand-zh {
