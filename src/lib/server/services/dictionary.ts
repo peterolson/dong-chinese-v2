@@ -470,15 +470,24 @@ export async function getCharacterList(
 		case 'components': {
 			// Characters that appear most frequently as components in other characters.
 			// Groups variant forms (e.g. 心/忄/⺗) under the canonical character using variant_of.
+			// Pre-loads char data into a CTE to avoid querying the view multiple times.
 			const rows = await db.execute<Record<string, unknown>>(sql`
-				WITH component_counts AS (
+				WITH chars AS (
+					SELECT character, variant_of, components, pinyin, gloss,
+						COALESCE(is_verified, false) AS is_verified,
+						subtlex_rank, subtlex_per_million, subtlex_context_diversity,
+						jun_da_rank, jun_da_per_million,
+						simplified_variants, traditional_variants
+					FROM ${charView}
+				),
+				component_counts AS (
 					SELECT
 						COALESCE(cv.variant_of, comp->>'character') AS canonical,
 						comp->>'character' AS original,
 						count(*)::int AS usage_count
-					FROM ${charView} AS src,
-						jsonb_array_elements(src.components) AS comp
-						LEFT JOIN ${charView} cv ON cv.character = comp->>'character'
+					FROM chars AS src
+					CROSS JOIN LATERAL jsonb_array_elements(src.components) AS comp
+					LEFT JOIN chars cv ON cv.character = comp->>'character'
 					WHERE src.components IS NOT NULL
 					GROUP BY COALESCE(cv.variant_of, comp->>'character'), comp->>'character'
 				),
@@ -492,7 +501,7 @@ export async function getCharacterList(
 				)
 				SELECT
 					c.character, c.pinyin, c.gloss,
-					COALESCE(c.is_verified, false) AS "isVerified",
+					c.is_verified AS "isVerified",
 					c.subtlex_rank AS "subtlexRank",
 					c.subtlex_per_million AS "subtlexPerMillion",
 					c.subtlex_context_diversity AS "subtlexContextDiversity",
@@ -504,7 +513,7 @@ export async function getCharacterList(
 					g.variants,
 					count(*) OVER()::int AS total
 				FROM grouped g
-				JOIN ${charView} c ON c.character = g.character
+				JOIN chars c ON c.character = g.character
 				ORDER BY g.usage_count DESC, c.character ASC
 				OFFSET ${offset}
 				LIMIT ${limit}

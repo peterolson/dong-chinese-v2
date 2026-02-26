@@ -961,8 +961,7 @@ async function main() {
 				// Follow the chain to find the root canonical
 				let current = row.variantOf;
 				const visited = new Set<string>([row.character]);
-				let hops = 0;
-				while (variantMap.has(current) && hops < 10) {
+				while (variantMap.has(current)) {
 					if (visited.has(current)) {
 						// Cycle detected — null out this entry
 						row.variantOf = null;
@@ -971,7 +970,6 @@ async function main() {
 					}
 					visited.add(current);
 					current = variantMap.get(current)!;
-					hops++;
 				}
 
 				if (row.variantOf === null) continue; // was nulled by cycle

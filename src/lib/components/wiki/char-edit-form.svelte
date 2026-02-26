@@ -170,7 +170,6 @@
 <form method="post" action="?/submitEdit" class="edit-form">
 	<!-- Hidden data serialized as JSON — only active when JS is enabled (noscript inputs are used otherwise) -->
 	<div class="js-hidden-fields">
-		<input type="hidden" name="variantOf" value={variantOf} />
 		<input type="hidden" name="pinyin" value={JSON.stringify(pinyin)} />
 		<input type="hidden" name="simplifiedVariants" value={JSON.stringify(simplifiedVariants)} />
 		<input type="hidden" name="traditionalVariants" value={JSON.stringify(traditionalVariants)} />

@@ -18,12 +18,19 @@ async function validateVariantOf(character: string, value: string): Promise<void
 	if (value === character) {
 		throw new CharEditError('INVALID_VARIANT_OF', 'variantOf cannot point to self');
 	}
-	// Target must not itself have a variantOf (no chains)
+	// Target must exist in the dictionary
 	const [targetRow] = await db
 		.select({ variantOf: charView.variantOf })
 		.from(charView)
 		.where(eq(charView.character, value));
-	if (targetRow?.variantOf) {
+	if (!targetRow) {
+		throw new CharEditError(
+			'INVALID_VARIANT_OF',
+			`Cannot set variantOf to '${value}' because the target character does not exist.`
+		);
+	}
+	// Target must not itself have a variantOf (no chains)
+	if (targetRow.variantOf) {
 		throw new CharEditError(
 			'INVALID_VARIANT_OF',
 			`Cannot set variantOf to '${value}' because it is itself a variant of '${targetRow.variantOf}'. Point directly to '${targetRow.variantOf}' instead.`
