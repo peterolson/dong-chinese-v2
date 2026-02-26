@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { getCharacterData } from '$lib/server/services/dictionary';
+import { getCharacterData, getComponentUses } from '$lib/server/services/dictionary';
 import { countPendingEdits, getUserPendingEdit } from '$lib/server/services/char-edit';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 
@@ -12,7 +12,10 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 		error(404, { message: 'Wiki entries are for single characters only' });
 	}
 
-	const data = await getCharacterData(chars[0]);
+	const [data, componentUses] = await Promise.all([
+		getCharacterData(chars[0]),
+		getComponentUses(chars[0])
+	]);
 	if (!data) {
 		error(404, { message: `Character "${char}" not found in dictionary` });
 	}
@@ -49,5 +52,5 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 			}
 		: null;
 
-	return { character: data, pendingCount, userPendingEdit };
+	return { character: data, componentUses, pendingCount, userPendingEdit };
 };

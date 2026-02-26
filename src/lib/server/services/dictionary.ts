@@ -1,7 +1,13 @@
 import { db } from '$lib/server/db';
 import { charView } from '$lib/server/db/dictionary.views';
 import { eq, inArray, sql } from 'drizzle-orm';
-import type { CharacterData, ComponentData, HistoricalPronunciation } from '$lib/types/dictionary';
+import type {
+	CharacterData,
+	ComponentData,
+	ComponentUse,
+	ComponentUseGroup,
+	HistoricalPronunciation
+} from '$lib/types/dictionary';
 
 /**
  * Look up a single character's data from the dictionary.char view.
@@ -79,6 +85,60 @@ export async function getCharacterData(char: string): Promise<CharacterData | nu
 		pinyinFrequencies: row.pinyinFrequencies as CharacterData['pinyinFrequencies'],
 		pinyin: row.pinyin
 	};
+}
+
+/**
+ * Find all characters that contain the given character as a component,
+ * grouped by the role (type) the component plays.
+ * Each group is sorted by Jun Da frequency; groups are sorted by character count descending.
+ */
+export async function getComponentUses(component: string): Promise<ComponentUseGroup[]> {
+	const rows = await db.execute<{
+		character: string;
+		isVerified: boolean;
+		types: string[] | null;
+		junDaRank: number | null;
+	}>(sql`
+		SELECT c.character,
+			COALESCE(c.is_verified, false) AS "isVerified",
+			(comp->'type')::jsonb AS types,
+			c.jun_da_rank AS "junDaRank"
+		FROM ${charView} c, jsonb_array_elements(c.components) AS comp
+		WHERE comp->>'character' = ${component}
+		ORDER BY c.jun_da_rank ASC NULLS LAST
+	`);
+
+	// Group by component type. A component entry can have multiple types;
+	// in that case the character appears in each group.
+	const groups = new Map<string, { chars: ComponentUse[]; verified: number }>();
+	for (const row of rows as unknown as {
+		character: string;
+		isVerified: boolean;
+		types: string[] | null;
+	}[]) {
+		const types = row.types && row.types.length > 0 ? row.types : ['unknown'];
+		for (const type of types) {
+			let group = groups.get(type);
+			if (!group) {
+				group = { chars: [], verified: 0 };
+				groups.set(type, group);
+			}
+			// Avoid duplicates (same character listed in same type group twice)
+			if (!group.chars.some((c) => c.character === row.character)) {
+				group.chars.push({ character: row.character, isVerified: row.isVerified });
+				if (row.isVerified) group.verified++;
+			}
+		}
+	}
+
+	// Sort groups by character count descending
+	return [...groups.entries()]
+		.sort((a, b) => b[1].chars.length - a[1].chars.length)
+		.map(([type, { chars, verified }]) => ({
+			type,
+			characters: chars,
+			verifiedCount: verified
+		}));
 }
 
 export interface CharacterSearchResult {

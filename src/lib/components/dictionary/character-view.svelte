@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { CharacterData } from '$lib/types/dictionary';
+	import type { CharacterData, ComponentUseGroup } from '$lib/types/dictionary';
 	import type { PhoneticScript } from '$lib/orthography';
 	import { formatPinyinList } from '$lib/orthography';
 	import { getCharLinkBase } from './char-link-context';
@@ -11,16 +11,23 @@
 	import HistoricalImages from './historical-images.svelte';
 	import HistoricalPronunciations from './historical-pronunciations.svelte';
 	import SpeakButton from '$lib/components/ui/speak-button.svelte';
+	import ComponentUses from './component-uses.svelte';
 	import SourceList from './source-list.svelte';
 	import { detectSources } from '$lib/data/source-info';
 
 	interface Props {
 		character: CharacterData;
+		componentUses?: ComponentUseGroup[];
 		characterSet?: 'simplified' | 'traditional';
 		phoneticScript?: PhoneticScript | null;
 	}
 
-	let { character, characterSet = 'simplified', phoneticScript = null }: Props = $props();
+	let {
+		character,
+		componentUses,
+		characterSet = 'simplified',
+		phoneticScript = null
+	}: Props = $props();
 
 	let strokeVariantData = $derived(
 		characterSet === 'traditional'
@@ -116,6 +123,10 @@
 				strokes={strokeVariantData?.strokes ?? null}
 				character={character.character}
 			/>
+		{/if}
+
+		{#if componentUses && componentUses.length > 0}
+			<ComponentUses {componentUses} />
 		{/if}
 
 		{#if character.historicalPronunciations && character.historicalPronunciations.length > 0}

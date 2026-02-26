@@ -41,15 +41,16 @@ The largest and most complex component area. Renders the dictionary detail page 
 
 ### Core Components
 
-| Component                    | Notes                                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------------------- |
-| `character-view.svelte`      | Main orchestrator — composes all sub-components for a character page.                 |
-| `character-breakdown.svelte` | Decomposition tree showing semantic/phonetic components. Links to explanation modals. |
-| `character-glyph.svelte`     | Renders the character with color-coded component stroke highlights.                   |
-| `stroke-animation.svelte`    | Animated stroke-by-stroke SVG drawing using CSS keyframes + SVG masking.              |
-| `character-frequency.svelte` | Jun Da & SUBTLEX-CH frequency comparison bars.                                        |
-| `cjk-linked-text.svelte`     | Auto-links CJK characters to their dictionary pages.                                  |
-| `source-list.svelte`         | Groups and displays data source attribution.                                          |
+| Component                    | Notes                                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `character-view.svelte`      | Main orchestrator — composes all sub-components for a character page.                                        |
+| `character-breakdown.svelte` | Decomposition tree showing semantic/phonetic components. Links to explanation modals.                        |
+| `character-glyph.svelte`     | Renders the character with color-coded component stroke highlights.                                          |
+| `stroke-animation.svelte`    | Animated stroke-by-stroke SVG drawing using CSS keyframes + SVG masking.                                     |
+| `character-frequency.svelte` | Jun Da & SUBTLEX-CH frequency comparison bars.                                                               |
+| `component-uses.svelte`      | Lists characters that use the current character as a component. Verified = blue link, unverified = red link. |
+| `cjk-linked-text.svelte`     | Auto-links CJK characters to their dictionary pages.                                                         |
+| `source-list.svelte`         | Groups and displays data source attribution.                                                                 |
 
 ### Historical/Linguistic
 

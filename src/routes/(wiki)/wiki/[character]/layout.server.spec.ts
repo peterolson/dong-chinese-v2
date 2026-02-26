@@ -3,11 +3,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // ── Mocks ──────────────────────────────────────────────────────
 
 const mockGetCharacterData = vi.fn();
+const mockGetComponentUses = vi.fn();
 const mockCountPendingEdits = vi.fn();
 const mockGetUserPendingEdit = vi.fn();
 
 vi.mock('$lib/server/services/dictionary', () => ({
-	getCharacterData: (...args: unknown[]) => mockGetCharacterData(...args)
+	getCharacterData: (...args: unknown[]) => mockGetCharacterData(...args),
+	getComponentUses: (...args: unknown[]) => mockGetComponentUses(...args)
 }));
 
 vi.mock('$lib/server/services/char-edit', () => ({
@@ -45,6 +47,7 @@ function makeEvent(character: string, canReview = false, userId?: string, anonId
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetCharacterData.mockResolvedValue(null);
+	mockGetComponentUses.mockResolvedValue([]);
 	mockCountPendingEdits.mockResolvedValue(0);
 	mockGetUserPendingEdit.mockResolvedValue(null);
 });
