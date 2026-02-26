@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { CircleUser } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 	import type { AuthUser } from '$lib/server/auth';
@@ -6,20 +7,22 @@
 	let { user, variant = 'default' }: { user: AuthUser | null; variant?: 'default' | 'on-primary' } =
 		$props();
 
+	const id = $props.id();
+	const toggleId = `account-toggle-${id}`;
 	const username = $derived(user ? user.name || user.username || user.email : null);
 </script>
 
 <div class="auth-status" class:on-primary={variant === 'on-primary'}>
 	{#if user}
-		<input type="checkbox" id="account-toggle" class="sr-only" />
-		<label for="account-toggle" class="account-button" aria-label="Account menu">
+		<input type="checkbox" id={toggleId} class="sr-only" aria-label="Account menu" />
+		<label for={toggleId} class="account-button">
 			<CircleUser size={22} aria-hidden="true" />
 		</label>
 		<div class="account-popover">
-			<label for="account-toggle" class="account-backdrop"></label>
+			<label for={toggleId} class="account-backdrop"></label>
 			<div class="account-menu">
 				<span class="user-name">{username}</span>
-				<form method="post" action="/login?/signOut">
+				<form method="post" action="/login?/signOut" use:enhance>
 					<button type="submit" class="sign-out-btn">Sign out</button>
 				</form>
 			</div>
@@ -73,6 +76,11 @@
 
 	.auth-status.on-primary .account-button:hover {
 		background: rgb(255 255 255 / 0.15);
+	}
+
+	.sr-only:focus-visible ~ .account-button {
+		outline: 2px solid var(--ring, Highlight);
+		outline-offset: 2px;
 	}
 
 	.account-popover {

@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
+	import { expect, userEvent, within } from 'storybook/test';
 	import WikiHeader from './wiki-header.svelte';
 
 	const { Story } = defineMeta({
@@ -25,11 +25,11 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		await expect(canvas.getByText('Chinese Character Wiki')).toBeInTheDocument();
-		await expect(canvas.getByLabelText('Account menu')).toBeInTheDocument();
+		const toggle = canvas.getByRole('checkbox', { name: /account menu/i });
+		await expect(toggle).toBeInTheDocument();
 
 		// Open the popover by clicking the account button
-		const toggle = canvas.getByRole('checkbox');
-		toggle.click();
+		await userEvent.click(toggle);
 		await expect(canvas.getByText('Alice')).toBeVisible();
 		await expect(canvas.getByText('Sign out')).toBeVisible();
 	}}

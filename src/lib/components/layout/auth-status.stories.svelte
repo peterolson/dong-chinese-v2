@@ -1,6 +1,6 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
+	import { expect, userEvent, within } from 'storybook/test';
 	import AuthStatus from './auth-status.svelte';
 
 	const { Story } = defineMeta({
@@ -38,10 +38,10 @@
 	}}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.getByLabelText('Account menu')).toBeInTheDocument();
+		const toggle = canvas.getByRole('checkbox', { name: /account menu/i });
+		await expect(toggle).toBeInTheDocument();
 		// Open the popover
-		const toggle = canvas.getByRole('checkbox');
-		toggle.click();
+		await userEvent.click(toggle);
 		await expect(canvas.getByText('Jane Doe')).toBeVisible();
 		await expect(canvas.getByRole('button', { name: /sign out/i })).toBeVisible();
 		// Should not have a log in link
@@ -66,8 +66,7 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		// Open the popover to see the email
-		const toggle = canvas.getByRole('checkbox');
-		toggle.click();
+		await userEvent.click(canvas.getByRole('checkbox', { name: /account menu/i }));
 		await expect(canvas.getByText('user@example.com')).toBeVisible();
 		await expect(canvas.getByRole('button', { name: /sign out/i })).toBeVisible();
 	}}

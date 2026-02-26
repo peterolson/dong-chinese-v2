@@ -1,6 +1,6 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
+	import { expect, userEvent, within } from 'storybook/test';
 	import SiteHeader from './site-header.svelte';
 
 	const { Story } = defineMeta({
@@ -40,10 +40,10 @@
 	}}
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.getByLabelText('Account menu')).toBeInTheDocument();
+		const toggle = canvas.getByRole('checkbox', { name: /account menu/i });
+		await expect(toggle).toBeInTheDocument();
 		// Open the popover
-		const toggle = canvas.getByRole('checkbox');
-		toggle.click();
+		await userEvent.click(toggle);
 		await expect(canvas.getByText('Jane Doe')).toBeVisible();
 		await expect(canvas.getByRole('button', { name: /sign out/i })).toBeVisible();
 	}}
