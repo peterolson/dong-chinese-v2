@@ -103,14 +103,15 @@ export async function getComponentUses(component: string): Promise<ComponentUseG
 			COALESCE(c.is_verified, false) AS "isVerified",
 			(comp->'type')::jsonb AS types,
 			c.jun_da_rank AS "junDaRank"
-		FROM ${charView} c, jsonb_array_elements(c.components) AS comp
+		FROM ${charView} c
+		CROSS JOIN LATERAL jsonb_array_elements(COALESCE(c.components, '[]'::jsonb)) AS comp
 		WHERE comp->>'character' = ${component}
 		ORDER BY c.jun_da_rank ASC NULLS LAST
 	`);
 
 	// Group by component type. A component entry can have multiple types;
 	// in that case the character appears in each group.
-	const groups = new Map<string, { chars: ComponentUse[]; verified: number }>();
+	const groups = new Map<string, { chars: ComponentUse[]; seen: Set<string>; verified: number }>();
 	for (const row of rows as unknown as {
 		character: string;
 		isVerified: boolean;
@@ -120,11 +121,11 @@ export async function getComponentUses(component: string): Promise<ComponentUseG
 		for (const type of types) {
 			let group = groups.get(type);
 			if (!group) {
-				group = { chars: [], verified: 0 };
+				group = { chars: [], seen: new Set(), verified: 0 };
 				groups.set(type, group);
 			}
-			// Avoid duplicates (same character listed in same type group twice)
-			if (!group.chars.some((c) => c.character === row.character)) {
+			if (!group.seen.has(row.character)) {
+				group.seen.add(row.character);
 				group.chars.push({ character: row.character, isVerified: row.isVerified });
 				if (row.isVerified) group.verified++;
 			}

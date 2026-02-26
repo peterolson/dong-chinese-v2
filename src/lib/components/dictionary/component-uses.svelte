@@ -42,7 +42,12 @@
 				{/if}
 			</h3>
 			{#if needsCollapse}
-				<input type="checkbox" id={checkboxId} class="expand-toggle" />
+				<input
+					type="checkbox"
+					id={checkboxId}
+					class="expand-toggle"
+					aria-label="Show all {total} characters"
+				/>
 			{/if}
 			<div class="char-list">
 				{#each group.characters as use, i (use.character)}
@@ -97,7 +102,15 @@
 	}
 
 	.expand-toggle {
-		display: none;
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 
 	.char-list {

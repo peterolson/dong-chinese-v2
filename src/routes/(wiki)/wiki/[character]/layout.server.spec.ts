@@ -66,17 +66,22 @@ describe('load', () => {
 
 	it('returns character data and pending count on success', async () => {
 		const charData = { character: '水', gloss: 'water', pinyin: ['shuǐ'] };
+		const componentUses = [
+			{ type: 'meaning', characters: [{ character: '泉', isVerified: true }], verifiedCount: 1 }
+		];
 		mockGetCharacterData.mockResolvedValue(charData);
+		mockGetComponentUses.mockResolvedValue(componentUses);
 		mockCountPendingEdits.mockResolvedValue(3);
 
 		const event = makeEvent('水', true);
 		const result = await loadResult(event);
 
 		expect(result.character).toEqual(charData);
+		expect(result.componentUses).toEqual(componentUses);
 		expect(result.pendingCount).toBe(3);
 	});
 
-	it('passes the single character to getCharacterData', async () => {
+	it('passes the single character to getCharacterData and getComponentUses', async () => {
 		const charData = { character: '火', gloss: 'fire', pinyin: ['huǒ'] };
 		mockGetCharacterData.mockResolvedValue(charData);
 		mockCountPendingEdits.mockResolvedValue(1);
@@ -85,6 +90,7 @@ describe('load', () => {
 		await loadResult(event);
 
 		expect(mockGetCharacterData).toHaveBeenCalledWith('火');
+		expect(mockGetComponentUses).toHaveBeenCalledWith('火');
 	});
 
 	it('counts all pending edits for reviewers', async () => {
