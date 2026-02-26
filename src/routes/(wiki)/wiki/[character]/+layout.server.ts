@@ -1,9 +1,10 @@
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { getCharacterData } from '$lib/server/services/dictionary';
-import { countPendingEdits } from '$lib/server/services/char-edit';
+import { countPendingEdits, getUserPendingEdit } from '$lib/server/services/char-edit';
+import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 
-export const load: LayoutServerLoad = async ({ params }) => {
+export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 	const char = params.character;
 	const chars = [...char];
 
@@ -16,7 +17,37 @@ export const load: LayoutServerLoad = async ({ params }) => {
 		error(404, { message: `Character "${char}" not found in dictionary` });
 	}
 
-	const pendingCount = await countPendingEdits(chars[0]);
+	const { canReview } = await parent();
 
-	return { character: data, pendingCount };
+	const hasIdentity = Boolean(locals.user?.id || locals.anonymousSessionId);
+	const editedBy = hasIdentity
+		? { userId: locals.user?.id, anonymousSessionId: locals.anonymousSessionId }
+		: undefined;
+
+	// Scope pending count: reviewers see all, others see only their own
+	const pendingCount = canReview
+		? await countPendingEdits(chars[0])
+		: hasIdentity
+			? await countPendingEdits(chars[0], editedBy)
+			: 0;
+
+	// Load user's pending edit (if any)
+	const pendingEdit = hasIdentity ? await getUserPendingEdit(chars[0], editedBy!) : null;
+
+	// Serialize only editable fields + metadata for the pending edit
+	const userPendingEdit = pendingEdit
+		? {
+				id: pendingEdit.id,
+				editComment: pendingEdit.editComment,
+				changedFields: pendingEdit.changedFields,
+				...(Object.fromEntries(
+					EDITABLE_FIELDS.map((f) => [
+						f,
+						(pendingEdit as unknown as Record<string, unknown>)[f] ?? null
+					])
+				) as Record<string, unknown>)
+			}
+		: null;
+
+	return { character: data, pendingCount, userPendingEdit };
 };

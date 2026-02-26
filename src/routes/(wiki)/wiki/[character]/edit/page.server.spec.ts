@@ -3,20 +3,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // ── Mocks ──────────────────────────────────────────────────────
 
 const mockSubmitCharEdit = vi.fn();
-const mockGetPendingEdits = vi.fn();
-const mockApproveCharEdit = vi.fn();
-const mockRejectCharEdit = vi.fn();
+const mockGetUserPendingEdit = vi.fn();
+const mockUpdateCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
-const mockResolveUserNames = vi.fn();
 
 vi.mock('$lib/server/services/char-edit', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/server/services/char-edit')>();
 	return {
 		CharEditError: actual.CharEditError,
 		submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
-		getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
-		approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
-		rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
+		getUserPendingEdit: (...args: unknown[]) => mockGetUserPendingEdit(...args),
+		updateCharEdit: (...args: unknown[]) => mockUpdateCharEdit(...args)
 	};
 });
 
@@ -24,60 +21,9 @@ vi.mock('$lib/server/services/permissions', () => ({
 	hasPermission: (...args: unknown[]) => mockHasPermission(...args)
 }));
 
-vi.mock('$lib/server/services/user', () => ({
-	resolveUserNames: (...args: unknown[]) => mockResolveUserNames(...args)
-}));
-
-const { load, actions } = await import('./+page.server');
-
-async function loadResult(...args: Parameters<typeof load>) {
-	const r = await load(...args);
-	if (!r) throw new Error('Unexpected void from load');
-	return r;
-}
+const { actions } = await import('./+page.server');
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function makePendingEdit(overrides: Record<string, unknown> = {}) {
-	return {
-		id: 'edit-1',
-		character: '水',
-		status: 'pending',
-		editComment: 'Updated gloss',
-		reviewComment: null,
-		editedBy: 'user-1',
-		reviewedBy: null,
-		createdAt: new Date('2025-01-15T10:00:00Z'),
-		reviewedAt: null,
-		anonymousSessionId: null,
-		changedFields: ['gloss'],
-		gloss: 'water',
-		hint: null,
-		originalMeaning: null,
-		isVerified: true,
-		pinyin: ['shuǐ'],
-		components: null,
-		simplifiedVariants: null,
-		traditionalVariants: null,
-		customSources: null,
-		strokeDataSimp: null,
-		strokeDataTrad: null,
-		strokeCountSimp: 4,
-		strokeCountTrad: null,
-		fragmentsSimp: null,
-		fragmentsTrad: null,
-		historicalImages: null,
-		historicalPronunciations: null,
-		...overrides
-	};
-}
-
-function makeLoadEvent(character: string, canReview = false) {
-	return {
-		params: { character },
-		parent: () => Promise.resolve({ canReview })
-	} as unknown as Parameters<typeof load>[0];
-}
 
 function makeActionEvent(
 	formEntries: Record<string, string>,
@@ -101,93 +47,8 @@ function makeActionEvent(
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockGetPendingEdits.mockResolvedValue([]);
-	mockResolveUserNames.mockResolvedValue(new Map());
 	mockHasPermission.mockResolvedValue(false);
-});
-
-// ── load ───────────────────────────────────────────────────────
-
-describe('load', () => {
-	it('returns pending edits with resolved names', async () => {
-		const edit = makePendingEdit();
-		mockGetPendingEdits.mockResolvedValue([edit]);
-		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
-
-		const event = makeLoadEvent('水');
-		const result = await loadResult(event);
-
-		expect(result.pendingEdits).toHaveLength(1);
-		expect(result.pendingEdits[0]).toMatchObject({
-			id: 'edit-1',
-			editComment: 'Updated gloss',
-			editorName: 'Alice',
-			createdAt: '2025-01-15T10:00:00.000Z',
-			changedFields: ['gloss']
-		});
-		expect(mockGetPendingEdits).toHaveBeenCalledWith('水');
-	});
-
-	it('labels anonymous editors as "Anonymous"', async () => {
-		const edit = makePendingEdit({ editedBy: null });
-		mockGetPendingEdits.mockResolvedValue([edit]);
-		mockResolveUserNames.mockResolvedValue(new Map());
-
-		const event = makeLoadEvent('水');
-		const result = await loadResult(event);
-
-		expect(result.pendingEdits[0].editorName).toBe('Anonymous');
-	});
-
-	it('labels unknown user IDs as "Unknown"', async () => {
-		const edit = makePendingEdit({ editedBy: 'deleted-user' });
-		mockGetPendingEdits.mockResolvedValue([edit]);
-		mockResolveUserNames.mockResolvedValue(new Map());
-
-		const event = makeLoadEvent('水');
-		const result = await loadResult(event);
-
-		expect(result.pendingEdits[0].editorName).toBe('Unknown');
-	});
-
-	it('passes canReview from parent', async () => {
-		const event = makeLoadEvent('水', true);
-		const result = await loadResult(event);
-
-		expect(result.canReview).toBe(true);
-	});
-
-	it('passes canReview=false from parent', async () => {
-		const event = makeLoadEvent('水', false);
-		const result = await loadResult(event);
-
-		expect(result.canReview).toBe(false);
-	});
-
-	it('collects both editedBy and reviewedBy user IDs for resolution', async () => {
-		const edits = [
-			makePendingEdit({ id: 'e1', editedBy: 'u1', reviewedBy: 'u2' }),
-			makePendingEdit({ id: 'e2', editedBy: 'u3', reviewedBy: null })
-		];
-		mockGetPendingEdits.mockResolvedValue(edits);
-		mockResolveUserNames.mockResolvedValue(new Map());
-
-		const event = makeLoadEvent('水');
-		await load(event);
-
-		// Should include u1, u3 from editedBy and u2 from reviewedBy (null filtered out)
-		expect(mockResolveUserNames).toHaveBeenCalledWith(['u1', 'u3', 'u2']);
-	});
-
-	it('returns empty pendingEdits when none exist', async () => {
-		mockGetPendingEdits.mockResolvedValue([]);
-
-		const event = makeLoadEvent('火');
-		const result = await loadResult(event);
-
-		expect(result.pendingEdits).toEqual([]);
-		expect(mockGetPendingEdits).toHaveBeenCalledWith('火');
-	});
+	mockGetUserPendingEdit.mockResolvedValue(null);
 });
 
 // ── actions.submitEdit ─────────────────────────────────────────
@@ -399,7 +260,6 @@ describe('actions.submitEdit', () => {
 		await expect(actions!.submitEdit(event)).rejects.toMatchObject({ status: 303 });
 
 		const callArgs = mockSubmitCharEdit.mock.calls[0][0];
-		// All entries are unsafe, so customSources becomes null
 		expect(callArgs.data.customSources).toBeNull();
 	});
 
@@ -536,128 +396,64 @@ describe('actions.submitEdit', () => {
 	});
 });
 
-// ── actions.approveEdit ────────────────────────────────────────
+// ── actions.submitEdit — update in-place ────────────────────────
 
-describe('actions.approveEdit', () => {
-	it('fails 401 when no user', async () => {
-		const event = makeActionEvent({ editId: 'edit-1' }, { user: null });
-		const result = await actions!.approveEdit(event);
-
-		expect(result).toMatchObject({ status: 401 });
-	});
-
-	it('fails 403 when user lacks wikiEdit permission', async () => {
+describe('actions.submitEdit — update in-place', () => {
+	it('calls updateCharEdit when user has existing pending edit', async () => {
 		mockHasPermission.mockResolvedValue(false);
-		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
-		const result = await actions!.approveEdit(event);
+		mockGetUserPendingEdit.mockResolvedValue({ id: 'existing-edit' });
+		mockUpdateCharEdit.mockResolvedValue({ id: 'existing-edit', status: 'pending' });
 
-		expect(result).toMatchObject({ status: 403 });
-		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
+		const event = makeActionEvent(
+			{ editComment: 'Updated edit', gloss: 'new value' },
+			{ user: { id: 'user-1' }, anonymousSessionId: 'anon-1' }
+		);
+
+		await expect(actions!.submitEdit(event)).rejects.toMatchObject({
+			status: 303,
+			location: `/wiki/${encodeURIComponent('水')}?edited=pending`
+		});
+
+		expect(mockUpdateCharEdit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				editId: 'existing-edit',
+				character: '水',
+				editComment: 'Updated edit'
+			})
+		);
+		expect(mockSubmitCharEdit).not.toHaveBeenCalled();
 	});
 
-	it('fails 400 when missing editId', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		const event = makeActionEvent({}, { user: { id: 'user-1' } });
-		const result = await actions!.approveEdit(event);
-
-		expect(result).toMatchObject({ status: 400 });
-	});
-
-	it('returns approved: true on success', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		mockApproveCharEdit.mockResolvedValue(true);
-
-		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
-		const result = await actions!.approveEdit(event);
-
-		expect(result).toEqual({ approved: true });
-		expect(mockApproveCharEdit).toHaveBeenCalledWith('edit-1', 'user-1');
-	});
-
-	it('fails 404 when edit not found or already reviewed', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		mockApproveCharEdit.mockResolvedValue(false);
-
-		const event = makeActionEvent({ editId: 'nonexistent' }, { user: { id: 'user-1' } });
-		const result = await actions!.approveEdit(event);
-
-		expect(result).toMatchObject({ status: 404 });
-	});
-});
-
-// ── actions.rejectEdit ─────────────────────────────────────────
-
-describe('actions.rejectEdit', () => {
-	it('fails 401 when no user', async () => {
-		const event = makeActionEvent({ editId: 'edit-1', rejectComment: 'Bad edit' }, { user: null });
-		const result = await actions!.rejectEdit(event);
-
-		expect(result).toMatchObject({ status: 401 });
-	});
-
-	it('fails 403 when user lacks wikiEdit permission', async () => {
+	it('falls back to submitCharEdit when updateCharEdit returns null (race condition)', async () => {
 		mockHasPermission.mockResolvedValue(false);
-		const event = makeActionEvent(
-			{ editId: 'edit-1', rejectComment: 'Bad edit' },
-			{ user: { id: 'user-1' } }
-		);
-		const result = await actions!.rejectEdit(event);
-
-		expect(result).toMatchObject({ status: 403 });
-		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
-	});
-
-	it('fails 400 when missing editId', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		const event = makeActionEvent({ rejectComment: 'Bad edit' }, { user: { id: 'user-1' } });
-		const result = await actions!.rejectEdit(event);
-
-		expect(result).toMatchObject({ status: 400 });
-	});
-
-	it('fails 400 when missing rejectComment', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
-		const result = await actions!.rejectEdit(event);
-
-		expect(result).toMatchObject({ status: 400 });
-	});
-
-	it('fails 400 when rejectComment is whitespace only', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		const event = makeActionEvent(
-			{ editId: 'edit-1', rejectComment: '   ' },
-			{ user: { id: 'user-1' } }
-		);
-		const result = await actions!.rejectEdit(event);
-
-		expect(result).toMatchObject({ status: 400 });
-	});
-
-	it('returns rejected: true on success', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		mockRejectCharEdit.mockResolvedValue(true);
+		mockGetUserPendingEdit.mockResolvedValue({ id: 'existing-edit' });
+		mockUpdateCharEdit.mockResolvedValue(null); // edit was approved in between
+		mockSubmitCharEdit.mockResolvedValue({ id: 'new-edit', status: 'pending' });
 
 		const event = makeActionEvent(
-			{ editId: 'edit-1', rejectComment: 'Incorrect data' },
-			{ user: { id: 'user-1' } }
+			{ editComment: 'Updated edit', gloss: 'new value' },
+			{ user: { id: 'user-1' }, anonymousSessionId: 'anon-1' }
 		);
-		const result = await actions!.rejectEdit(event);
 
-		expect(result).toEqual({ rejected: true });
-		expect(mockRejectCharEdit).toHaveBeenCalledWith('edit-1', 'user-1', 'Incorrect data');
+		await expect(actions!.submitEdit(event)).rejects.toMatchObject({ status: 303 });
+
+		expect(mockUpdateCharEdit).toHaveBeenCalled();
+		expect(mockSubmitCharEdit).toHaveBeenCalled();
 	});
 
-	it('fails 404 when edit not found or already reviewed', async () => {
-		mockHasPermission.mockResolvedValue(true);
-		mockRejectCharEdit.mockResolvedValue(false);
+	it('creates new edit when no existing pending edit', async () => {
+		mockHasPermission.mockResolvedValue(false);
+		mockGetUserPendingEdit.mockResolvedValue(null);
+		mockSubmitCharEdit.mockResolvedValue({ id: 'new-edit', status: 'pending' });
 
 		const event = makeActionEvent(
-			{ editId: 'nonexistent', rejectComment: 'Bad data' },
-			{ user: { id: 'user-1' } }
+			{ editComment: 'New edit', gloss: 'water' },
+			{ user: { id: 'user-1' }, anonymousSessionId: 'anon-1' }
 		);
-		const result = await actions!.rejectEdit(event);
 
-		expect(result).toMatchObject({ status: 404 });
+		await expect(actions!.submitEdit(event)).rejects.toMatchObject({ status: 303 });
+
+		expect(mockUpdateCharEdit).not.toHaveBeenCalled();
+		expect(mockSubmitCharEdit).toHaveBeenCalled();
 	});
 });

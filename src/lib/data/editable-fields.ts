@@ -23,3 +23,12 @@ export const EDITABLE_FIELDS = [
 ] as const;
 
 export type EditableField = (typeof EDITABLE_FIELDS)[number];
+
+/** Pick only the fields that edits can touch (no frequency, shuowen, etc.) */
+export function pickEditableFields(row: Record<string, unknown>): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const field of EDITABLE_FIELDS) {
+		result[field] = row[field as keyof typeof row] ?? null;
+	}
+	return result;
+}

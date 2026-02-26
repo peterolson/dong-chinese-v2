@@ -10,8 +10,13 @@
 
 	let {
 		canReview = false,
+		pendingBadgeCount = 0,
 		settings = {}
-	}: { canReview?: boolean; settings?: Partial<UserSettings> } = $props();
+	}: {
+		canReview?: boolean;
+		pendingBadgeCount?: number;
+		settings?: Partial<UserSettings>;
+	} = $props();
 
 	const currentTheme = $derived(settings.theme ?? null);
 	const currentCharSet = $derived(settings.characterSet ?? null);
@@ -58,18 +63,19 @@
 			</li>
 		{/each}
 
-		{#if canReview}
-			<li>
-				<a
-					href={resolve('/wiki/pending')}
-					class="nav-link"
-					aria-current={isActive('/wiki/pending') ? 'page' : undefined}
-				>
-					<CheckCircle size={20} class="nav-icon" aria-hidden="true" />
-					Pending Edits
-				</a>
-			</li>
-		{/if}
+		<li>
+			<a
+				href={resolve('/wiki/pending')}
+				class="nav-link"
+				aria-current={isActive('/wiki/pending') ? 'page' : undefined}
+			>
+				<CheckCircle size={20} class="nav-icon" aria-hidden="true" />
+				{canReview ? 'Review Queue' : 'My Edits'}
+				{#if canReview && pendingBadgeCount > 0}
+					<span class="badge">{pendingBadgeCount}</span>
+				{/if}
+			</a>
+		</li>
 	</ul>
 
 	<div class="nav-divider"></div>
@@ -216,6 +222,22 @@
 	.nav-link:hover :global(.nav-icon),
 	.nav-link[aria-current='page'] :global(.nav-icon) {
 		color: var(--secondary-soft);
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.25rem;
+		height: 1.25rem;
+		padding: 0 0.375rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		line-height: 1;
+		border-radius: 0.625rem;
+		background: var(--secondary);
+		color: var(--primary-foreground);
+		margin-left: auto;
 	}
 
 	.nav-divider {

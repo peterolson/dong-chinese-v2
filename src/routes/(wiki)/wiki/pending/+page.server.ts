@@ -1,29 +1,27 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getPendingEdits, approveCharEdit, rejectCharEdit } from '$lib/server/services/char-edit';
+import {
+	getPendingEdits,
+	getUserPendingEdits,
+	approveCharEdit,
+	rejectCharEdit
+} from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
 import { resolveUserNames } from '$lib/server/services/user';
 import { charView } from '$lib/server/db/dictionary.views';
 import { db } from '$lib/server/db';
 import { inArray } from 'drizzle-orm';
-import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
+import { pickEditableFields } from '$lib/data/editable-fields';
 
-function pickEditableFields(row: Record<string, unknown>) {
-	const result: Record<string, unknown> = {};
-	for (const field of EDITABLE_FIELDS) {
-		result[field] = row[field as keyof typeof row] ?? null;
-	}
-	return result;
-}
-
-export const load: PageServerLoad = async ({ parent }) => {
+export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { canReview } = await parent();
 
-	if (!canReview) {
-		redirect(303, '/wiki');
-	}
-
-	const edits = await getPendingEdits();
+	// Reviewers see all pending edits; non-reviewers see only their own
+	const editedBy = {
+		userId: locals.user?.id,
+		anonymousSessionId: locals.anonymousSessionId
+	};
+	const edits = canReview ? await getPendingEdits() : await getUserPendingEdits(editedBy);
 
 	// Resolve editor names
 	const userIds = edits.map((e) => e.editedBy).filter((id): id is string => id != null);
@@ -43,8 +41,12 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const items = edits.map((edit) => ({
 		id: edit.id,
 		character: edit.character,
+		status: 'pending' as const,
 		editComment: edit.editComment,
 		editorName: edit.editedBy ? (nameMap.get(edit.editedBy) ?? 'Unknown') : 'Anonymous',
+		reviewerName: null,
+		reviewComment: null,
+		reviewedAt: null,
 		createdAt: edit.createdAt.toISOString(),
 		changedFields: edit.changedFields,
 		// Include editable fields for diff
@@ -67,7 +69,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 		historicalPronunciations: edit.historicalPronunciations
 	}));
 
-	return { items, charBaseDataMap };
+	return { items, charBaseDataMap, canReview };
 };
 
 export const actions: Actions = {

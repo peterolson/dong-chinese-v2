@@ -1,12 +1,17 @@
 import { db } from '$lib/server/db';
 import { charBase, charManual } from '$lib/server/db/dictionary.schema';
 import { charView } from '$lib/server/db/dictionary.views';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, ne, or, isNull } from 'drizzle-orm';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 import { computeChangedFields } from '$lib/data/deep-equal';
 
 export type CharManualInsert = typeof charManual.$inferInsert;
 export type CharManualRow = typeof charManual.$inferSelect;
+
+/** Strip internal import tags (e.g. "[mongo:cb6rRRWzdwKX4NdAb]") from edit comments for display. */
+function stripImportTag(comment: string): string {
+	return comment.replace(/^\[mongo:[A-Za-z0-9]{17,24}\]\s*/, '');
+}
 
 export class CharEditError extends Error {
 	code: string;
@@ -106,6 +111,149 @@ export async function submitCharEdit(params: {
 		.returning({ id: charManual.id });
 
 	return { id: row.id, status };
+}
+
+/**
+ * Find the user's existing pending edit for a character.
+ * Returns the row or null if no pending edit exists.
+ */
+export async function getUserPendingEdit(
+	character: string,
+	editedBy: { userId?: string; anonymousSessionId?: string }
+): Promise<CharManualRow | null> {
+	const authorCondition = editedBy.userId
+		? eq(charManual.editedBy, editedBy.userId)
+		: editedBy.anonymousSessionId
+			? and(
+					eq(charManual.anonymousSessionId, editedBy.anonymousSessionId),
+					or(isNull(charManual.editedBy), eq(charManual.editedBy, ''))
+				)
+			: null;
+
+	if (!authorCondition) return null;
+
+	const [row] = await db
+		.select()
+		.from(charManual)
+		.where(
+			and(eq(charManual.character, character), eq(charManual.status, 'pending'), authorCondition)
+		)
+		.orderBy(desc(charManual.createdAt))
+		.limit(1);
+
+	if (!row) return null;
+	return { ...row, editComment: stripImportTag(row.editComment) };
+}
+
+/**
+ * Update an existing pending edit row in-place.
+ * Uses WHERE id = editId AND status = 'pending' as optimistic lock.
+ * Returns { id, status } or null if the row was already reviewed (race condition).
+ */
+export async function updateCharEdit(params: {
+	editId: string;
+	character: string;
+	data: Omit<
+		CharManualInsert,
+		| 'id'
+		| 'character'
+		| 'changedFields'
+		| 'status'
+		| 'reviewedBy'
+		| 'reviewedAt'
+		| 'reviewComment'
+		| 'editedBy'
+		| 'anonymousSessionId'
+		| 'editComment'
+		| 'createdAt'
+	>;
+	editComment: string;
+}): Promise<{ id: string; status: 'pending' } | null> {
+	// Load char_base for existence check + change detection
+	const [baseState] = await db
+		.select()
+		.from(charBase)
+		.where(eq(charBase.character, params.character));
+	if (!baseState) {
+		throw new Error(`Character '${params.character}' does not exist in char_base`);
+	}
+
+	// Load current state from the char view
+	const [currentState] = await db
+		.select()
+		.from(charView)
+		.where(eq(charView.character, params.character));
+
+	// Build effective post-approval values (same logic as submitCharEdit)
+	const submittedRecord = params.data as unknown as Record<string, unknown>;
+	const baseRecord = baseState as unknown as Record<string, unknown>;
+	const effectiveSubmitted: Record<string, unknown> = {};
+	for (const field of EDITABLE_FIELDS) {
+		if (field in submittedRecord) {
+			effectiveSubmitted[field] = submittedRecord[field] ?? baseRecord[field];
+		}
+	}
+
+	const referenceState = (currentState ?? baseState) as unknown as Record<string, unknown>;
+	const changedFields = computeChangedFields(referenceState, effectiveSubmitted, EDITABLE_FIELDS);
+
+	if (changedFields.length === 0) {
+		throw new CharEditError('NO_FIELDS_CHANGED', 'No fields were changed');
+	}
+
+	// Update with optimistic lock on status='pending'
+	const rows = await db
+		.update(charManual)
+		.set({
+			...params.data,
+			changedFields,
+			editComment: params.editComment,
+			createdAt: new Date()
+		})
+		.where(and(eq(charManual.id, params.editId), eq(charManual.status, 'pending')))
+		.returning({ id: charManual.id });
+
+	if (rows.length === 0) return null;
+	return { id: rows[0].id, status: 'pending' };
+}
+
+/**
+ * Get all pending edits for a specific user across all characters.
+ */
+export async function getUserPendingEdits(editedBy: {
+	userId?: string;
+	anonymousSessionId?: string;
+}): Promise<CharManualRow[]> {
+	const authorCondition = editedBy.userId
+		? eq(charManual.editedBy, editedBy.userId)
+		: editedBy.anonymousSessionId
+			? and(
+					eq(charManual.anonymousSessionId, editedBy.anonymousSessionId),
+					or(isNull(charManual.editedBy), eq(charManual.editedBy, ''))
+				)
+			: null;
+
+	if (!authorCondition) return [];
+
+	const rows = await db
+		.select()
+		.from(charManual)
+		.where(and(eq(charManual.status, 'pending'), authorCondition))
+		.orderBy(desc(charManual.createdAt));
+
+	return rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) }));
+}
+
+/**
+ * Count all pending edits globally. Used by sidebar badge for reviewers.
+ */
+export async function countAllPendingEdits(): Promise<number> {
+	const [result] = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(charManual)
+		.where(eq(charManual.status, 'pending'));
+
+	return result.count;
 }
 
 /**
@@ -241,23 +389,42 @@ export async function getPendingEdits(character?: string): Promise<CharManualRow
 		conditions.push(eq(charManual.character, character));
 	}
 
-	return db
+	const rows = await db
 		.select()
 		.from(charManual)
 		.where(and(...conditions))
 		.orderBy(desc(charManual.createdAt));
+
+	return rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) }));
 }
 
 /**
  * Get edit history for a character (all statuses), most recent first.
+ * Returns paginated results with total count.
  */
-export async function getCharEditHistory(character: string, limit = 50): Promise<CharManualRow[]> {
-	return db
-		.select()
-		.from(charManual)
-		.where(eq(charManual.character, character))
-		.orderBy(desc(charManual.createdAt))
-		.limit(limit);
+export async function getCharEditHistory(
+	character: string,
+	{ limit = 50, offset = 0 }: { limit?: number; offset?: number } = {}
+): Promise<{ edits: CharManualRow[]; total: number }> {
+	const [rows, countResult] = await Promise.all([
+		db
+			.select()
+			.from(charManual)
+			.where(eq(charManual.character, character))
+			.orderBy(desc(charManual.createdAt))
+			.limit(limit)
+			.offset(offset),
+		db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(charManual)
+			.where(eq(charManual.character, character))
+			.then((rows) => rows[0])
+	]);
+
+	return {
+		edits: rows.map((r) => ({ ...r, editComment: stripImportTag(r.editComment) })),
+		total: countResult.count
+	};
 }
 
 /**
@@ -265,52 +432,73 @@ export async function getCharEditHistory(character: string, limit = 50): Promise
  */
 export async function getCharManualById(editId: string): Promise<CharManualRow | null> {
 	const [row] = await db.select().from(charManual).where(eq(charManual.id, editId)).limit(1);
-	return row ?? null;
+	if (!row) return null;
+	return { ...row, editComment: stripImportTag(row.editComment) };
 }
 
 /**
- * Get recent edits across all characters, paginated. Includes all statuses.
- * Only selects columns needed for the recent-changes listing (no large JSONB data).
+ * Get recent edits across all characters, paginated.
+ * Excludes pending edits — those are only visible via the pending/review queue.
+ * Returns full rows (needed for diff display).
  */
 export async function getRecentEdits({
 	limit = 50,
 	offset = 0
 }: { limit?: number; offset?: number } = {}) {
+	const notPending = ne(charManual.status, 'pending');
 	const [edits, countResult] = await Promise.all([
 		db
-			.select({
-				id: charManual.id,
-				character: charManual.character,
-				status: charManual.status,
-				editComment: charManual.editComment,
-				editedBy: charManual.editedBy,
-				reviewedBy: charManual.reviewedBy,
-				reviewComment: charManual.reviewComment,
-				createdAt: charManual.createdAt,
-				reviewedAt: charManual.reviewedAt,
-				changedFields: charManual.changedFields
-			})
+			.select()
 			.from(charManual)
+			.where(notPending)
 			.orderBy(desc(charManual.createdAt))
 			.limit(limit)
 			.offset(offset),
 		db
 			.select({ count: sql<number>`count(*)::int` })
 			.from(charManual)
+			.where(notPending)
 			.then((rows) => rows[0])
 	]);
 
-	return { edits, total: countResult.count };
+	return {
+		edits: edits.map((e) => ({ ...e, editComment: stripImportTag(e.editComment) })),
+		total: countResult.count
+	};
 }
 
 /**
  * Count pending edits for a character.
+ * When editedBy is provided, counts only that user's pending edits.
+ * When omitted, counts all pending edits (for reviewers).
  */
-export async function countPendingEdits(character: string): Promise<number> {
+export async function countPendingEdits(
+	character: string,
+	editedBy?: { userId?: string; anonymousSessionId?: string }
+): Promise<number> {
+	const conditions = [eq(charManual.character, character), eq(charManual.status, 'pending')];
+
+	if (editedBy) {
+		const authorCondition = editedBy.userId
+			? eq(charManual.editedBy, editedBy.userId)
+			: editedBy.anonymousSessionId
+				? and(
+						eq(charManual.anonymousSessionId, editedBy.anonymousSessionId),
+						or(isNull(charManual.editedBy), eq(charManual.editedBy, ''))
+					)
+				: null;
+
+		// If editedBy was provided but has no identity, return 0 rather than
+		// falling through to an unscoped global count.
+		if (!authorCondition) return 0;
+
+		conditions.push(authorCondition);
+	}
+
 	const [result] = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(charManual)
-		.where(and(eq(charManual.character, character), eq(charManual.status, 'pending')));
+		.where(and(...conditions));
 
 	return result.count;
 }

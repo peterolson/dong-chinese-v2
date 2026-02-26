@@ -1,37 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions } from './$types';
 import {
 	submitCharEdit,
-	getPendingEdits,
-	approveCharEdit,
-	rejectCharEdit,
+	getUserPendingEdit,
+	updateCharEdit,
 	CharEditError
 } from '$lib/server/services/char-edit';
 import { hasPermission } from '$lib/server/services/permissions';
-import { resolveUserNames } from '$lib/server/services/user';
-
-export const load: PageServerLoad = async ({ params, parent }) => {
-	const char = params.character;
-	const { canReview } = await parent();
-
-	// Load pending edits for this character
-	const pendingEdits = await getPendingEdits(char);
-	const userIds = [
-		...pendingEdits.map((e) => e.editedBy).filter((id): id is string => id != null),
-		...pendingEdits.map((e) => e.reviewedBy).filter((id): id is string => id != null)
-	];
-	const nameMap = await resolveUserNames(userIds);
-
-	const pendingItems = pendingEdits.map((edit) => ({
-		id: edit.id,
-		editComment: edit.editComment,
-		editorName: edit.editedBy ? (nameMap.get(edit.editedBy) ?? 'Unknown') : 'Anonymous',
-		createdAt: edit.createdAt.toISOString(),
-		changedFields: edit.changedFields
-	}));
-
-	return { canReview, pendingEdits: pendingItems };
-};
 
 function safeJsonParse(value: string | null): unknown {
 	if (!value || value === 'null' || value === 'undefined') return null;
@@ -80,8 +55,6 @@ export const actions: Actions = {
 		const canReview = userId ? await hasPermission(userId, 'wikiEdit') : false;
 
 		// Build the edit data from form fields.
-		// Text fields: '' = force-clear (stored as '' in char_manual, COALESCE preserves it),
-		// null = field not present (reset to base via COALESCE fallthrough).
 		const data = {
 			gloss: formData.get('gloss')?.toString()?.trim() ?? null,
 			hint: formData.get('hint')?.toString()?.trim() ?? null,
@@ -109,15 +82,43 @@ export const actions: Actions = {
 			)
 		};
 
+		const editedBy = { userId, anonymousSessionId };
+
+		// Check for existing pending edit — update in-place if found
+		const existingPending = await getUserPendingEdit(char, editedBy);
+
 		let editResult;
 		try {
-			editResult = await submitCharEdit({
-				character: char,
-				data,
-				editedBy: { userId, anonymousSessionId },
-				editComment,
-				autoApprove: canReview
-			});
+			if (existingPending) {
+				// Try to update the existing pending edit
+				const updated = await updateCharEdit({
+					editId: existingPending.id,
+					character: char,
+					data,
+					editComment
+				});
+				if (updated) {
+					editResult = updated;
+				} else {
+					// Race condition: edit was approved/rejected between load and submit
+					// Fall back to creating a new edit
+					editResult = await submitCharEdit({
+						character: char,
+						data,
+						editedBy,
+						editComment,
+						autoApprove: canReview
+					});
+				}
+			} else {
+				editResult = await submitCharEdit({
+					character: char,
+					data,
+					editedBy,
+					editComment,
+					autoApprove: canReview
+				});
+			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to submit edit';
 			const status = err instanceof CharEditError && err.code === 'NO_FIELDS_CHANGED' ? 400 : 500;
@@ -125,40 +126,5 @@ export const actions: Actions = {
 		}
 
 		redirect(303, `/wiki/${encodeURIComponent(char)}?edited=${editResult.status}`);
-	},
-
-	approveEdit: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { error: 'Login required' });
-
-		const canReview = await hasPermission(locals.user.id, 'wikiEdit');
-		if (!canReview) return fail(403, { error: 'wikiEdit permission required' });
-
-		const formData = await request.formData();
-		const editId = formData.get('editId')?.toString();
-		if (!editId) return fail(400, { error: 'Missing editId' });
-
-		const approved = await approveCharEdit(editId, locals.user.id);
-		if (!approved) return fail(404, { error: 'Edit not found or already reviewed' });
-
-		return { approved: true };
-	},
-
-	rejectEdit: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { error: 'Login required' });
-
-		const canReview = await hasPermission(locals.user.id, 'wikiEdit');
-		if (!canReview) return fail(403, { error: 'wikiEdit permission required' });
-
-		const formData = await request.formData();
-		const editId = formData.get('editId')?.toString();
-		const rejectComment = formData.get('rejectComment')?.toString()?.trim();
-
-		if (!editId) return fail(400, { error: 'Missing editId' });
-		if (!rejectComment) return fail(400, { error: 'Rejection comment is required' });
-
-		const rejected = await rejectCharEdit(editId, locals.user.id, rejectComment);
-		if (!rejected) return fail(404, { error: 'Edit not found or already reviewed' });
-
-		return { rejected: true };
 	}
 };

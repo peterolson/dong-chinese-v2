@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // ── Mocks ──────────────────────────────────────────────────────
 
 const mockGetPendingEdits = vi.fn();
+const mockGetUserPendingEdits = vi.fn();
 const mockApproveCharEdit = vi.fn();
 const mockRejectCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
@@ -10,6 +11,7 @@ const mockResolveUserNames = vi.fn();
 
 vi.mock('$lib/server/services/char-edit', () => ({
 	getPendingEdits: (...args: unknown[]) => mockGetPendingEdits(...args),
+	getUserPendingEdits: (...args: unknown[]) => mockGetUserPendingEdits(...args),
 	approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
 	rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
 }));
@@ -46,26 +48,35 @@ vi.mock('drizzle-orm', () => ({
 	inArray: vi.fn()
 }));
 
+const EDITABLE_FIELDS = [
+	'gloss',
+	'hint',
+	'originalMeaning',
+	'isVerified',
+	'pinyin',
+	'simplifiedVariants',
+	'traditionalVariants',
+	'components',
+	'strokeCountSimp',
+	'strokeCountTrad',
+	'strokeDataSimp',
+	'strokeDataTrad',
+	'fragmentsSimp',
+	'fragmentsTrad',
+	'historicalImages',
+	'historicalPronunciations',
+	'customSources'
+] as const;
+
 vi.mock('$lib/data/editable-fields', () => ({
-	EDITABLE_FIELDS: [
-		'gloss',
-		'hint',
-		'originalMeaning',
-		'isVerified',
-		'pinyin',
-		'simplifiedVariants',
-		'traditionalVariants',
-		'components',
-		'strokeCountSimp',
-		'strokeCountTrad',
-		'strokeDataSimp',
-		'strokeDataTrad',
-		'fragmentsSimp',
-		'fragmentsTrad',
-		'historicalImages',
-		'historicalPronunciations',
-		'customSources'
-	]
+	EDITABLE_FIELDS,
+	pickEditableFields: (row: Record<string, unknown>) => {
+		const result: Record<string, unknown> = {};
+		for (const field of EDITABLE_FIELDS) {
+			result[field] = row[field] ?? null;
+		}
+		return result;
+	}
 }));
 
 const { load, actions } = await import('./+page.server');
@@ -107,9 +118,13 @@ function makeEdit(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function makeLoadEvent(canReview: boolean) {
+function makeLoadEvent(canReview: boolean, userId?: string, anonymousSessionId?: string) {
 	return {
-		parent: () => Promise.resolve({ canReview })
+		parent: () => Promise.resolve({ canReview }),
+		locals: {
+			user: userId ? { id: userId } : null,
+			anonymousSessionId: anonymousSessionId ?? null
+		}
 	} as unknown as Parameters<typeof load>[0];
 }
 
@@ -134,6 +149,7 @@ function makeActionEvent(
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetPendingEdits.mockResolvedValue([]);
+	mockGetUserPendingEdits.mockResolvedValue([]);
 	mockResolveUserNames.mockResolvedValue(new Map());
 	mockHasPermission.mockResolvedValue(false);
 	// Default: no charView rows found (empty batch load)
@@ -141,33 +157,35 @@ beforeEach(() => {
 });
 
 describe('load', () => {
-	it('redirects to /wiki when canReview is false', async () => {
-		const event = makeLoadEvent(false);
-
-		await expect(load(event)).rejects.toMatchObject({
-			status: 303,
-			location: '/wiki'
-		});
-	});
-
-	it('returns items when canReview is true', async () => {
+	it('calls getPendingEdits for reviewers', async () => {
 		const edit = makeEdit();
 		mockGetPendingEdits.mockResolvedValue([edit]);
 		mockResolveUserNames.mockResolvedValue(new Map([['user-1', 'Alice']]));
 
-		const event = makeLoadEvent(true);
+		const event = makeLoadEvent(true, 'reviewer-1');
 		const result = await loadResult(event);
 
 		expect(result.items).toHaveLength(1);
-		expect(result.items[0]).toMatchObject({
-			id: 'edit-1',
-			character: '水',
-			gloss: 'water',
-			editorName: 'Alice',
-			createdAt: '2025-01-15T10:00:00.000Z',
-			changedFields: ['gloss']
+		expect(result.canReview).toBe(true);
+		expect(mockGetPendingEdits).toHaveBeenCalled();
+		expect(mockGetUserPendingEdits).not.toHaveBeenCalled();
+	});
+
+	it('calls getUserPendingEdits for non-reviewers', async () => {
+		const edit = makeEdit({ editedBy: null });
+		mockGetUserPendingEdits.mockResolvedValue([edit]);
+		mockResolveUserNames.mockResolvedValue(new Map());
+
+		const event = makeLoadEvent(false, undefined, 'anon-1');
+		const result = await loadResult(event);
+
+		expect(result.items).toHaveLength(1);
+		expect(result.canReview).toBe(false);
+		expect(mockGetPendingEdits).not.toHaveBeenCalled();
+		expect(mockGetUserPendingEdits).toHaveBeenCalledWith({
+			userId: undefined,
+			anonymousSessionId: 'anon-1'
 		});
-		expect(result.charBaseDataMap).toBeDefined();
 	});
 
 	it('resolves editor names from user IDs', async () => {
@@ -250,6 +268,16 @@ describe('load', () => {
 		expect(Object.keys(result.charBaseDataMap)).toHaveLength(2);
 		expect(result.charBaseDataMap['水']).toMatchObject({ gloss: 'water' });
 		expect(result.charBaseDataMap['火']).toMatchObject({ gloss: 'fire' });
+	});
+
+	it('returns empty items when non-reviewer has no pending edits', async () => {
+		mockGetUserPendingEdits.mockResolvedValue([]);
+
+		const event = makeLoadEvent(false, undefined, 'anon-1');
+		const result = await loadResult(event);
+
+		expect(result.items).toEqual([]);
+		expect(result.canReview).toBe(false);
 	});
 });
 

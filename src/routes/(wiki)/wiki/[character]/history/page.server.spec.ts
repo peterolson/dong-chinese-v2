@@ -5,13 +5,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const mockGetCharEditHistory = vi.fn();
 const mockGetCharManualById = vi.fn();
 const mockSubmitCharEdit = vi.fn();
+const mockApproveCharEdit = vi.fn();
+const mockRejectCharEdit = vi.fn();
 const mockHasPermission = vi.fn();
 const mockResolveUserNames = vi.fn();
 
 vi.mock('$lib/server/services/char-edit', () => ({
 	getCharEditHistory: (...args: unknown[]) => mockGetCharEditHistory(...args),
 	getCharManualById: (...args: unknown[]) => mockGetCharManualById(...args),
-	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args)
+	submitCharEdit: (...args: unknown[]) => mockSubmitCharEdit(...args),
+	approveCharEdit: (...args: unknown[]) => mockApproveCharEdit(...args),
+	rejectCharEdit: (...args: unknown[]) => mockRejectCharEdit(...args)
 }));
 
 vi.mock('$lib/server/services/permissions', () => ({
@@ -46,26 +50,35 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn()
 }));
 
+const EDITABLE_FIELDS = [
+	'gloss',
+	'hint',
+	'originalMeaning',
+	'isVerified',
+	'pinyin',
+	'simplifiedVariants',
+	'traditionalVariants',
+	'components',
+	'strokeCountSimp',
+	'strokeCountTrad',
+	'strokeDataSimp',
+	'strokeDataTrad',
+	'fragmentsSimp',
+	'fragmentsTrad',
+	'historicalImages',
+	'historicalPronunciations',
+	'customSources'
+] as const;
+
 vi.mock('$lib/data/editable-fields', () => ({
-	EDITABLE_FIELDS: [
-		'gloss',
-		'hint',
-		'originalMeaning',
-		'isVerified',
-		'pinyin',
-		'simplifiedVariants',
-		'traditionalVariants',
-		'components',
-		'strokeCountSimp',
-		'strokeCountTrad',
-		'strokeDataSimp',
-		'strokeDataTrad',
-		'fragmentsSimp',
-		'fragmentsTrad',
-		'historicalImages',
-		'historicalPronunciations',
-		'customSources'
-	]
+	EDITABLE_FIELDS,
+	pickEditableFields: (row: Record<string, unknown>) => {
+		const result: Record<string, unknown> = {};
+		for (const field of EDITABLE_FIELDS) {
+			result[field] = row[field] ?? null;
+		}
+		return result;
+	}
 }));
 
 const { load, actions } = await import('./+page.server');
@@ -149,9 +162,12 @@ function makeBaseRow(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function makeLoadEvent(character: string, canReview = false) {
+function makeLoadEvent(character: string, canReview = false, page = '1') {
+	const url = new URL(`http://localhost:5173/wiki/${character}/history`);
+	if (page !== '1') url.searchParams.set('page', page);
 	return {
 		params: { character },
+		url,
 		parent: () => Promise.resolve({ canReview })
 	} as unknown as Parameters<typeof load>[0];
 }
@@ -178,7 +194,7 @@ function makeActionEvent(
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockGetCharEditHistory.mockResolvedValue([]);
+	mockGetCharEditHistory.mockResolvedValue({ edits: [], total: 0 });
 	mockResolveUserNames.mockResolvedValue(new Map());
 	mockHasPermission.mockResolvedValue(false);
 	mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
@@ -187,7 +203,7 @@ beforeEach(() => {
 describe('load', () => {
 	it('returns edits with resolved names', async () => {
 		const edit = makeEdit();
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(
 			new Map([
 				['user-1', 'Alice'],
@@ -210,35 +226,62 @@ describe('load', () => {
 			gloss: 'water',
 			changedFields: ['gloss']
 		});
-		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水');
+		expect(mockGetCharEditHistory).toHaveBeenCalledWith('水', { limit: 51, offset: 0 });
 	});
 
-	it('includes charBase data when base row exists', async () => {
+	it('uses char_base as baseline for a single edit', async () => {
+		const edit = makeEdit();
 		const baseRow = makeBaseRow();
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBase).toMatchObject({
+		expect(result.baselineMap['edit-1']).toMatchObject({
 			gloss: 'base water',
 			isVerified: false,
 			strokeCountSimp: 4
 		});
 	});
 
-	it('returns null charBase when no base row', async () => {
+	it('uses preceding edit as baseline for sequential edits', async () => {
+		const edit2 = makeEdit({
+			id: 'edit-2',
+			gloss: 'water (updated)',
+			createdAt: new Date('2025-01-16T10:00:00Z')
+		});
+		const edit1 = makeEdit({
+			id: 'edit-1',
+			gloss: 'water',
+			createdAt: new Date('2025-01-15T10:00:00Z')
+		});
+		// Edits returned newest-first: [edit2, edit1]
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit2, edit1], total: 2 });
+		const baseRow = makeBaseRow();
+		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([baseRow]));
+
+		const event = makeLoadEvent('水');
+		const result = await loadResult(event);
+
+		// edit-2's baseline should be edit-1's data
+		expect(result.baselineMap['edit-2']).toMatchObject({ gloss: 'water' });
+		// edit-1's baseline should be char_base data
+		expect(result.baselineMap['edit-1']).toMatchObject({ gloss: 'base water' });
+	});
+
+	it('returns empty baselineMap when no char_base found', async () => {
 		mockDbThen.mockImplementation((cb: (rows: unknown[]) => unknown) => cb([]));
 
 		const event = makeLoadEvent('水');
 		const result = await loadResult(event);
 
-		expect(result.charBase).toBeNull();
+		expect(result.baselineMap).toEqual({});
 	});
 
 	it('labels anonymous editors as "Anonymous"', async () => {
 		const edit = makeEdit({ editedBy: null, reviewedBy: null, reviewedAt: null });
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
@@ -250,7 +293,7 @@ describe('load', () => {
 
 	it('labels unknown user IDs as "Unknown"', async () => {
 		const edit = makeEdit({ editedBy: 'deleted-user', reviewedBy: 'deleted-reviewer' });
-		mockGetCharEditHistory.mockResolvedValue([edit]);
+		mockGetCharEditHistory.mockResolvedValue({ edits: [edit], total: 1 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
@@ -272,7 +315,7 @@ describe('load', () => {
 			makeEdit({ id: 'e1', editedBy: 'u1', reviewedBy: 'u2' }),
 			makeEdit({ id: 'e2', editedBy: 'u3', reviewedBy: null, reviewedAt: null })
 		];
-		mockGetCharEditHistory.mockResolvedValue(edits);
+		mockGetCharEditHistory.mockResolvedValue({ edits, total: 2 });
 		mockResolveUserNames.mockResolvedValue(new Map());
 
 		const event = makeLoadEvent('水');
@@ -441,5 +484,127 @@ describe('actions.rollback', () => {
 		const result = await actions!.rollback(event);
 
 		expect(result).toMatchObject({ status: 500 });
+	});
+});
+
+describe('actions.approveEdit', () => {
+	it('fails 401 when no user', async () => {
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: null });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 401 });
+	});
+
+	it('fails 403 when user lacks wikiEdit permission', async () => {
+		mockHasPermission.mockResolvedValue(false);
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 403 });
+		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
+	});
+
+	it('fails 400 when missing editId', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({}, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('returns approved: true on success', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockApproveCharEdit.mockResolvedValue(true);
+
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toEqual({ approved: true });
+		expect(mockApproveCharEdit).toHaveBeenCalledWith('edit-1', 'user-1');
+	});
+
+	it('fails 404 when edit not found or already reviewed', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockApproveCharEdit.mockResolvedValue(false);
+
+		const event = makeActionEvent({ editId: 'nonexistent' }, { user: { id: 'user-1' } });
+		const result = await actions!.approveEdit(event);
+
+		expect(result).toMatchObject({ status: 404 });
+	});
+});
+
+describe('actions.rejectEdit', () => {
+	it('fails 401 when no user', async () => {
+		const event = makeActionEvent({ editId: 'edit-1', rejectComment: 'Bad edit' }, { user: null });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 401 });
+	});
+
+	it('fails 403 when user lacks wikiEdit permission', async () => {
+		mockHasPermission.mockResolvedValue(false);
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: 'Bad edit' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 403 });
+		expect(mockHasPermission).toHaveBeenCalledWith('user-1', 'wikiEdit');
+	});
+
+	it('fails 400 when missing editId', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({ rejectComment: 'Bad edit' }, { user: { id: 'user-1' } });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('fails 400 when missing rejectComment', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent({ editId: 'edit-1' }, { user: { id: 'user-1' } });
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('fails 400 when rejectComment is whitespace only', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: '   ' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('returns rejected: true on success', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockRejectCharEdit.mockResolvedValue(true);
+
+		const event = makeActionEvent(
+			{ editId: 'edit-1', rejectComment: 'Incorrect data' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toEqual({ rejected: true });
+		expect(mockRejectCharEdit).toHaveBeenCalledWith('edit-1', 'user-1', 'Incorrect data');
+	});
+
+	it('fails 404 when edit not found or already reviewed', async () => {
+		mockHasPermission.mockResolvedValue(true);
+		mockRejectCharEdit.mockResolvedValue(false);
+
+		const event = makeActionEvent(
+			{ editId: 'nonexistent', rejectComment: 'Bad data' },
+			{ user: { id: 'user-1' } }
+		);
+		const result = await actions!.rejectEdit(event);
+
+		expect(result).toMatchObject({ status: 404 });
 	});
 });

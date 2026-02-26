@@ -33,16 +33,33 @@
 
 	let {
 		character: initialCharacter,
-		canReview = false
+		canReview = false,
+		pendingEdit = null
 	}: {
 		character: CharacterData;
 		canReview?: boolean;
+		pendingEdit?: Record<string, unknown> | null;
 	} = $props();
 
 	// Snapshot initial values for form state (intentionally non-reactive — the form
-	// is a local working copy that does not react to prop changes)
+	// is a local working copy that does not react to prop changes).
+	// When a pending edit exists, overlay its changed fields onto the character data.
 	// svelte-ignore state_referenced_locally
-	const init = $state.snapshot(initialCharacter);
+	const init = $state.snapshot(
+		pendingEdit ? overlayPendingEdit(initialCharacter, pendingEdit) : initialCharacter
+	);
+
+	function overlayPendingEdit(base: CharacterData, edit: Record<string, unknown>): CharacterData {
+		const changedFields = edit.changedFields as string[] | null;
+		if (!changedFields) return base;
+		const result = { ...base } as Record<string, unknown>;
+		for (const field of changedFields) {
+			if (field in edit) {
+				result[field] = edit[field];
+			}
+		}
+		return result as unknown as CharacterData;
+	}
 
 	let gloss = $state(init.gloss ?? '');
 	let hint = $state(init.hint ?? '');
@@ -102,7 +119,8 @@
 		Array.isArray(init.customSources) ? init.customSources.map(parseSource) : []
 	);
 
-	let editComment = $state('');
+	// svelte-ignore state_referenced_locally
+	let editComment = $state((pendingEdit?.editComment as string) ?? '');
 	const hasSources = $derived(sources.some((s) => s.name.trim()));
 
 	function isSourceAdded(name: string): boolean {
@@ -349,7 +367,7 @@
 				/>
 			</label>
 			<Button variant="primary" size="sm" type="submit">
-				{canReview ? 'Submit & Approve' : 'Submit Edit'}
+				{pendingEdit ? 'Update Pending Edit' : canReview ? 'Submit & Approve' : 'Submit Edit'}
 			</Button>
 		</div>
 		<noscript>

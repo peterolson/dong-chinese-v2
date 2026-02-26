@@ -78,19 +78,20 @@ The largest and most complex component area. Renders the dictionary detail page 
 
 Components for the `/wiki` route group's editing and review UI.
 
-| Component                                | Notes                                                                                              |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `char-edit-form.svelte`                  | Structured edit form for character data (components, strokes, pronunciation, sources).             |
-| `component-editor.svelte`                | Sub-editor for character component tree (add/remove/reorder components with type and stroke data). |
-| `edit-status-badge.svelte`               | Colored badge showing pending/approved/rejected status.                                            |
-| `field-diff.svelte`                      | Side-by-side diff viewer for edit history, handles all field types including JSON arrays.          |
-| `historical-image-editor.svelte`         | Editor for oracle bone, bronze, seal script images.                                                |
-| `historical-pronunciation-editor.svelte` | Editor for Baxter-Sagart, Zhengzhang, Tang reconstructions.                                        |
-| `key-value-editor.svelte`                | Generic key-value pair editor for structured source fields.                                        |
-| `list-editor.svelte`                     | Ordered list editor with add/remove/reorder.                                                       |
-| `tag-input.svelte`                       | Tag input with comma/enter to add, backspace to remove.                                            |
-| `wiki-header.svelte`                     | Wiki-specific header with logo and auth status.                                                    |
-| `wiki-sidebar.svelte`                    | Wiki navigation sidebar with search, character nav, and review links.                              |
+| Component                                | Notes                                                                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `char-edit-form.svelte`                  | Structured edit form for character data (components, strokes, pronunciation, sources).                          |
+| `component-editor.svelte`                | Sub-editor for character component tree (add/remove/reorder components with type and stroke data).              |
+| `edit-list.svelte`                       | Shared compact edit list used by recent-changes and history pages. Supports diffs, pagination, actions snippet. |
+| `edit-status-badge.svelte`               | Colored badge showing pending/approved/rejected status.                                                         |
+| `field-diff.svelte`                      | Side-by-side diff viewer for edit history, handles all field types including JSON arrays.                       |
+| `historical-image-editor.svelte`         | Editor for oracle bone, bronze, seal script images.                                                             |
+| `historical-pronunciation-editor.svelte` | Editor for Baxter-Sagart, Zhengzhang, Tang reconstructions.                                                     |
+| `key-value-editor.svelte`                | Generic key-value pair editor for structured source fields.                                                     |
+| `list-editor.svelte`                     | Ordered list editor with add/remove/reorder.                                                                    |
+| `tag-input.svelte`                       | Tag input with comma/enter to add, backspace to remove.                                                         |
+| `wiki-header.svelte`                     | Wiki-specific header with logo and auth status.                                                                 |
+| `wiki-sidebar.svelte`                    | Wiki navigation sidebar with search, character nav, and review links.                                           |
 
 ### Supporting Modules
 

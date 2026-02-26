@@ -26,3 +26,5 @@ jobs:
       - name: Create char view
         run: npm run dictionary:create-char-view
       - run: npm run dictionary:import-dong-dictionary
+      - name: Import legacy history into char_manual
+        run: npm run import:legacy-history

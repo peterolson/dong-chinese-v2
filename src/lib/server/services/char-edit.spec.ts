@@ -11,7 +11,11 @@ import {
 	getCharEditHistory,
 	getCharManualById,
 	getRecentEdits,
-	countPendingEdits
+	countPendingEdits,
+	getUserPendingEdit,
+	updateCharEdit,
+	getUserPendingEdits,
+	countAllPendingEdits
 } from './char-edit';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -268,15 +272,17 @@ describe('getCharEditHistory', () => {
 			autoApprove: false
 		});
 
-		const history = await getCharEditHistory('土');
-		expect(history).toHaveLength(2);
-		expect(history[0].editComment).toBe('second');
-		expect(history[1].editComment).toBe('first');
+		const { edits, total } = await getCharEditHistory('土');
+		expect(edits).toHaveLength(2);
+		expect(total).toBe(2);
+		expect(edits[0].editComment).toBe('second');
+		expect(edits[1].editComment).toBe('first');
 	});
 
-	it('returns empty array for character with no edits', async () => {
-		const history = await getCharEditHistory('龍');
-		expect(history).toEqual([]);
+	it('returns empty result for character with no edits', async () => {
+		const { edits, total } = await getCharEditHistory('龍');
+		expect(edits).toEqual([]);
+		expect(total).toBe(0);
 	});
 });
 
@@ -311,19 +317,20 @@ describe('getRecentEdits', () => {
 	});
 
 	it('returns edits ordered by newest first', async () => {
+		const userId = await createTestUser('recent-order');
 		await submitCharEdit({
 			character: '水',
 			data: { gloss: 'water' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000021' },
+			editedBy: { userId },
 			editComment: 'first',
-			autoApprove: false
+			autoApprove: true
 		});
 		await submitCharEdit({
 			character: '火',
 			data: { gloss: 'fire' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000022' },
+			editedBy: { userId },
 			editComment: 'second',
-			autoApprove: false
+			autoApprove: true
 		});
 
 		const result = await getRecentEdits();
@@ -334,26 +341,27 @@ describe('getRecentEdits', () => {
 	});
 
 	it('respects limit and offset', async () => {
+		const userId = await createTestUser('recent-limit');
 		await submitCharEdit({
 			character: '木',
 			data: { gloss: 'tree' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000023' },
+			editedBy: { userId },
 			editComment: 'a',
-			autoApprove: false
+			autoApprove: true
 		});
 		await submitCharEdit({
 			character: '金',
 			data: { gloss: 'gold' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000024' },
+			editedBy: { userId },
 			editComment: 'b',
-			autoApprove: false
+			autoApprove: true
 		});
 		await submitCharEdit({
 			character: '土',
 			data: { gloss: 'earth' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000025' },
+			editedBy: { userId },
 			editComment: 'c',
-			autoApprove: false
+			autoApprove: true
 		});
 
 		const result = await getRecentEdits({ limit: 2, offset: 1 });
@@ -362,7 +370,7 @@ describe('getRecentEdits', () => {
 		expect(result.edits[0].character).toBe('金');
 	});
 
-	it('includes all statuses', async () => {
+	it('excludes pending edits', async () => {
 		const userId = await createTestUser('recent-test');
 
 		await submitCharEdit({
@@ -381,10 +389,9 @@ describe('getRecentEdits', () => {
 		});
 
 		const result = await getRecentEdits();
-		expect(result.edits).toHaveLength(2);
-		const statuses = result.edits.map((e) => e.status);
-		expect(statuses).toContain('approved');
-		expect(statuses).toContain('pending');
+		// Only the approved edit should be returned; pending is excluded
+		expect(result.edits).toHaveLength(1);
+		expect(result.edits[0].status).toBe('approved');
 	});
 });
 
@@ -538,12 +545,13 @@ describe('approveCharEdit — merge', () => {
 
 describe('getRecentEdits — changedFields', () => {
 	it('includes changedFields in results', async () => {
+		const userId = await createTestUser('changed-fields-test');
 		await submitCharEdit({
 			character: '木',
 			data: { gloss: 'tree' },
-			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000044' },
+			editedBy: { userId },
 			editComment: 'test',
-			autoApprove: false
+			autoApprove: true
 		});
 
 		const result = await getRecentEdits();
@@ -592,5 +600,326 @@ describe('countPendingEdits', () => {
 
 		const count = await countPendingEdits('中');
 		expect(count).toBe(0);
+	});
+
+	it('scopes by editedBy when provided', async () => {
+		const anonId1 = '00000000-0000-0000-0000-000000000032';
+		const anonId2 = '00000000-0000-0000-0000-000000000033';
+
+		await submitCharEdit({
+			character: '人',
+			data: { gloss: 'person' },
+			editedBy: { anonymousSessionId: anonId1 },
+			editComment: 'by anon 1',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '人',
+			data: { gloss: 'human' },
+			editedBy: { anonymousSessionId: anonId2 },
+			editComment: 'by anon 2',
+			autoApprove: false
+		});
+
+		const countAll = await countPendingEdits('人');
+		expect(countAll).toBe(2);
+
+		const countScoped = await countPendingEdits('人', { anonymousSessionId: anonId1 });
+		expect(countScoped).toBe(1);
+	});
+});
+
+describe('getUserPendingEdit', () => {
+	it('finds a pending edit by anonymous session', async () => {
+		const anonId = '00000000-0000-0000-0000-000000000050';
+		await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'anon edit',
+			autoApprove: false
+		});
+
+		const result = await getUserPendingEdit('水', { anonymousSessionId: anonId });
+		expect(result).not.toBeNull();
+		expect(result!.character).toBe('水');
+		expect(result!.gloss).toBe('water');
+	});
+
+	it('finds a pending edit by userId', async () => {
+		const userId = await createTestUser('pending-user-1');
+		await submitCharEdit({
+			character: '火',
+			data: { gloss: 'fire' },
+			editedBy: { userId },
+			editComment: 'user edit',
+			autoApprove: false
+		});
+
+		const result = await getUserPendingEdit('火', { userId });
+		expect(result).not.toBeNull();
+		expect(result!.character).toBe('火');
+	});
+
+	it('returns null when no pending edit exists', async () => {
+		const result = await getUserPendingEdit('水', {
+			anonymousSessionId: '00000000-0000-0000-0000-000000000051'
+		});
+		expect(result).toBeNull();
+	});
+
+	it('does not return approved edits', async () => {
+		const userId = await createTestUser('pending-user-2');
+		await submitCharEdit({
+			character: '木',
+			data: { gloss: 'tree' },
+			editedBy: { userId },
+			editComment: 'auto-approved',
+			autoApprove: true
+		});
+
+		const result = await getUserPendingEdit('木', { userId });
+		expect(result).toBeNull();
+	});
+
+	it('does not return other users pending edits', async () => {
+		const anonId1 = '00000000-0000-0000-0000-000000000052';
+		const anonId2 = '00000000-0000-0000-0000-000000000053';
+		await submitCharEdit({
+			character: '金',
+			data: { gloss: 'gold' },
+			editedBy: { anonymousSessionId: anonId1 },
+			editComment: 'by anon 1',
+			autoApprove: false
+		});
+
+		const result = await getUserPendingEdit('金', { anonymousSessionId: anonId2 });
+		expect(result).toBeNull();
+	});
+
+	it('returns null when neither userId nor anonymousSessionId provided', async () => {
+		const result = await getUserPendingEdit('水', {});
+		expect(result).toBeNull();
+	});
+});
+
+describe('updateCharEdit', () => {
+	it('updates a pending edit in-place', async () => {
+		const anonId = '00000000-0000-0000-0000-000000000054';
+		const original = await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'first version',
+			autoApprove: false
+		});
+
+		const updated = await updateCharEdit({
+			editId: original.id,
+			character: '水',
+			data: { gloss: 'liquid' },
+			editComment: 'revised version'
+		});
+
+		expect(updated).not.toBeNull();
+		expect(updated!.id).toBe(original.id);
+		expect(updated!.status).toBe('pending');
+
+		const row = await getCharManualById(original.id);
+		expect(row!.gloss).toBe('liquid');
+		expect(row!.editComment).toBe('revised version');
+	});
+
+	it('returns null if edit was already approved (race condition)', async () => {
+		const userId = await createTestUser('update-race');
+		const original = await submitCharEdit({
+			character: '火',
+			data: { gloss: 'fire' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000055' },
+			editComment: 'pending edit',
+			autoApprove: false
+		});
+
+		// Approve the edit (simulating race condition)
+		await approveCharEdit(original.id, userId);
+
+		const updated = await updateCharEdit({
+			editId: original.id,
+			character: '火',
+			data: { gloss: 'flame' },
+			editComment: 'too late'
+		});
+
+		expect(updated).toBeNull();
+	});
+
+	it('throws when no fields changed', async () => {
+		const anonId = '00000000-0000-0000-0000-000000000056';
+		const original = await submitCharEdit({
+			character: '木',
+			data: { gloss: 'tree' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'original',
+			autoApprove: false
+		});
+
+		// Submitting the same base value (base is 'test', view now shows 'tree' pending)
+		// Actually, submitting 'test' should compute changed from current view state
+		await expect(
+			updateCharEdit({
+				editId: original.id,
+				character: '木',
+				data: { gloss: 'test' }, // same as base
+				editComment: 'no change'
+			})
+		).rejects.toThrow('No fields were changed');
+	});
+
+	it('resets createdAt to now', async () => {
+		const anonId = '00000000-0000-0000-0000-000000000057';
+		const original = await submitCharEdit({
+			character: '土',
+			data: { gloss: 'earth' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'first',
+			autoApprove: false
+		});
+
+		const originalRow = await getCharManualById(original.id);
+		const originalCreatedAt = originalRow!.createdAt;
+
+		// Small delay to ensure different timestamp
+		await new Promise((r) => setTimeout(r, 50));
+
+		await updateCharEdit({
+			editId: original.id,
+			character: '土',
+			data: { gloss: 'soil' },
+			editComment: 'second'
+		});
+
+		const updatedRow = await getCharManualById(original.id);
+		expect(updatedRow!.createdAt.getTime()).toBeGreaterThan(originalCreatedAt.getTime());
+	});
+});
+
+describe('getUserPendingEdits', () => {
+	it('returns all pending edits for a user', async () => {
+		const anonId = '00000000-0000-0000-0000-000000000058';
+		await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'edit 1',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '火',
+			data: { gloss: 'fire' },
+			editedBy: { anonymousSessionId: anonId },
+			editComment: 'edit 2',
+			autoApprove: false
+		});
+
+		const edits = await getUserPendingEdits({ anonymousSessionId: anonId });
+		expect(edits).toHaveLength(2);
+		const chars = edits.map((e) => e.character).sort();
+		expect(chars).toEqual(['水', '火'].sort());
+	});
+
+	it('does not return other users edits', async () => {
+		const anonId1 = '00000000-0000-0000-0000-000000000059';
+		const anonId2 = '00000000-0000-0000-0000-000000000060';
+		await submitCharEdit({
+			character: '木',
+			data: { gloss: 'tree' },
+			editedBy: { anonymousSessionId: anonId1 },
+			editComment: 'anon 1',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '金',
+			data: { gloss: 'gold' },
+			editedBy: { anonymousSessionId: anonId2 },
+			editComment: 'anon 2',
+			autoApprove: false
+		});
+
+		const edits = await getUserPendingEdits({ anonymousSessionId: anonId1 });
+		expect(edits).toHaveLength(1);
+		expect(edits[0].character).toBe('木');
+	});
+
+	it('returns empty array when no identity provided', async () => {
+		const edits = await getUserPendingEdits({});
+		expect(edits).toEqual([]);
+	});
+});
+
+describe('countAllPendingEdits', () => {
+	it('returns total count of all pending edits', async () => {
+		await submitCharEdit({
+			character: '水',
+			data: { gloss: 'water' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000061' },
+			editComment: 'a',
+			autoApprove: false
+		});
+		await submitCharEdit({
+			character: '火',
+			data: { gloss: 'fire' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000062' },
+			editComment: 'b',
+			autoApprove: false
+		});
+
+		const count = await countAllPendingEdits();
+		expect(count).toBe(2);
+	});
+
+	it('returns 0 when no pending edits exist', async () => {
+		const count = await countAllPendingEdits();
+		expect(count).toBe(0);
+	});
+
+	it('does not count approved edits', async () => {
+		const userId = await createTestUser('count-all-test');
+		await submitCharEdit({
+			character: '中',
+			data: { gloss: 'middle' },
+			editedBy: { userId },
+			editComment: 'approved',
+			autoApprove: true
+		});
+
+		const count = await countAllPendingEdits();
+		expect(count).toBe(0);
+	});
+});
+
+describe('getRecentEdits — excludes pending', () => {
+	it('excludes pending edits from results', async () => {
+		const userId = await createTestUser('recent-exclude');
+
+		// Create one approved and one pending
+		await submitCharEdit({
+			character: '大',
+			data: { gloss: 'big' },
+			editedBy: { userId },
+			editComment: 'auto-approved',
+			autoApprove: true
+		});
+		await submitCharEdit({
+			character: '小',
+			data: { gloss: 'small' },
+			editedBy: { anonymousSessionId: '00000000-0000-0000-0000-000000000063' },
+			editComment: 'pending',
+			autoApprove: false
+		});
+
+		const result = await getRecentEdits();
+		expect(result.edits).toHaveLength(1);
+		expect(result.total).toBe(1);
+		expect(result.edits[0].status).toBe('approved');
 	});
 });

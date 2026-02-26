@@ -5,11 +5,15 @@
 
 import type { EditableField } from './editable-fields';
 
-/** Normalize "empty-ish" values so false, null, undefined, "", and [] all compare equal */
+/** Normalize "empty-ish" values so false, null, undefined, "", and [] all compare equal.
+ *  Strings are trimmed so trailing whitespace doesn't cause spurious diffs. */
 export function normalize(val: unknown): unknown {
 	if (val == null) return null;
 	if (val === false) return null;
-	if (val === '') return null;
+	if (typeof val === 'string') {
+		const trimmed = val.trim();
+		return trimmed === '' ? null : trimmed;
+	}
 	if (Array.isArray(val) && val.length === 0) return null;
 	return val;
 }
