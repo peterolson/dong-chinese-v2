@@ -7,7 +7,9 @@ import type {
 	ComponentData,
 	ComponentUse,
 	ComponentUseGroup,
-	HistoricalPronunciation
+	DeletedComponentGlyph,
+	HistoricalPronunciation,
+	StrokeVariantData
 } from '$lib/types/dictionary';
 
 /**
@@ -530,4 +532,87 @@ export async function getCharacterList(
 			};
 		}
 	}
+}
+
+/**
+ * For characters with deleted components, fetch traditional variant stroke data
+ * so the deleted component can be rendered within the traditional character glyph.
+ *
+ * Returns a map from component index → glyph override data, or null if no overrides apply.
+ */
+export async function getDeletedComponentGlyphs(
+	character: CharacterData
+): Promise<Record<number, DeletedComponentGlyph> | null> {
+	const { components, traditionalVariants } = character;
+	if (!components?.length || !traditionalVariants?.length) return null;
+
+	const deletedIndices = components
+		.map((c, i) => (c.type?.includes('deleted') ? i : -1))
+		.filter((i) => i !== -1);
+	if (deletedIndices.length === 0) return null;
+
+	const tradChars = traditionalVariants.filter((v) => v !== character.character);
+	if (tradChars.length === 0) return null;
+
+	const tradRows = await db
+		.select({
+			character: charView.character,
+			components: charView.components,
+			strokeDataSimp: charView.strokeDataSimp,
+			strokeDataTrad: charView.strokeDataTrad,
+			fragmentsSimp: charView.fragmentsSimp,
+			fragmentsTrad: charView.fragmentsTrad
+		})
+		.from(charView)
+		.where(inArray(charView.character, tradChars));
+
+	// Preserve traditionalVariants order so the first listed variant is preferred
+	const tradMap = new Map(tradRows.map((r) => [r.character, r]));
+
+	const result: Record<number, DeletedComponentGlyph> = {};
+
+	for (const i of deletedIndices) {
+		const comp = components[i];
+
+		for (const tradChar of tradChars) {
+			const tradRow = tradMap.get(tradChar);
+			if (!tradRow) continue;
+
+			const tradComponents = tradRow.components as ComponentData[] | null;
+			const tradStrokeData = (tradRow.strokeDataSimp ??
+				tradRow.strokeDataTrad) as StrokeVariantData | null;
+			const tradFragments = (tradRow.fragmentsSimp ?? tradRow.fragmentsTrad) as number[][] | null;
+
+			if (!tradComponents || !tradStrokeData?.strokes || !tradFragments) continue;
+
+			// Find the Nth occurrence of this component character in the traditional variant,
+			// where N = which occurrence it is in the simplified character's component list.
+			const occurrenceIndex = components
+				.slice(0, i)
+				.filter((c) => c.character === comp.character).length;
+
+			let tradIndex = -1;
+			let seen = 0;
+			for (let j = 0; j < tradComponents.length; j++) {
+				if (tradComponents[j].character === comp.character) {
+					if (seen === occurrenceIndex) {
+						tradIndex = j;
+						break;
+					}
+					seen++;
+				}
+			}
+
+			if (tradIndex === -1 || !tradFragments[tradIndex]?.length) continue;
+
+			result[i] = {
+				character: tradRow.character,
+				strokes: tradStrokeData.strokes,
+				highlightedStrokeIndices: tradFragments[tradIndex]
+			};
+			break;
+		}
+	}
+
+	return Object.keys(result).length > 0 ? result : null;
 }

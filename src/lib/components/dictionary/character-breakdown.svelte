@@ -6,6 +6,7 @@
 	import type {
 		ComponentData,
 		CharacterData,
+		DeletedComponentGlyph,
 		HistoricalPronunciation
 	} from '$lib/types/dictionary';
 	import type { PhoneticScript } from '$lib/orthography';
@@ -25,6 +26,7 @@
 		originalMeaning: string | null;
 		strokes: string[] | null;
 		fragments: number[][] | null;
+		deletedComponentGlyphs?: Record<number, DeletedComponentGlyph> | null;
 		historicalPronunciations: HistoricalPronunciation[] | null;
 		characterSet?: 'simplified' | 'traditional';
 		phoneticScript?: PhoneticScript | null;
@@ -37,6 +39,7 @@
 		originalMeaning,
 		strokes,
 		fragments,
+		deletedComponentGlyphs = null,
 		historicalPronunciations,
 		characterSet,
 		phoneticScript = null
@@ -101,8 +104,37 @@
 		<h2>Components</h2>
 		<div class="component-grid">
 			{#each components as comp, i (i)}
+				{@const deletedGlyph = deletedComponentGlyphs?.[i]}
 				<div class="component-card">
-					{#if strokes}
+					{#if deletedGlyph}
+						{@const highlightSet = new Set(deletedGlyph.highlightedStrokeIndices)}
+						<div class="component-glyph">
+							<svg
+								viewBox="0 0 1024 1024"
+								class="deleted-component-glyph"
+								aria-label={deletedGlyph.character}
+								role="img"
+							>
+								<g transform="translate(0, 900) scale(1, -1)">
+									{#each deletedGlyph.strokes as stroke, si (si)}
+										<path
+											d={stroke}
+											fill="var(--foreground)"
+											opacity={highlightSet.has(si) ? 1 : 0.15}
+										/>
+									{/each}
+								</g>
+								<text
+									x="512"
+									y="512"
+									text-anchor="middle"
+									dominant-baseline="central"
+									font-size="800"
+									fill="transparent">{deletedGlyph.character}</text
+								>
+							</svg>
+						</div>
+					{:else if strokes}
 						<div class="component-glyph">
 							<CharacterGlyph
 								character={comp.character}
@@ -247,6 +279,12 @@
 		width: 92px;
 		height: 92px;
 		flex-shrink: 0;
+	}
+
+	.deleted-component-glyph {
+		width: 100%;
+		height: 100%;
+		display: block;
 	}
 
 	.component-details {

@@ -4,12 +4,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const mockGetCharacterData = vi.fn();
 const mockGetComponentUses = vi.fn();
+const mockGetDeletedComponentGlyphs = vi.fn();
 const mockCountPendingEdits = vi.fn();
 const mockGetUserPendingEdit = vi.fn();
 
 vi.mock('$lib/server/services/dictionary', () => ({
 	getCharacterData: (...args: unknown[]) => mockGetCharacterData(...args),
-	getComponentUses: (...args: unknown[]) => mockGetComponentUses(...args)
+	getComponentUses: (...args: unknown[]) => mockGetComponentUses(...args),
+	getDeletedComponentGlyphs: (...args: unknown[]) => mockGetDeletedComponentGlyphs(...args)
 }));
 
 vi.mock('$lib/server/services/char-edit', () => ({
@@ -48,6 +50,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetCharacterData.mockResolvedValue(null);
 	mockGetComponentUses.mockResolvedValue([]);
+	mockGetDeletedComponentGlyphs.mockResolvedValue(null);
 	mockCountPendingEdits.mockResolvedValue(0);
 	mockGetUserPendingEdit.mockResolvedValue(null);
 });
@@ -139,6 +142,36 @@ describe('load', () => {
 		expect(result.userPendingEdit).not.toBeNull();
 		expect(result.userPendingEdit!.id).toBe('edit-1');
 		expect(result.userPendingEdit!.gloss).toBe('liquid');
+	});
+
+	it('returns deletedComponentGlyphs from dictionary service', async () => {
+		const charData = { character: '开', gloss: 'to open', pinyin: ['kāi'] };
+		const glyphs = {
+			0: {
+				character: '開',
+				strokes: ['M 1 2', 'M 3 4'],
+				highlightedStrokeIndices: [0, 1]
+			}
+		};
+		mockGetCharacterData.mockResolvedValue(charData);
+		mockGetDeletedComponentGlyphs.mockResolvedValue(glyphs);
+
+		const event = makeEvent('开', true);
+		const result = await loadResult(event);
+
+		expect(mockGetDeletedComponentGlyphs).toHaveBeenCalledWith(charData);
+		expect(result.deletedComponentGlyphs).toEqual(glyphs);
+	});
+
+	it('returns null deletedComponentGlyphs when none exist', async () => {
+		const charData = { character: '水', gloss: 'water', pinyin: ['shuǐ'] };
+		mockGetCharacterData.mockResolvedValue(charData);
+		mockGetDeletedComponentGlyphs.mockResolvedValue(null);
+
+		const event = makeEvent('水', true);
+		const result = await loadResult(event);
+
+		expect(result.deletedComponentGlyphs).toBeNull();
 	});
 
 	it('returns null userPendingEdit when none exists', async () => {

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { CharacterData, ComponentUseGroup } from '$lib/types/dictionary';
+	import type {
+		CharacterData,
+		ComponentUseGroup,
+		DeletedComponentGlyph
+	} from '$lib/types/dictionary';
 	import type { PhoneticScript } from '$lib/orthography';
 	import { formatPinyinList } from '$lib/orthography';
 	import { getCharLinkBase } from './char-link-context';
@@ -18,6 +22,7 @@
 	interface Props {
 		character: CharacterData;
 		componentUses?: ComponentUseGroup[];
+		deletedComponentGlyphs?: Record<number, DeletedComponentGlyph> | null;
 		characterSet?: 'simplified' | 'traditional';
 		phoneticScript?: PhoneticScript | null;
 	}
@@ -25,6 +30,7 @@
 	let {
 		character,
 		componentUses,
+		deletedComponentGlyphs = null,
 		characterSet = 'simplified',
 		phoneticScript = null
 	}: Props = $props();
@@ -112,6 +118,7 @@
 			originalMeaning={character.originalMeaning}
 			strokes={strokeVariantData?.strokes ?? null}
 			historicalPronunciations={character.historicalPronunciations}
+			{deletedComponentGlyphs}
 			{fragments}
 			{characterSet}
 			{phoneticScript}

@@ -1,6 +1,10 @@
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { getCharacterData, getComponentUses } from '$lib/server/services/dictionary';
+import {
+	getCharacterData,
+	getComponentUses,
+	getDeletedComponentGlyphs
+} from '$lib/server/services/dictionary';
 import { countPendingEdits, getUserPendingEdit } from '$lib/server/services/char-edit';
 import { EDITABLE_FIELDS } from '$lib/data/editable-fields';
 
@@ -16,6 +20,7 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 		getCharacterData(chars[0]),
 		getComponentUses(chars[0])
 	]);
+
 	if (!data) {
 		error(404, { message: `Character "${char}" not found in dictionary` });
 	}
@@ -27,15 +32,16 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 		? { userId: locals.user?.id, anonymousSessionId: locals.anonymousSessionId }
 		: undefined;
 
-	// Scope pending count: reviewers see all, others see only their own
-	const pendingCount = canReview
-		? await countPendingEdits(chars[0])
-		: hasIdentity
-			? await countPendingEdits(chars[0], editedBy)
-			: 0;
-
-	// Load user's pending edit (if any)
-	const pendingEdit = hasIdentity ? await getUserPendingEdit(chars[0], editedBy!) : null;
+	// Run pending-edit queries and deleted-component lookup in parallel
+	const [pendingCount, pendingEdit, deletedComponentGlyphs] = await Promise.all([
+		canReview
+			? countPendingEdits(chars[0])
+			: hasIdentity
+				? countPendingEdits(chars[0], editedBy)
+				: Promise.resolve(0),
+		hasIdentity ? getUserPendingEdit(chars[0], editedBy!) : Promise.resolve(null),
+		getDeletedComponentGlyphs(data)
+	]);
 
 	// Serialize only editable fields + metadata for the pending edit
 	const userPendingEdit = pendingEdit
@@ -52,5 +58,5 @@ export const load: LayoutServerLoad = async ({ params, parent, locals }) => {
 			}
 		: null;
 
-	return { character: data, componentUses, pendingCount, userPendingEdit };
+	return { character: data, componentUses, deletedComponentGlyphs, pendingCount, userPendingEdit };
 };

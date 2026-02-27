@@ -1,6 +1,10 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getCharacterData, getComponentUses } from '$lib/server/services/dictionary';
+import {
+	getCharacterData,
+	getComponentUses,
+	getDeletedComponentGlyphs
+} from '$lib/server/services/dictionary';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const entry = params.entry;
@@ -15,7 +19,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		if (!data) {
 			error(404, { message: `Character "${entry}" not found in dictionary` });
 		}
-		return { type: 'character' as const, character: data, componentUses };
+		const deletedComponentGlyphs = await getDeletedComponentGlyphs(data);
+		return { type: 'character' as const, character: data, componentUses, deletedComponentGlyphs };
 	}
 
 	// Multi-character → future word view (not yet implemented)
