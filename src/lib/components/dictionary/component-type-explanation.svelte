@@ -123,7 +123,7 @@
 )}
 	{@const strokes = strokesFor(glyphChar)}
 	{@const frags = fragmentsFor(glyphChar)}
-	{@const highlightSet = frags ? new Set(frags[highlightIndex]) : null}
+	{@const highlightSet = frags?.[highlightIndex] ? new Set(frags[highlightIndex]) : null}
 	<td>
 		<div class="char-cell">
 			<div class="glyph-box">

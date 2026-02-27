@@ -559,20 +559,29 @@ export async function getDeletedComponentGlyphs(
 			character: charView.character,
 			components: charView.components,
 			strokeDataSimp: charView.strokeDataSimp,
-			fragmentsSimp: charView.fragmentsSimp
+			strokeDataTrad: charView.strokeDataTrad,
+			fragmentsSimp: charView.fragmentsSimp,
+			fragmentsTrad: charView.fragmentsTrad
 		})
 		.from(charView)
 		.where(inArray(charView.character, tradChars));
+
+	// Preserve traditionalVariants order so the first listed variant is preferred
+	const tradMap = new Map(tradRows.map((r) => [r.character, r]));
 
 	const result: Record<number, DeletedComponentGlyph> = {};
 
 	for (const i of deletedIndices) {
 		const comp = components[i];
 
-		for (const tradRow of tradRows) {
+		for (const tradChar of tradChars) {
+			const tradRow = tradMap.get(tradChar);
+			if (!tradRow) continue;
+
 			const tradComponents = tradRow.components as ComponentData[] | null;
-			const tradStrokeData = tradRow.strokeDataSimp as StrokeVariantData | null;
-			const tradFragments = tradRow.fragmentsSimp as number[][] | null;
+			const tradStrokeData = (tradRow.strokeDataSimp ??
+				tradRow.strokeDataTrad) as StrokeVariantData | null;
+			const tradFragments = (tradRow.fragmentsSimp ?? tradRow.fragmentsTrad) as number[][] | null;
 
 			if (!tradComponents || !tradStrokeData?.strokes || !tradFragments) continue;
 
