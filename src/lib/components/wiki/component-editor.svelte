@@ -42,16 +42,24 @@
 
 <div class="component-editor">
 	<div class="top-row">
-		<label class="field">
+		<div class="field">
 			<span class="field-label">Character</span>
-			<input
-				type="text"
-				name="{prefix}.character"
-				bind:value={component.character}
-				class="field-input char-input"
-				maxlength="2"
-			/>
-		</label>
+			<div class="char-field">
+				<input
+					type="text"
+					name="{prefix}.character"
+					bind:value={component.character}
+					class="field-input char-input"
+					maxlength="2"
+				/>
+				<button
+					type="button"
+					class="characterless-btn"
+					title="Mark as characterless component"
+					onclick={() => (component.character = '◎')}>◎</button
+				>
+			</div>
+		</div>
 		<label class="field grow">
 			<span class="field-label">Hint</span>
 			<textarea
@@ -220,10 +228,33 @@
 		resize: vertical;
 	}
 
+	.char-field {
+		display: flex;
+		gap: 0.25rem;
+		align-items: stretch;
+		flex: 1;
+	}
+
 	.char-input {
 		width: 4rem;
 		font-size: 1.25rem;
 		text-align: center;
+	}
+
+	.characterless-btn {
+		padding: 0 0.375rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+		color: var(--muted-foreground);
+		font-size: 1rem;
+		cursor: pointer;
+		line-height: 1;
+	}
+
+	.characterless-btn:hover {
+		background: var(--border);
+		color: var(--foreground);
 	}
 
 	.type-checkboxes {
