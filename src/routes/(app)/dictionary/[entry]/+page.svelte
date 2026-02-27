@@ -13,6 +13,7 @@
 	<CharacterView
 		character={data.character}
 		componentUses={data.componentUses}
+		deletedComponentGlyphs={data.deletedComponentGlyphs}
 		characterSet={data.settings.characterSet ?? 'simplified'}
 		phoneticScript={data.settings.phoneticScript}
 	/>

@@ -114,6 +114,48 @@
 	</td>
 {/snippet}
 
+{#snippet deletedHighlightCell(
+	glyphChar: string,
+	highlightIndex: number,
+	linkChar: string,
+	pinyin: string,
+	meaning: string
+)}
+	{@const strokes = strokesFor(glyphChar)}
+	{@const frags = fragmentsFor(glyphChar)}
+	{@const highlightSet = frags ? new Set(frags[highlightIndex]) : null}
+	<td>
+		<div class="char-cell">
+			<div class="glyph-box">
+				{#if strokes && highlightSet}
+					<svg viewBox="0 0 1024 1024" class="deleted-glyph" aria-label={glyphChar} role="img">
+						<g transform="translate(0, 900) scale(1, -1)">
+							{#each strokes as stroke, si (si)}
+								<path
+									d={stroke}
+									fill="var(--foreground)"
+									opacity={highlightSet.has(si) ? 1 : 0.15}
+								/>
+							{/each}
+						</g>
+						<text
+							x="512"
+							y="512"
+							text-anchor="middle"
+							dominant-baseline="central"
+							font-size="800"
+							fill="transparent">{glyphChar}</text
+						>
+					</svg>
+				{/if}
+			</div>
+			<a href={resolve(`${charLinkBase}/${linkChar}`)} class="cell-char">{linkChar}</a>
+			<span class="cell-pinyin">{pinyin}</span>
+			<span class="cell-meaning">{meaning}</span>
+		</div>
+	</td>
+{/snippet}
+
 {#snippet highlightCell(char: string, index: number, meaning: string)}
 	<td>
 		<div class="char-cell">
@@ -258,6 +300,24 @@
 			{/each}
 		</tbody>
 	</table>
+{:else if type === 'deleted'}
+	<!-- Hardcoded 開 → 門 (deleted) → 开 example -->
+	<table class="examples-table">
+		<thead>
+			<tr>
+				<th>Traditional</th>
+				<th>Deleted component</th>
+				<th>Simplified</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				{@render cell('開', 'kāi', 'to open', false, false)}
+				{@render deletedHighlightCell('開', 0, '門', 'mén', 'door')}
+				{@render cell('开', 'kāi', 'to open', false, false)}
+			</tr>
+		</tbody>
+	</table>
 {:else}
 	<table class="examples-table">
 		<thead>
@@ -375,6 +435,12 @@
 	.glyph-box {
 		width: 60px;
 		height: 60px;
+	}
+
+	.deleted-glyph {
+		width: 100%;
+		height: 100%;
+		display: block;
 	}
 
 	.cell-char {

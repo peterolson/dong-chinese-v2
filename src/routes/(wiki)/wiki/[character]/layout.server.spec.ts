@@ -4,12 +4,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const mockGetCharacterData = vi.fn();
 const mockGetComponentUses = vi.fn();
+const mockGetDeletedComponentGlyphs = vi.fn();
 const mockCountPendingEdits = vi.fn();
 const mockGetUserPendingEdit = vi.fn();
 
 vi.mock('$lib/server/services/dictionary', () => ({
 	getCharacterData: (...args: unknown[]) => mockGetCharacterData(...args),
-	getComponentUses: (...args: unknown[]) => mockGetComponentUses(...args)
+	getComponentUses: (...args: unknown[]) => mockGetComponentUses(...args),
+	getDeletedComponentGlyphs: (...args: unknown[]) => mockGetDeletedComponentGlyphs(...args)
 }));
 
 vi.mock('$lib/server/services/char-edit', () => ({
@@ -48,6 +50,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetCharacterData.mockResolvedValue(null);
 	mockGetComponentUses.mockResolvedValue([]);
+	mockGetDeletedComponentGlyphs.mockResolvedValue(null);
 	mockCountPendingEdits.mockResolvedValue(0);
 	mockGetUserPendingEdit.mockResolvedValue(null);
 });

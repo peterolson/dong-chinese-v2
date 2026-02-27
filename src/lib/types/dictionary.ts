@@ -58,6 +58,19 @@ export interface ComponentUseGroup {
 	verifiedCount: number;
 }
 
+/**
+ * Override glyph data for a deleted component, using traditional variant stroke data.
+ * Shows the full traditional character with the deleted component's strokes highlighted.
+ */
+export interface DeletedComponentGlyph {
+	/** The traditional variant character being rendered (e.g. '開') */
+	character: string;
+	/** All SVG path strings for the traditional variant */
+	strokes: string[];
+	/** Stroke indices belonging to the deleted component */
+	highlightedStrokeIndices: number[];
+}
+
 /** Full character data as returned by the dictionary service */
 export interface CharacterData {
 	character: string;
