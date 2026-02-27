@@ -38,14 +38,16 @@
 	const hasSimpStrokes = $derived((strokesSimp?.length ?? 0) > 0);
 	const hasTradStrokes = $derived((strokesTrad?.length ?? 0) > 0);
 	const prefix = $derived(`components[${index}]`);
+	const charInputId = $derived(`comp-char-${index}`);
 </script>
 
 <div class="component-editor">
 	<div class="top-row">
 		<div class="field">
-			<span class="field-label">Character</span>
+			<label class="field-label" for={charInputId}>Character</label>
 			<div class="char-field">
 				<input
+					id={charInputId}
 					type="text"
 					name="{prefix}.character"
 					bind:value={component.character}
@@ -56,6 +58,7 @@
 					type="button"
 					class="characterless-btn"
 					title="Mark as characterless component"
+					aria-label="Mark as characterless component"
 					onclick={() => (component.character = '◎')}>◎</button
 				>
 			</div>
@@ -236,6 +239,7 @@
 	}
 
 	.char-input {
+		flex: 0 0 4rem;
 		width: 4rem;
 		font-size: 1.25rem;
 		text-align: center;
