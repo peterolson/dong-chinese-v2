@@ -41,7 +41,7 @@
 
 ## In Progress
 
-- [ ] **Production deployment** — Hetzner VPS (5.78.183.33), Caddy reverse proxy, systemd template units, zero-downtime port-swap deploys via GitHub Actions `workflow_dispatch`. Health check endpoint at `/api/health`. Auto-release tagging with PR-based notes. Files: `deploy/Caddyfile`, `deploy/dong-chinese@.service`, `scripts/server-setup.sh`, `.github/workflows/deploy.yml`, `src/routes/api/health/+server.ts`.
+- [ ] **Production deployment** — Hetzner VPS, Caddy reverse proxy, systemd template units, zero-downtime port-swap deploys via GitHub Actions `workflow_dispatch`. Health check endpoint at `/api/health`. Auto-release tagging with PR-based notes. Files: `deploy/Caddyfile`, `deploy/dong-chinese@.service`, `scripts/server-setup.sh`, `.github/workflows/deploy.yml`, `src/routes/api/health/+server.ts`.
 
 ## Up Next
 

@@ -3,16 +3,26 @@
 # One-time server provisioning for Dong Chinese.
 # Safe to re-run (idempotent). Run as root on Ubuntu 24.04.
 #
-# Usage: bash scripts/server-setup.sh
+# Usage: ssh root@<host> bash -s < scripts/server-setup.sh
 
 set -euo pipefail
 
 echo "=== Dong Chinese server setup ==="
 
-# ---------- Node.js 22 LTS via NodeSource ----------
+# ---------- Prerequisites ----------
+apt-get update -qq
+apt-get install -y curl gnupg
+
+# ---------- Node.js 22 LTS via NodeSource APT repo ----------
 if ! command -v node &>/dev/null || ! node -v | grep -q '^v22'; then
   echo "Installing Node.js 22 LTS..."
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  NODESOURCE_KEYRING="/usr/share/keyrings/nodesource.gpg"
+  NODESOURCE_LIST="/etc/apt/sources.list.d/nodesource.list"
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o "$NODESOURCE_KEYRING"
+  echo "deb [signed-by=$NODESOURCE_KEYRING] https://deb.nodesource.com/node_22.x nodistro main" \
+    > "$NODESOURCE_LIST"
+  apt-get update -qq
   apt-get install -y nodejs
 else
   echo "Node.js 22 already installed: $(node -v)"
@@ -21,12 +31,12 @@ fi
 # ---------- Caddy ----------
 if ! command -v caddy &>/dev/null; then
   echo "Installing Caddy..."
-  apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+  apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
     | tee /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update
+  apt-get update -qq
   apt-get install -y caddy
 else
   echo "Caddy already installed: $(caddy version)"
@@ -52,6 +62,8 @@ if [ ! -f /opt/dong-chinese/shared/active-port ]; then
 fi
 
 # ---------- Deploy systemd service ----------
+# Note: the deploy workflow also syncs this file from deploy/dong-chinese@.service.
+# This embedded copy is for initial provisioning before the first deploy.
 echo "Installing systemd template unit..."
 cat > /etc/systemd/system/dong-chinese@.service <<'EOF'
 [Unit]
@@ -63,7 +75,7 @@ Type=simple
 User=dong
 Group=dong
 WorkingDirectory=/opt/dong-chinese/current
-ExecStart=/usr/local/bin/node build/index.js
+ExecStart=/usr/bin/node build/index.js
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
@@ -86,18 +98,26 @@ EOF
 systemctl daemon-reload
 
 # ---------- Deploy Caddyfile ----------
+# Note: the deploy workflow also syncs this file from deploy/Caddyfile.
+# This embedded copy is for initial provisioning before the first deploy.
+# The deploy workflow rewrites the port number directly on each swap.
 echo "Installing Caddyfile..."
-cat > /etc/caddy/Caddyfile <<'EOF'
+ACTIVE_PORT=$(cat /opt/dong-chinese/shared/active-port)
+cat > /etc/caddy/Caddyfile <<EOF
+# Dong Chinese — Caddy reverse proxy
+# Port is rewritten by the deploy workflow on each zero-downtime swap.
+# To enable HTTPS, replace ":80" with your domain (e.g. "dong-chinese.com").
+
 :80 {
 	encode zstd gzip
 
 	handle /_app/immutable/* {
 		header Cache-Control "public, max-age=31536000, immutable"
-		reverse_proxy localhost:{$DONG_PORT:3000}
+		reverse_proxy localhost:${ACTIVE_PORT}
 	}
 
 	handle {
-		reverse_proxy localhost:{$DONG_PORT:3000}
+		reverse_proxy localhost:${ACTIVE_PORT}
 	}
 }
 EOF

@@ -16,10 +16,6 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
-env:
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  APP_DIR: /opt/dong-chinese
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: '.node-version'
+          node-version: '22.x'
           cache: 'npm'
 
       - run: npm ci
@@ -42,8 +38,9 @@ jobs:
           mkdir -p deploy-package
           cp -r build deploy-package/build
           cp package.json deploy-package/package.json
+          cp package-lock.json deploy-package/package-lock.json
           cd deploy-package
-          npm install --omit=dev
+          npm ci --omit=dev
           cd ..
 
       - uses: actions/upload-artifact@v4
@@ -57,6 +54,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # for creating releases/tags
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,14 +77,16 @@ jobs:
             HostName $DEPLOY_HOST
             User root
             IdentityFile ~/.ssh/deploy_key
-            StrictHostKeyChecking no
           EOF
 
       - name: Sync config files
         run: |
-          rsync -az deploy/Caddyfile deploy:$APP_DIR/shared/Caddyfile.new
-          rsync -az deploy/dong-chinese@.service deploy:$APP_DIR/shared/dong-chinese@.service.new
+          rsync -az deploy/Caddyfile deploy:/opt/dong-chinese/shared/Caddyfile.new
+          rsync -az deploy/dong-chinese@.service deploy:/opt/dong-chinese/shared/dong-chinese@.service.new
           ssh deploy bash <<'SCRIPT'
+            set -euo pipefail
+            APP_DIR=/opt/dong-chinese
+
             # Update systemd unit if changed
             if ! diff -q /etc/systemd/system/dong-chinese@.service $APP_DIR/shared/dong-chinese@.service.new &>/dev/null 2>&1; then
               cp $APP_DIR/shared/dong-chinese@.service.new /etc/systemd/system/dong-chinese@.service
@@ -94,27 +95,29 @@ jobs:
             fi
             rm -f $APP_DIR/shared/dong-chinese@.service.new
 
-            # Update Caddyfile if changed
+            # Update Caddyfile if changed (deploy will rewrite the port)
             if ! diff -q /etc/caddy/Caddyfile $APP_DIR/shared/Caddyfile.new &>/dev/null 2>&1; then
               cp $APP_DIR/shared/Caddyfile.new /etc/caddy/Caddyfile
+              # Rewrite port to match current active port
+              ACTIVE_PORT=$(cat $APP_DIR/shared/active-port)
+              sed -i "s/localhost:[0-9]*/localhost:$ACTIVE_PORT/g" /etc/caddy/Caddyfile
+              caddy reload --config /etc/caddy/Caddyfile
               echo "Updated Caddyfile"
             fi
             rm -f $APP_DIR/shared/Caddyfile.new
           SCRIPT
-        env:
-          APP_DIR: /opt/dong-chinese
 
       - name: Deploy release
         run: |
           RELEASE=$(date -u +%Y%m%d%H%M%S)
-          RELEASE_DIR="$APP_DIR/releases/$RELEASE"
+          RELEASE_DIR="/opt/dong-chinese/releases/$RELEASE"
 
           # Upload build to new release directory
           ssh deploy "mkdir -p $RELEASE_DIR"
           rsync -az --delete deploy-package/ deploy:$RELEASE_DIR/
 
           # Swap symlink
-          ssh deploy "ln -sfn $RELEASE_DIR $APP_DIR/current"
+          ssh deploy "ln -sfn $RELEASE_DIR /opt/dong-chinese/current"
 
           echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
           echo "RELEASE_DIR=$RELEASE_DIR" >> "$GITHUB_ENV"
@@ -151,8 +154,8 @@ jobs:
               sleep 1
             done
 
-            # Update Caddy upstream to new port and reload (graceful, no dropped connections)
-            export DONG_PORT=$NEXT_PORT
+            # Rewrite Caddy upstream to new port and reload (graceful, no dropped connections)
+            sed -i "s/localhost:$ACTIVE_PORT/localhost:$NEXT_PORT/g" /etc/caddy/Caddyfile
             caddy reload --config /etc/caddy/Caddyfile
 
             # Stop old process
@@ -167,8 +170,7 @@ jobs:
         run: |
           ssh deploy bash <<'SCRIPT'
             set -euo pipefail
-            APP_DIR=/opt/dong-chinese
-            cd $APP_DIR/releases
+            cd /opt/dong-chinese/releases
             # Keep the 5 most recent releases, remove the rest
             ls -1t | tail -n +6 | xargs -r rm -rf
           SCRIPT
