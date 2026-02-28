@@ -28,3 +28,5 @@ jobs:
       - run: npm run dictionary:import-dong-dictionary
       - name: Import legacy history into char_manual
         run: npm run import:legacy-history
+      - name: Rebuild char_base from stage tables
+        run: npm run dictionary:rebuild-char

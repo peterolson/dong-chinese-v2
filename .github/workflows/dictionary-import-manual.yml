@@ -83,3 +83,8 @@ jobs:
       - name: Import Permissions
         if: contains(fromJSON('["full-sync","permissions"]'), github.event.inputs.import)
         run: npm run import:permissions
+
+      # Rebuild char_base after any dictionary import (skipped for permissions-only)
+      - name: Rebuild char_base from stage tables
+        if: github.event.inputs.import != 'permissions'
+        run: npm run dictionary:rebuild-char
