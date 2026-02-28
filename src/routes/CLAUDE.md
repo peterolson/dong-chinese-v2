@@ -40,6 +40,7 @@ Community-maintained character dictionary with editing workflow. Own layout with
 | `/wiki/search`                             | Working | Character search by character, pinyin, or English gloss. GET form (no-JS baseline).        |
 | `/wiki/lists`                              | Working | Index of frequency-based character lists (SUBTLEX, Jun Da, context diversity, components). |
 | `/wiki/lists/[list_type]/[offset]/[limit]` | Working | Paginated character list by frequency metric.                                              |
+| `/wiki/lists/component-types`              | Working | Verified characters grouped by component type combination (accordion with colored badges). |
 | `/wiki/[character]`                        | Working | Character view with draft/published toggle when user has pending edit.                     |
 | `/wiki/[character]/edit`                   | Working | Structured edit form. Updates existing pending edit in-place (no duplicates).              |
 | `/wiki/[character]/history`                | Working | Edit history with diffs, rollback, approve/reject for reviewers, "View full entry" links.  |

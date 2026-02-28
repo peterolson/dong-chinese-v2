@@ -182,6 +182,29 @@ function derivePinyin(pf: Array<{ pinyin: string; count: number }> | undefined):
 }
 
 /**
+ * Normalize legacy MongoDB pronunciation entries.
+ * The old Meteor schema used MC/OC as field names; our DB schema uses middleChinese/oldChinese.
+ */
+function normalizeHistoricalPronunciations(raw: unknown): unknown[] | null {
+	if (!raw || !Array.isArray(raw) || raw.length === 0) return null;
+	return raw.map((entry) => {
+		const e = entry as Record<string, unknown>;
+		const result: Record<string, unknown> = { source: e.source };
+		// Map MC → middleChinese, OC → oldChinese (prefer canonical names if both exist)
+		const mc = (e.middleChinese as string | undefined) ?? (e.MC as string | undefined);
+		const oc = (e.oldChinese as string | undefined) ?? (e.OC as string | undefined);
+		if (mc) result.middleChinese = mc;
+		if (oc) result.oldChinese = oc;
+		if (e.pinyin) result.pinyin = e.pinyin;
+		if (e.gloss) result.gloss = e.gloss;
+		if (e.phoneticSeries) result.phoneticSeries = e.phoneticSeries;
+		if (e.rhymeGroup) result.rhymeGroup = e.rhymeGroup;
+		if (e.notes) result.notes = e.notes;
+		return result;
+	});
+}
+
+/**
  * Fields we can diff between changes and previous to compute changedFields.
  * Intentionally broader than EDITABLE_FIELDS — legacy edits could modify fields
  * like codepoint, pinyinFrequencies, and shuowenExplanation that are now read-only.
@@ -274,10 +297,9 @@ function mapToCharManual(row: HistoryRawRow): CharManualRow {
 		historicalImages = split.historicalImages;
 	}
 
-	// Historical pronunciations
-	const historicalPronunciations = changes?.oldPronunciations
-		? parseJson(changes.oldPronunciations)
-		: null;
+	// Historical pronunciations — normalize legacy MC/OC keys to middleChinese/oldChinese
+	const rawProns = changes?.oldPronunciations ? parseJson(changes.oldPronunciations) : null;
+	const historicalPronunciations = normalizeHistoricalPronunciations(rawProns);
 
 	// Pinyin frequencies
 	const rawPf = changes?.pinyinFrequencies

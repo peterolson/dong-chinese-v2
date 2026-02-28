@@ -10,7 +10,10 @@
 
 import { execSync } from 'node:child_process';
 import postgres from 'postgres';
-import { CHAR_VIEW_SQL } from '../src/lib/server/db/char-view-sql.js';
+import {
+	CHAR_VIEW_SQL,
+	CHAR_MANUAL_COVERING_INDEX_SQL
+} from '../src/lib/server/db/char-view-sql.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -39,6 +42,7 @@ async function main() {
 	console.log('Creating dictionary.char view...');
 	const sql2 = postgres(TEST_DATABASE_URL);
 	await sql2.unsafe(CHAR_VIEW_SQL);
+	await sql2.unsafe(CHAR_MANUAL_COVERING_INDEX_SQL);
 	const result = await sql2`SELECT COUNT(*) AS total FROM dictionary.char`;
 	console.log(`View created (${Number(result[0].total).toLocaleString()} rows).`);
 	await sql2.end();

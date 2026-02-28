@@ -1,8 +1,11 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getCharacterList, LIST_TYPES, type ListType } from '$lib/server/services/dictionary';
-
-const allLists = Object.entries(LIST_TYPES).map(([slug, { navLabel }]) => ({ slug, navLabel }));
+import {
+	getCharacterList,
+	LIST_NAV_ITEMS,
+	LIST_TYPES,
+	type ListType
+} from '$lib/server/services/dictionary';
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const listType = params.list_type;
@@ -39,7 +42,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		listType: validType,
 		listLabel: LIST_TYPES[validType].label,
 		listDescription: LIST_TYPES[validType].description,
-		allLists,
+		allLists: LIST_NAV_ITEMS.map((item) => ({
+			slug: item.slug,
+			navLabel: item.navLabel,
+			href: item.href(limit)
+		})),
 		items,
 		total,
 		offset,

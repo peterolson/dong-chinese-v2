@@ -4,17 +4,33 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const mockGetCharacterList = vi.fn();
 
+const LIST_TYPES = {
+	'movie-contexts': { label: '% of Movies', navLabel: '% Movies', description: 'desc' },
+	'movie-count': { label: 'Movie Frequency', navLabel: 'Movie Freq.', description: 'desc' },
+	'book-count': { label: 'Book Frequency', navLabel: 'Book Freq.', description: 'desc' },
+	hsk: { label: 'HSK 2.0', navLabel: 'HSK 2.0', description: 'desc' },
+	'hsk-3': { label: 'HSK 3.0', navLabel: 'HSK 3.0', description: 'desc' },
+	'dong-chinese': { label: '懂中文 Order', navLabel: '懂中文', description: 'desc' },
+	components: { label: 'Most Common Components', navLabel: 'Components', description: 'desc' }
+};
+
+const LIST_NAV_ITEMS = [
+	...Object.entries(LIST_TYPES).map(([slug, { navLabel }]) => ({
+		slug,
+		navLabel,
+		href: (limit: number) => `/wiki/lists/${slug}/0/${limit}`
+	})),
+	{
+		slug: 'component-types',
+		navLabel: 'Component Types',
+		href: () => '/wiki/lists/component-types'
+	}
+];
+
 vi.mock('$lib/server/services/dictionary', () => ({
 	getCharacterList: (...args: unknown[]) => mockGetCharacterList(...args),
-	LIST_TYPES: {
-		'movie-contexts': { label: '% of Movies', navLabel: '% Movies', description: 'desc' },
-		'movie-count': { label: 'Movie Frequency', navLabel: 'Movie Freq.', description: 'desc' },
-		'book-count': { label: 'Book Frequency', navLabel: 'Book Freq.', description: 'desc' },
-		hsk: { label: 'HSK 2.0', navLabel: 'HSK 2.0', description: 'desc' },
-		'hsk-3': { label: 'HSK 3.0', navLabel: 'HSK 3.0', description: 'desc' },
-		'dong-chinese': { label: '懂中文 Order', navLabel: '懂中文', description: 'desc' },
-		components: { label: 'Most Common Components', navLabel: 'Components', description: 'desc' }
-	}
+	LIST_TYPES,
+	LIST_NAV_ITEMS
 }));
 
 const { load } = await import('./+page.server');
@@ -105,7 +121,11 @@ describe('load', () => {
 		});
 		expect(result.allLists).toEqual(
 			expect.arrayContaining([
-				expect.objectContaining({ slug: 'movie-count', navLabel: 'Movie Freq.' })
+				expect.objectContaining({
+					slug: 'movie-count',
+					navLabel: 'Movie Freq.',
+					href: '/wiki/lists/movie-count/0/50'
+				})
 			])
 		);
 	});
@@ -122,10 +142,10 @@ describe('load', () => {
 		expect(result.listLabel).toBe('Book Frequency');
 	});
 
-	it('returns allLists with all 7 list types', async () => {
+	it('returns allLists with all list types including component-types', async () => {
 		const result = await loadResult(makeEvent({ list_type: 'hsk', offset: '0', limit: '100' }));
 
-		expect(result.allLists).toHaveLength(7);
+		expect(result.allLists).toHaveLength(8);
 		expect(result.allLists.map((l: { slug: string }) => l.slug)).toEqual([
 			'movie-contexts',
 			'movie-count',
@@ -133,7 +153,8 @@ describe('load', () => {
 			'hsk',
 			'hsk-3',
 			'dong-chinese',
-			'components'
+			'components',
+			'component-types'
 		]);
 	});
 
