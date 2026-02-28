@@ -491,7 +491,7 @@ export async function getCharacterList(
 			// then fetches display data only for the final page of results.
 			const rows = await db.execute<Record<string, unknown>>(sql`
 				WITH latest_narrow AS (
-					SELECT DISTINCT ON (character) character, components, is_verified
+					SELECT DISTINCT ON (character) character, components, is_verified, variant_of
 					FROM ${charManual}
 					WHERE status = 'approved'
 					ORDER BY character, created_at DESC
@@ -500,7 +500,7 @@ export async function getCharacterList(
 					SELECT
 						b.character,
 						COALESCE(m.components, b.components) AS components,
-						b.variant_of
+						COALESCE(m.variant_of, b.variant_of) AS variant_of
 					FROM ${charBase} b
 					LEFT JOIN latest_narrow m USING (character)
 					WHERE COALESCE(m.is_verified, b.is_verified, false) = true
@@ -698,6 +698,7 @@ export async function getComponentTypeCombinations(): Promise<{
 
 	// Group characters by their component type combination
 	const groups = new Map<string, string[]>();
+	let includedCount = 0;
 
 	for (const row of typed) {
 		const components = row.components as ComponentData[] | null;
@@ -723,6 +724,7 @@ export async function getComponentTypeCombinations(): Promise<{
 			key = normalizedTypes.join(',');
 		}
 
+		includedCount++;
 		const group = groups.get(key);
 		if (group) {
 			group.push(row.character);
@@ -742,7 +744,7 @@ export async function getComponentTypeCombinations(): Promise<{
 
 	return {
 		combinations,
-		totalCharacters: typed.length
+		totalCharacters: includedCount
 	};
 }
 
