@@ -1,0 +1,241 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  APP_DIR: /opt/dong-chinese
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for release notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      # Assemble deploy package: build output + production node_modules + package.json
+      - name: Assemble deploy package
+        run: |
+          mkdir -p deploy-package
+          cp -r build deploy-package/build
+          cp package.json deploy-package/package.json
+          cd deploy-package
+          npm install --omit=dev
+          cd ..
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy-package/
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for creating releases/tags
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy-package/
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host deploy
+            HostName $DEPLOY_HOST
+            User root
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Sync config files
+        run: |
+          rsync -az deploy/Caddyfile deploy:$APP_DIR/shared/Caddyfile.new
+          rsync -az deploy/dong-chinese@.service deploy:$APP_DIR/shared/dong-chinese@.service.new
+          ssh deploy bash <<'SCRIPT'
+            # Update systemd unit if changed
+            if ! diff -q /etc/systemd/system/dong-chinese@.service $APP_DIR/shared/dong-chinese@.service.new &>/dev/null 2>&1; then
+              cp $APP_DIR/shared/dong-chinese@.service.new /etc/systemd/system/dong-chinese@.service
+              systemctl daemon-reload
+              echo "Updated systemd unit"
+            fi
+            rm -f $APP_DIR/shared/dong-chinese@.service.new
+
+            # Update Caddyfile if changed
+            if ! diff -q /etc/caddy/Caddyfile $APP_DIR/shared/Caddyfile.new &>/dev/null 2>&1; then
+              cp $APP_DIR/shared/Caddyfile.new /etc/caddy/Caddyfile
+              echo "Updated Caddyfile"
+            fi
+            rm -f $APP_DIR/shared/Caddyfile.new
+          SCRIPT
+        env:
+          APP_DIR: /opt/dong-chinese
+
+      - name: Deploy release
+        run: |
+          RELEASE=$(date -u +%Y%m%d%H%M%S)
+          RELEASE_DIR="$APP_DIR/releases/$RELEASE"
+
+          # Upload build to new release directory
+          ssh deploy "mkdir -p $RELEASE_DIR"
+          rsync -az --delete deploy-package/ deploy:$RELEASE_DIR/
+
+          # Swap symlink
+          ssh deploy "ln -sfn $RELEASE_DIR $APP_DIR/current"
+
+          echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+          echo "RELEASE_DIR=$RELEASE_DIR" >> "$GITHUB_ENV"
+
+      - name: Zero-downtime swap
+        run: |
+          ssh deploy bash <<'SCRIPT'
+            set -euo pipefail
+            APP_DIR=/opt/dong-chinese
+
+            ACTIVE_PORT=$(cat $APP_DIR/shared/active-port)
+            if [ "$ACTIVE_PORT" = "3000" ]; then
+              NEXT_PORT=3001
+            else
+              NEXT_PORT=3000
+            fi
+
+            echo "Active: $ACTIVE_PORT → Starting new on: $NEXT_PORT"
+
+            # Start the new release on the inactive port
+            systemctl start dong-chinese@$NEXT_PORT
+
+            # Health check loop (up to 30 seconds)
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:$NEXT_PORT/api/health > /dev/null 2>&1; then
+                echo "Health check passed on port $NEXT_PORT"
+                break
+              fi
+              if [ "$i" = "30" ]; then
+                echo "Health check failed after 30s"
+                systemctl stop dong-chinese@$NEXT_PORT || true
+                exit 1
+              fi
+              sleep 1
+            done
+
+            # Update Caddy upstream to new port and reload (graceful, no dropped connections)
+            export DONG_PORT=$NEXT_PORT
+            caddy reload --config /etc/caddy/Caddyfile
+
+            # Stop old process
+            systemctl stop dong-chinese@$ACTIVE_PORT || true
+
+            # Record new active port
+            echo "$NEXT_PORT" > $APP_DIR/shared/active-port
+            echo "Swapped to port $NEXT_PORT"
+          SCRIPT
+
+      - name: Cleanup old releases
+        run: |
+          ssh deploy bash <<'SCRIPT'
+            set -euo pipefail
+            APP_DIR=/opt/dong-chinese
+            cd $APP_DIR/releases
+            # Keep the 5 most recent releases, remove the rest
+            ls -1t | tail -n +6 | xargs -r rm -rf
+          SCRIPT
+
+      - name: Create release tag
+        run: |
+          # Get latest version tag
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1 || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+
+          # Parse version components
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Bump
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_ENV"
+          echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_ENV"
+          echo "Bumping $LATEST_TAG → $NEW_TAG"
+
+      - name: Generate release notes and publish
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newTag = process.env.NEW_TAG;
+            const latestTag = process.env.LATEST_TAG;
+            const sha = context.sha;
+
+            // Create the tag
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${newTag}`,
+              sha: sha,
+            });
+
+            // Generate release notes from merged PRs
+            let body = '';
+            try {
+              const notes = await github.rest.repos.generateReleaseNotes({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: newTag,
+                previous_tag_name: latestTag !== 'v0.0.0' ? latestTag : undefined,
+              });
+              body = notes.data.body;
+            } catch {
+              body = `Release ${newTag}`;
+            }
+
+            // Create the release
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: newTag,
+              name: newTag,
+              body: body,
+              draft: false,
+              prerelease: false,
+            });
+
+            core.info(`Published release ${newTag}`);

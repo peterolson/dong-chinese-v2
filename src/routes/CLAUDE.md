@@ -56,6 +56,7 @@ All wiki pages work without JavaScript (progressive enhancement).
 | -------------------------------- | ------ | ------------------------------------------------------------------- |
 | `/api/dictionary/explain/[type]` | GET    | Component type examples. Cache: 1h + 24h stale-while-revalidate.    |
 | `/api/tts/token`                 | GET    | Azure Speech token. In-memory cache (9 min). 503 if not configured. |
+| `/api/health`                    | GET    | Health check. Pings DB, returns `{ status: "ok" }` or 503.          |
 
 ## Root Layout
 

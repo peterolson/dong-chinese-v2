@@ -70,6 +70,12 @@ Every import script follows the same pattern:
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dictionary/import-legacy-history.ts` | Imports char edit history from `stage.dong_dict_history_raw` into `dictionary.char_manual`. Maps MongoDB fields, computes changedFields diffs. Idempotent via `[mongo:<id>]` tag in edit_comment. |
 
+## Server Provisioning
+
+| Script            | Purpose                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server-setup.sh` | One-time idempotent server provisioning. Installs Node 22 LTS, Caddy, creates `dong` user, sets up `/opt/dong-chinese/` directory structure, deploys systemd unit + Caddyfile. |
+
 ## Running
 
 ```bash

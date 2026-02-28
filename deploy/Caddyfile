@@ -1,0 +1,19 @@
+# Dong Chinese — Caddy reverse proxy
+#
+# Serves the SvelteKit app on port 80 (HTTP).
+# To switch to a domain with auto-SSL, replace ":80" with "dong-chinese.com"
+# and Caddy will auto-provision a Let's Encrypt certificate.
+
+:80 {
+	encode zstd gzip
+
+	# SvelteKit hashed immutable assets — cache forever
+	handle /_app/immutable/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy localhost:{$DONG_PORT:3000}
+	}
+
+	handle {
+		reverse_proxy localhost:{$DONG_PORT:3000}
+	}
+}

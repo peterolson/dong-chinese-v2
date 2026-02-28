@@ -1,0 +1,28 @@
+[Unit]
+Description=Dong Chinese SvelteKit app (port %i)
+After=network.target
+
+[Service]
+Type=simple
+User=dong
+Group=dong
+WorkingDirectory=/opt/dong-chinese/current
+ExecStart=/usr/local/bin/node build/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# Environment
+Environment=PORT=%i
+EnvironmentFile=/opt/dong-chinese/shared/.env
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadOnlyPaths=/opt/dong-chinese/current
+ReadWritePaths=/opt/dong-chinese/shared
+
+[Install]
+WantedBy=multi-user.target
