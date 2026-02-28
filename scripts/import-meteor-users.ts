@@ -441,6 +441,30 @@ async function processBatch(
 	const deduped = deduplicateBatch(userRows, accountRows, emailRows, settingsRows);
 	skipped += deduped.droppedUsers;
 
+	// Pre-check which emails already exist in the DB to avoid user table email unique violation
+	// (ON CONFLICT (id) DO NOTHING won't catch email conflicts from different user IDs)
+	if (deduped.users.length > 0) {
+		const batchEmails = deduped.users.map((u) => u.email);
+		const existingEmails = await sql`
+			SELECT email FROM "user" WHERE email = ANY(${batchEmails})
+		`;
+		const existingEmailSet = new Set(existingEmails.map((r) => r.email as string));
+		if (existingEmailSet.size > 0) {
+			const beforeCount = deduped.users.length;
+			const droppedUserIds = new Set<string>();
+			for (let i = deduped.users.length - 1; i >= 0; i--) {
+				if (existingEmailSet.has(deduped.users[i].email)) {
+					droppedUserIds.add(deduped.users[i].id);
+					deduped.users.splice(i, 1);
+				}
+			}
+			deduped.accounts = deduped.accounts.filter((a) => !droppedUserIds.has(a.userId));
+			deduped.emails = deduped.emails.filter((e) => !droppedUserIds.has(e.userId));
+			deduped.settings = deduped.settings.filter((s) => !droppedUserIds.has(s.userId));
+			skipped += beforeCount - deduped.users.length;
+		}
+	}
+
 	// Execute all inserts in a single transaction with multi-row operations
 	try {
 		await sql.begin(async (_tx) => {
