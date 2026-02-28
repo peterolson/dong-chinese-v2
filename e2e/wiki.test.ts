@@ -76,17 +76,17 @@ for (const jsEnabled of [true, false]) {
 				await expect(page).toHaveURL(/\/wiki\/lists\/movie-contexts\/0\/100/);
 			});
 
-			test('list page shows nav pills for all 7 list types', async ({ page }) => {
+			test('list page shows nav pills for all 8 list types', async ({ page }) => {
 				await page.goto('/wiki/lists/movie-contexts/0/100');
 				const pills = page.locator('.list-pill');
-				await expect(pills).toHaveCount(7);
+				await expect(pills).toHaveCount(8);
 			});
 
 			test('nav pills link to other list types', async ({ page }) => {
 				await page.goto('/wiki/lists/movie-contexts/0/100');
 				const links = page.locator('a.list-pill');
-				// 6 links (all except current type which is a span)
-				await expect(links).toHaveCount(6);
+				// 7 links (all except current type which is a span)
+				await expect(links).toHaveCount(7);
 				const href = await links.first().getAttribute('href');
 				expect(href).toMatch(/\/wiki\/lists\/.+/);
 			});
