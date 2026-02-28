@@ -282,6 +282,15 @@ async function main() {
 	await sql.end();
 }
 
+/**
+ * Sanitize error messages to avoid leaking user emails in logs.
+ */
+function sanitizeError(err: unknown): string {
+	const msg = err instanceof Error ? err.message : String(err);
+	// Redact anything that looks like an email address
+	return msg.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED]');
+}
+
 async function processBatch(
 	sql: ReturnType<typeof postgres>,
 	batch: MeteorUser[]
@@ -290,179 +299,179 @@ async function processBatch(
 	let skipped = 0;
 	let errors = 0;
 
+	// Prepare all rows up front
+	const userRows: UserRow[] = [];
+	const accountRows: AccountRow[] = [];
+	const emailRows: UserEmailRow[] = [];
+	const settingsRows: { userId: string; settings: Record<string, unknown>; now: Date }[] = [];
+
 	for (const meteorUser of batch) {
 		try {
-			const result = await importUser(sql, meteorUser);
-			if (result === 'imported') imported++;
-			else skipped++;
+			const { email: primaryEmail, verified: primaryVerified } = resolvePrimaryEmail(meteorUser);
+			const name = resolveName(meteorUser, primaryEmail);
+			const now = meteorUser.createdAt ?? new Date();
+
+			userRows.push({
+				id: meteorUser._id,
+				name,
+				email: primaryEmail,
+				emailVerified: primaryVerified,
+				image: meteorUser.services?.google?.picture ?? null,
+				username: meteorUser.username?.toLowerCase() ?? null,
+				displayUsername: meteorUser.username ?? null,
+				createdAt: now,
+				updatedAt: now
+			});
+
+			const services = meteorUser.services ?? {};
+			if (services.password?.bcrypt) {
+				accountRows.push({
+					id: generateId(),
+					accountId: meteorUser._id,
+					providerId: 'credential',
+					userId: meteorUser._id,
+					password: services.password.bcrypt,
+					createdAt: now,
+					updatedAt: now
+				});
+			}
+			if (services.google?.id) {
+				accountRows.push({
+					id: generateId(),
+					accountId: services.google.id,
+					providerId: 'google',
+					userId: meteorUser._id,
+					password: null,
+					createdAt: now,
+					updatedAt: now
+				});
+			}
+			if (services.facebook?.id) {
+				accountRows.push({
+					id: generateId(),
+					accountId: services.facebook.id,
+					providerId: 'facebook',
+					userId: meteorUser._id,
+					password: null,
+					createdAt: now,
+					updatedAt: now
+				});
+			}
+			if (services.twitter?.id) {
+				accountRows.push({
+					id: generateId(),
+					accountId: services.twitter.id,
+					providerId: 'twitter',
+					userId: meteorUser._id,
+					password: null,
+					createdAt: now,
+					updatedAt: now
+				});
+			}
+
+			emailRows.push(...collectAllEmails(meteorUser, primaryEmail));
+
+			const settings = resolveSettings(meteorUser);
+			if (settings) {
+				settingsRows.push({ userId: meteorUser._id, settings, now });
+			}
 		} catch (err) {
 			errors++;
-			console.error(`Error importing user ${meteorUser._id}:`, err);
+			console.error(`Error preparing user ${meteorUser._id}: ${sanitizeError(err)}`);
 		}
+	}
+
+	// Execute all inserts in a single transaction with multi-row operations
+	try {
+		await sql.begin(async (_tx) => {
+			const tx = _tx as Tx;
+
+			// Bulk insert users (postgres.js helper maps property names to column names)
+			if (userRows.length > 0) {
+				const dbUsers = userRows.map((u) => ({
+					id: u.id,
+					name: u.name,
+					email: u.email,
+					email_verified: u.emailVerified,
+					image: u.image,
+					username: u.username,
+					display_username: u.displayUsername,
+					created_at: u.createdAt,
+					updated_at: u.updatedAt
+				}));
+				const inserted = await tx`
+					INSERT INTO "user" ${tx(dbUsers, 'id', 'name', 'email', 'email_verified', 'image', 'username', 'display_username', 'created_at', 'updated_at')}
+					ON CONFLICT (id) DO NOTHING
+					RETURNING id
+				`;
+				const insertedIds = new Set(inserted.map((r) => r.id as string));
+				imported = insertedIds.size;
+				skipped = userRows.length - imported;
+
+				// Only insert accounts/emails for newly inserted users
+				const newAccounts = accountRows.filter((a) => insertedIds.has(a.userId));
+				const newEmails = emailRows.filter((e) => insertedIds.has(e.userId));
+
+				if (newAccounts.length > 0) {
+					const dbAccounts = newAccounts.map((a) => ({
+						id: a.id,
+						account_id: a.accountId,
+						provider_id: a.providerId,
+						user_id: a.userId,
+						password: a.password,
+						created_at: a.createdAt,
+						updated_at: a.updatedAt
+					}));
+					await tx`
+						INSERT INTO account ${tx(dbAccounts, 'id', 'account_id', 'provider_id', 'user_id', 'password', 'created_at', 'updated_at')}
+						ON CONFLICT (id) DO NOTHING
+					`;
+				}
+
+				if (newEmails.length > 0) {
+					const dbEmails = newEmails.map((e) => ({
+						id: crypto.randomUUID(),
+						user_id: e.userId,
+						email: e.email,
+						verified: e.verified,
+						is_primary: e.isPrimary,
+						created_at: e.createdAt,
+						updated_at: e.updatedAt
+					}));
+					await tx`
+						INSERT INTO user_email ${tx(dbEmails, 'id', 'user_id', 'email', 'verified', 'is_primary', 'created_at', 'updated_at')}
+						ON CONFLICT (email) DO NOTHING
+					`;
+				}
+			}
+
+			// Upsert settings for all users (including existing ones)
+			for (const { userId, settings, now } of settingsRows) {
+				const settingKeys = Object.keys(settings);
+				const columns = ['user_id', 'created_at', 'updated_at', ...settingKeys];
+				const values: (string | Date)[] = [
+					userId,
+					now,
+					now,
+					...(Object.values(settings) as (string | Date)[])
+				];
+				const updateSet = settingKeys.map((k, i) => `${k} = $${i + 4}`).join(', ');
+				await tx.unsafe(
+					`INSERT INTO user_settings (${columns.join(', ')})
+					VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')})
+					ON CONFLICT (user_id) DO UPDATE SET ${updateSet}, updated_at = $3`,
+					values
+				);
+			}
+		});
+	} catch (err) {
+		console.error(`Error processing batch: ${sanitizeError(err)}`);
+		errors += userRows.length;
+		imported = 0;
+		skipped = 0;
 	}
 
 	return { imported, skipped, errors };
-}
-
-async function importUser(
-	sql: ReturnType<typeof postgres>,
-	meteorUser: MeteorUser
-): Promise<'imported' | 'skipped'> {
-	const { email: primaryEmail, verified: primaryVerified } = resolvePrimaryEmail(meteorUser);
-	const name = resolveName(meteorUser, primaryEmail);
-	const now = meteorUser.createdAt ?? new Date();
-
-	// Prepare user row
-	const userRow: UserRow = {
-		id: meteorUser._id,
-		name,
-		email: primaryEmail,
-		emailVerified: primaryVerified,
-		image: meteorUser.services?.google?.picture ?? null,
-		username: meteorUser.username?.toLowerCase() ?? null,
-		displayUsername: meteorUser.username ?? null,
-		createdAt: now,
-		updatedAt: now
-	};
-
-	// Prepare account rows
-	const accounts: AccountRow[] = [];
-	const services = meteorUser.services ?? {};
-
-	if (services.password?.bcrypt) {
-		accounts.push({
-			id: generateId(),
-			accountId: meteorUser._id,
-			providerId: 'credential',
-			userId: meteorUser._id,
-			password: services.password.bcrypt,
-			createdAt: now,
-			updatedAt: now
-		});
-	}
-
-	if (services.google?.id) {
-		accounts.push({
-			id: generateId(),
-			accountId: services.google.id,
-			providerId: 'google',
-			userId: meteorUser._id,
-			password: null,
-			createdAt: now,
-			updatedAt: now
-		});
-	}
-
-	if (services.facebook?.id) {
-		accounts.push({
-			id: generateId(),
-			accountId: services.facebook.id,
-			providerId: 'facebook',
-			userId: meteorUser._id,
-			password: null,
-			createdAt: now,
-			updatedAt: now
-		});
-	}
-
-	if (services.twitter?.id) {
-		accounts.push({
-			id: generateId(),
-			accountId: services.twitter.id,
-			providerId: 'twitter',
-			userId: meteorUser._id,
-			password: null,
-			createdAt: now,
-			updatedAt: now
-		});
-	}
-
-	// Prepare email rows
-	const emailRows = collectAllEmails(meteorUser, primaryEmail);
-
-	// Insert in a transaction
-	let wasInserted = false;
-
-	await sql.begin(async (_tx) => {
-		const tx = _tx as Tx;
-		// Insert user (ON CONFLICT DO NOTHING for idempotency)
-		const userResult = await tx`
-			INSERT INTO "user" (id, name, email, email_verified, image, username, display_username, created_at, updated_at)
-			VALUES (
-				${userRow.id},
-				${userRow.name},
-				${userRow.email},
-				${userRow.emailVerified},
-				${userRow.image},
-				${userRow.username},
-				${userRow.displayUsername},
-				${userRow.createdAt},
-				${userRow.updatedAt}
-			)
-			ON CONFLICT (id) DO NOTHING
-			RETURNING id
-		`;
-
-		wasInserted = userResult.length > 0;
-
-		// Upsert user settings (always runs, even for existing users)
-		const settings = resolveSettings(meteorUser);
-		if (settings) {
-			const settingKeys = Object.keys(settings);
-			const columns = ['user_id', 'created_at', 'updated_at', ...settingKeys];
-			const values: (string | Date)[] = [
-				meteorUser._id,
-				now,
-				now,
-				...(Object.values(settings) as (string | Date)[])
-			];
-			const updateSet = settingKeys.map((k, i) => `${k} = $${i + 4}`).join(', ');
-			await tx.unsafe(
-				`INSERT INTO user_settings (${columns.join(', ')})
-				VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')})
-				ON CONFLICT (user_id) DO UPDATE SET ${updateSet}, updated_at = $3`,
-				values
-			);
-		}
-
-		if (!wasInserted) return; // User already exists, skip accounts and emails
-
-		// Insert accounts
-		for (const acc of accounts) {
-			await tx`
-				INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at)
-				VALUES (
-					${acc.id},
-					${acc.accountId},
-					${acc.providerId},
-					${acc.userId},
-					${acc.password},
-					${acc.createdAt},
-					${acc.updatedAt}
-				)
-				ON CONFLICT (id) DO NOTHING
-			`;
-		}
-
-		// Insert emails
-		for (const emailRow of emailRows) {
-			await tx`
-				INSERT INTO user_email (id, user_id, email, verified, is_primary, created_at, updated_at)
-				VALUES (
-					${crypto.randomUUID()},
-					${emailRow.userId},
-					${emailRow.email},
-					${emailRow.verified},
-					${emailRow.isPrimary},
-					${emailRow.createdAt},
-					${emailRow.updatedAt}
-				)
-				ON CONFLICT (email) DO NOTHING
-			`;
-		}
-	});
-
-	return wasInserted ? 'imported' : 'skipped';
 }
 
 main().catch((err) => {
