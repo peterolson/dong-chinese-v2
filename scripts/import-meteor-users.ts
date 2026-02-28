@@ -93,6 +93,12 @@ interface UserEmailRow {
 	updatedAt: Date;
 }
 
+interface SettingsRow {
+	userId: string;
+	settings: Record<string, unknown>;
+	now: Date;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -291,6 +297,56 @@ function sanitizeError(err: unknown): string {
 	return msg.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED]');
 }
 
+/**
+ * Deduplicate rows before SQL insertion.
+ * Meteor data can have duplicate emails across users (shared OAuth accounts,
+ * case variations, etc.). Multi-row INSERTs fail on intra-batch duplicates
+ * because ON CONFLICT only handles conflicts with existing DB rows.
+ */
+function deduplicateBatch(
+	userRows: UserRow[],
+	accountRows: AccountRow[],
+	emailRows: UserEmailRow[],
+	settingsRows: SettingsRow[]
+): {
+	users: UserRow[];
+	accounts: AccountRow[];
+	emails: UserEmailRow[];
+	settings: SettingsRow[];
+	droppedUsers: number;
+} {
+	// Deduplicate users by primary email (first wins)
+	const seenEmails = new Set<string>();
+	const seenUsernames = new Set<string>();
+	const validUserIds = new Set<string>();
+	const users: UserRow[] = [];
+
+	for (const u of userRows) {
+		if (seenEmails.has(u.email)) continue;
+		if (u.username && seenUsernames.has(u.username)) continue;
+		seenEmails.add(u.email);
+		if (u.username) seenUsernames.add(u.username);
+		validUserIds.add(u.id);
+		users.push(u);
+	}
+
+	// Filter child rows to only reference surviving users
+	const accounts = accountRows.filter((a) => validUserIds.has(a.userId));
+	const settings = settingsRows.filter((s) => validUserIds.has(s.userId));
+
+	// Deduplicate email rows by email address (first wins)
+	const seenEmailAddrs = new Set<string>();
+	const emails: UserEmailRow[] = [];
+	for (const e of emailRows) {
+		if (!validUserIds.has(e.userId)) continue;
+		if (seenEmailAddrs.has(e.email)) continue;
+		seenEmailAddrs.add(e.email);
+		emails.push(e);
+	}
+
+	return { users, accounts, emails, settings, droppedUsers: userRows.length - users.length };
+}
+
 async function processBatch(
 	sql: ReturnType<typeof postgres>,
 	batch: MeteorUser[]
@@ -303,7 +359,7 @@ async function processBatch(
 	const userRows: UserRow[] = [];
 	const accountRows: AccountRow[] = [];
 	const emailRows: UserEmailRow[] = [];
-	const settingsRows: { userId: string; settings: Record<string, unknown>; now: Date }[] = [];
+	const settingsRows: SettingsRow[] = [];
 
 	for (const meteorUser of batch) {
 		try {
@@ -381,14 +437,41 @@ async function processBatch(
 		}
 	}
 
+	// Deduplicate before touching SQL — prevents intra-batch unique constraint violations
+	const deduped = deduplicateBatch(userRows, accountRows, emailRows, settingsRows);
+	skipped += deduped.droppedUsers;
+
+	// Pre-check which emails already exist in the DB to avoid user table email unique violation
+	// (ON CONFLICT (id) DO NOTHING won't catch email conflicts from different user IDs)
+	if (deduped.users.length > 0) {
+		const batchEmails = deduped.users.map((u) => u.email);
+		const existingEmails = await sql`
+			SELECT email FROM "user" WHERE email = ANY(${batchEmails})
+		`;
+		const existingEmailSet = new Set(existingEmails.map((r) => r.email as string));
+		if (existingEmailSet.size > 0) {
+			const beforeCount = deduped.users.length;
+			const droppedUserIds = new Set<string>();
+			for (let i = deduped.users.length - 1; i >= 0; i--) {
+				if (existingEmailSet.has(deduped.users[i].email)) {
+					droppedUserIds.add(deduped.users[i].id);
+					deduped.users.splice(i, 1);
+				}
+			}
+			deduped.accounts = deduped.accounts.filter((a) => !droppedUserIds.has(a.userId));
+			deduped.emails = deduped.emails.filter((e) => !droppedUserIds.has(e.userId));
+			deduped.settings = deduped.settings.filter((s) => !droppedUserIds.has(s.userId));
+			skipped += beforeCount - deduped.users.length;
+		}
+	}
+
 	// Execute all inserts in a single transaction with multi-row operations
 	try {
 		await sql.begin(async (_tx) => {
 			const tx = _tx as Tx;
 
-			// Bulk insert users (postgres.js helper maps property names to column names)
-			if (userRows.length > 0) {
-				const dbUsers = userRows.map((u) => ({
+			if (deduped.users.length > 0) {
+				const dbUsers = deduped.users.map((u) => ({
 					id: u.id,
 					name: u.name,
 					email: u.email,
@@ -406,11 +489,11 @@ async function processBatch(
 				`;
 				const insertedIds = new Set(inserted.map((r) => r.id as string));
 				imported = insertedIds.size;
-				skipped = userRows.length - imported;
+				skipped += deduped.users.length - imported;
 
 				// Only insert accounts/emails for newly inserted users
-				const newAccounts = accountRows.filter((a) => insertedIds.has(a.userId));
-				const newEmails = emailRows.filter((e) => insertedIds.has(e.userId));
+				const newAccounts = deduped.accounts.filter((a) => insertedIds.has(a.userId));
+				const newEmails = deduped.emails.filter((e) => insertedIds.has(e.userId));
 
 				if (newAccounts.length > 0) {
 					const dbAccounts = newAccounts.map((a) => ({
@@ -446,7 +529,7 @@ async function processBatch(
 			}
 
 			// Upsert settings for all users (including existing ones)
-			for (const { userId, settings, now } of settingsRows) {
+			for (const { userId, settings, now } of deduped.settings) {
 				const settingKeys = Object.keys(settings);
 				const columns = ['user_id', 'created_at', 'updated_at', ...settingKeys];
 				const values: (string | Date)[] = [
@@ -466,9 +549,8 @@ async function processBatch(
 		});
 	} catch (err) {
 		console.error(`Error processing batch: ${sanitizeError(err)}`);
-		errors += userRows.length;
+		errors += deduped.users.length;
 		imported = 0;
-		skipped = 0;
 	}
 
 	return { imported, skipped, errors };
