@@ -47,9 +47,7 @@
 			{#if list.slug === data.listType}
 				<span class="list-pill active">{list.navLabel}</span>
 			{:else}
-				<a href={resolve(`/wiki/lists/${list.slug}/0/${data.limit}`)} class="list-pill"
-					>{list.navLabel}</a
-				>
+				<a href={resolve(list.href)} class="list-pill">{list.navLabel}</a>
 			{/if}
 		{/each}
 	</nav>

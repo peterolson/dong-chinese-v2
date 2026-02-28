@@ -16,7 +16,10 @@
  */
 
 import postgres, { type Row, type PendingQuery } from 'postgres';
-import { CHAR_VIEW_SQL } from '../../src/lib/server/db/char-view-sql.js';
+import {
+	CHAR_VIEW_SQL,
+	CHAR_MANUAL_COVERING_INDEX_SQL
+} from '../../src/lib/server/db/char-view-sql.js';
 
 type Tx = postgres.TransactionSql & {
 	<T extends readonly (object | undefined)[] = Row[]>(
@@ -1029,6 +1032,9 @@ async function main() {
 			await tx`DROP TABLE dictionary.char_base_old`;
 		});
 		console.log('Swap complete (view re-created)');
+
+		// Ensure covering index exists on char_manual (speeds up the view's CTE)
+		await sql.unsafe(CHAR_MANUAL_COVERING_INDEX_SQL);
 
 		// Summary
 		const countResult = await sql`SELECT COUNT(*) AS total FROM dictionary.char_base`;

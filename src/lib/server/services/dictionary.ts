@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { charBase, charManual } from '$lib/server/db/dictionary.schema';
 import { charView } from '$lib/server/db/dictionary.views';
 import { dongChars, hsk2Chars, hsk3Chars } from '$lib/server/db/stage.schema';
 import { eq, inArray, sql } from 'drizzle-orm';
@@ -243,6 +244,20 @@ export const LIST_TYPES = {
 
 export type ListType = keyof typeof LIST_TYPES;
 
+/** Shared nav items for the wiki character list pages */
+export const LIST_NAV_ITEMS = [
+	...Object.entries(LIST_TYPES).map(([slug, { navLabel }]) => ({
+		slug,
+		navLabel,
+		href: (limit: number) => `/wiki/lists/${slug}/0/${limit}`
+	})),
+	{
+		slug: 'component-types',
+		navLabel: 'Component Types',
+		href: () => '/wiki/lists/component-types'
+	}
+];
+
 export interface CharacterListItem {
 	character: string;
 	pinyin: string[] | null;
@@ -470,26 +485,34 @@ export async function getCharacterList(
 			};
 		}
 		case 'components': {
-			// Characters that appear most frequently as components in other characters.
+			// Characters that appear most frequently as components in verified characters.
 			// Groups variant forms (e.g. 心/忄/⺗) under the canonical character using variant_of.
-			// Pre-loads char data into a CTE to avoid querying the view multiple times.
+			// Bypasses the view for counting (uses covering index on char_manual for speed),
+			// then fetches display data only for the final page of results.
 			const rows = await db.execute<Record<string, unknown>>(sql`
-				WITH chars AS (
-					SELECT character, variant_of, components, pinyin, gloss,
-						COALESCE(is_verified, false) AS is_verified,
-						subtlex_rank, subtlex_per_million, subtlex_context_diversity,
-						jun_da_rank, jun_da_per_million,
-						simplified_variants, traditional_variants
-					FROM ${charView}
+				WITH latest_narrow AS (
+					SELECT DISTINCT ON (character) character, components, is_verified
+					FROM ${charManual}
+					WHERE status = 'approved'
+					ORDER BY character, created_at DESC
+				),
+				verified AS MATERIALIZED (
+					SELECT
+						b.character,
+						COALESCE(m.components, b.components) AS components,
+						b.variant_of
+					FROM ${charBase} b
+					LEFT JOIN latest_narrow m USING (character)
+					WHERE COALESCE(m.is_verified, b.is_verified, false) = true
 				),
 				component_counts AS (
 					SELECT
 						COALESCE(cv.variant_of, comp->>'character') AS canonical,
 						comp->>'character' AS original,
 						count(*)::int AS usage_count
-					FROM chars AS src
+					FROM verified AS src
 					CROSS JOIN LATERAL jsonb_array_elements(src.components) AS comp
-					LEFT JOIN chars cv ON cv.character = comp->>'character'
+					LEFT JOIN verified cv ON cv.character = comp->>'character'
 					WHERE src.components IS NOT NULL
 					GROUP BY COALESCE(cv.variant_of, comp->>'character'), comp->>'character'
 				),
@@ -500,25 +523,43 @@ export async function getCharacterList(
 						array_agg(DISTINCT original) FILTER (WHERE original != canonical) AS variants
 					FROM component_counts
 					GROUP BY canonical
+				),
+				page AS (
+					SELECT character, usage_count, variants,
+						count(*) OVER()::int AS total
+					FROM grouped
+					ORDER BY usage_count DESC, character ASC
+					OFFSET ${offset}
+					LIMIT ${limit}
+				),
+				latest_display AS (
+					SELECT DISTINCT ON (character) character, pinyin, gloss, is_verified,
+						subtlex_rank, subtlex_per_million, subtlex_context_diversity,
+						jun_da_rank, jun_da_per_million,
+						simplified_variants, traditional_variants
+					FROM ${charManual}
+					WHERE status = 'approved' AND character IN (SELECT character FROM page)
+					ORDER BY character, created_at DESC
 				)
 				SELECT
-					c.character, c.pinyin, c.gloss,
-					c.is_verified AS "isVerified",
-					c.subtlex_rank AS "subtlexRank",
-					c.subtlex_per_million AS "subtlexPerMillion",
-					c.subtlex_context_diversity AS "subtlexContextDiversity",
-					c.jun_da_rank AS "junDaRank",
-					c.jun_da_per_million AS "junDaPerMillion",
-					c.simplified_variants AS "simplifiedVariants",
-					c.traditional_variants AS "traditionalVariants",
-					g.usage_count AS "usageCount",
-					g.variants,
-					count(*) OVER()::int AS total
-				FROM grouped g
-				JOIN chars c ON c.character = g.character
-				ORDER BY g.usage_count DESC, c.character ASC
-				OFFSET ${offset}
-				LIMIT ${limit}
+					p.usage_count AS "usageCount",
+					p.variants,
+					p.total,
+					b.character,
+					COALESCE(m.pinyin, b.pinyin) AS pinyin,
+					COALESCE(m.gloss, b.gloss) AS gloss,
+					COALESCE(COALESCE(m.is_verified, b.is_verified), false) AS "isVerified",
+					COALESCE(m.subtlex_rank, b.subtlex_rank) AS "subtlexRank",
+					COALESCE(m.subtlex_per_million, b.subtlex_per_million) AS "subtlexPerMillion",
+					COALESCE(m.subtlex_context_diversity, b.subtlex_context_diversity) AS "subtlexContextDiversity",
+					COALESCE(m.jun_da_rank, b.jun_da_rank) AS "junDaRank",
+					COALESCE(m.jun_da_per_million, b.jun_da_per_million) AS "junDaPerMillion",
+					COALESCE(m.simplified_variants, b.simplified_variants) AS "simplifiedVariants",
+					COALESCE(m.traditional_variants, b.traditional_variants) AS "traditionalVariants"
+				FROM page p
+				JOIN ${charBase} b ON b.character = p.character
+				LEFT JOIN latest_display m ON m.character = p.character
+				ORDER BY p.usage_count DESC, p.character ASC
 			`);
 			const typed = rows as unknown as (CharacterListItem & { total: number })[];
 			return {
@@ -615,4 +656,108 @@ export async function getDeletedComponentGlyphs(
 	}
 
 	return Object.keys(result).length > 0 ? result : null;
+}
+
+/** A label part for rendering a component type combination badge */
+export interface LabelPart {
+	count: number;
+	types: string[];
+}
+
+/** A group of characters sharing the same component type combination */
+export interface ComponentTypeCombination {
+	key: string;
+	label: LabelPart[];
+	characters: string[];
+}
+
+/**
+ * Get all verified characters grouped by their component type combination.
+ * Each character's components' types are normalized, sorted, and joined to form a key.
+ * Characters within each group are sorted by SUBTLEX frequency (most frequent first).
+ * Groups are sorted by character count descending.
+ */
+export async function getComponentTypeCombinations(): Promise<{
+	combinations: ComponentTypeCombination[];
+	totalCharacters: number;
+}> {
+	const rows = await db.execute<{ character: string; components: unknown; hint: string | null }>(
+		sql`
+		SELECT character, components, hint
+		FROM ${charView}
+		WHERE COALESCE(is_verified, false) = true
+		ORDER BY subtlex_rank ASC NULLS LAST
+	`
+	);
+
+	const typed = rows as unknown as {
+		character: string;
+		components: unknown;
+		hint: string | null;
+	}[];
+
+	// Group characters by their component type combination
+	const groups = new Map<string, string[]>();
+
+	for (const row of typed) {
+		const components = row.components as ComponentData[] | null;
+		const hasComponents = components && components.length > 0;
+
+		// Skip no-component characters that lack a hint or whose hint says "variant of" —
+		// these are either unanalyzed or variant forms (e.g. 忄→心).
+		if (!hasComponents && (!row.hint || /variant of/i.test(row.hint))) {
+			continue;
+		}
+
+		let key: string;
+		if (!hasComponents) {
+			key = 'none';
+		} else {
+			// For each component, normalize and sort its types, then join with '/'
+			const normalizedTypes = components.map((comp) => {
+				const types = comp.type && comp.type.length > 0 ? [...comp.type].sort() : ['unknown'];
+				return types.join('/');
+			});
+			// Sort the list of normalized types, join with ',' to form the key
+			normalizedTypes.sort();
+			key = normalizedTypes.join(',');
+		}
+
+		const group = groups.get(key);
+		if (group) {
+			group.push(row.character);
+		} else {
+			groups.set(key, [row.character]);
+		}
+	}
+
+	// Convert to output format with structured label parts
+	const combinations: ComponentTypeCombination[] = [...groups.entries()]
+		.sort((a, b) => b[1].length - a[1].length)
+		.map(([key, characters]) => ({
+			key,
+			label: buildLabelParts(key),
+			characters
+		}));
+
+	return {
+		combinations,
+		totalCharacters: typed.length
+	};
+}
+
+/** Build structured label parts from a combination key, collapsing duplicates */
+function buildLabelParts(key: string): LabelPart[] {
+	if (key === 'none') return [{ count: 1, types: ['none'] }];
+
+	const parts = key.split(',');
+	const counts = new Map<string, number>();
+	for (const part of parts) {
+		counts.set(part, (counts.get(part) ?? 0) + 1);
+	}
+
+	return [...counts.entries()].map(([typeStr, count]) => ({
+		count,
+		types: typeStr.split('/')
+	}));
 }

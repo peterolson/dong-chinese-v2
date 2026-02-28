@@ -11,7 +11,10 @@
  */
 
 import postgres from 'postgres';
-import { CHAR_VIEW_SQL } from '../../src/lib/server/db/char-view-sql.js';
+import {
+	CHAR_VIEW_SQL,
+	CHAR_MANUAL_COVERING_INDEX_SQL
+} from '../../src/lib/server/db/char-view-sql.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -40,6 +43,11 @@ async function main() {
 			}
 		}
 		console.log('View created successfully.');
+
+		// Create covering index for the latest_approved CTE
+		console.log('Creating char_manual covering index...');
+		await sql.unsafe(CHAR_MANUAL_COVERING_INDEX_SQL);
+		console.log('Index created.');
 
 		// Verify
 		const result = await sql`

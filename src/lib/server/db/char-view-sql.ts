@@ -57,3 +57,15 @@ export const CHAR_VIEW_BODY = `
 
 /** Full CREATE OR REPLACE VIEW statement — used by scripts that need raw SQL. */
 export const CHAR_VIEW_SQL = `CREATE OR REPLACE VIEW dictionary.char AS ${CHAR_VIEW_BODY}`;
+
+/**
+ * Covering index on char_manual for the latest_approved CTE in the char view.
+ * Eliminates seq-scan + sort by enabling an index-only scan on approved edits.
+ * INCLUDEs the columns most commonly read through the view.
+ */
+export const CHAR_MANUAL_COVERING_INDEX_SQL = `
+	CREATE INDEX IF NOT EXISTS char_manual_approved_covering_idx
+	ON dictionary.char_manual (character, created_at DESC)
+	INCLUDE (components, hint, is_verified, subtlex_rank)
+	WHERE status = 'approved'
+`;
