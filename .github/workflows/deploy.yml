@@ -19,6 +19,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # SvelteKit's postbuild analyse imports server modules; provide dummy values
+      DATABASE_URL: postgres://build:build@localhost:5432/build
+      BETTER_AUTH_SECRET: build-placeholder
     steps:
       - uses: actions/checkout@v4
         with:
