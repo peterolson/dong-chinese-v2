@@ -71,12 +71,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          echo "${{ secrets.DEPLOY_HOST_KEY }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
           cat >> ~/.ssh/config <<EOF
           Host deploy
             HostName $DEPLOY_HOST
             User root
             IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
           EOF
 
       - name: Sync config files
@@ -161,8 +164,10 @@ jobs:
             # Stop old process
             systemctl stop dong-chinese@$ACTIVE_PORT || true
 
-            # Record new active port
+            # Record new active port and enable for boot
             echo "$NEXT_PORT" > $APP_DIR/shared/active-port
+            systemctl enable dong-chinese@$NEXT_PORT
+            systemctl disable dong-chinese@$ACTIVE_PORT || true
             echo "Swapped to port $NEXT_PORT"
           SCRIPT
 
@@ -207,13 +212,21 @@ jobs:
             const latestTag = process.env.LATEST_TAG;
             const sha = context.sha;
 
-            // Create the tag
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${newTag}`,
-              sha: sha,
-            });
+            // Create the tag (idempotent — skip if it already exists from a re-run)
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${newTag}`,
+                sha: sha,
+              });
+            } catch (e) {
+              if (e.status === 422) {
+                core.info(`Tag ${newTag} already exists, reusing`);
+              } else {
+                throw e;
+              }
+            }
 
             // Generate release notes from merged PRs
             let body = '';
@@ -229,15 +242,23 @@ jobs:
               body = `Release ${newTag}`;
             }
 
-            // Create the release
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: newTag,
-              name: newTag,
-              body: body,
-              draft: false,
-              prerelease: false,
-            });
+            // Create the release (idempotent — skip if it already exists)
+            try {
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: newTag,
+                name: newTag,
+                body: body,
+                draft: false,
+                prerelease: false,
+              });
+            } catch (e) {
+              if (e.status === 422) {
+                core.info(`Release ${newTag} already exists, skipping`);
+              } else {
+                throw e;
+              }
+            }
 
             core.info(`Published release ${newTag}`);

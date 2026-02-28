@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockExecute = vi.fn();
 
@@ -9,6 +9,9 @@ vi.mock('$lib/server/db', () => ({
 const { GET } = await import('./+server');
 
 describe('GET /api/health', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 	it('returns ok when DB is reachable', async () => {
 		mockExecute.mockResolvedValueOnce([{ '?column?': 1 }]);
 		const response = await GET({} as Parameters<typeof GET>[0]);

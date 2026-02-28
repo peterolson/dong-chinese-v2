@@ -124,7 +124,7 @@ src/
 ├── hooks.server.ts                # Server hooks: Better Auth → anonymous session → settings
 └── app.html                       # HTML template with data-theme injection
 deploy/
-├── Caddyfile                      # Caddy reverse proxy config (port-swap via DONG_PORT env var)
+├── Caddyfile                      # Caddy reverse proxy config (upstream port rewritten by deploy)
 └── dong-chinese@.service          # systemd template unit (%i = port number)
 scripts/
 ├── server-setup.sh                # One-time server provisioning (Node 22, Caddy, dong user)
