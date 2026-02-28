@@ -41,7 +41,7 @@
 
 ## In Progress
 
-(none)
+- [ ] **Production deployment** — Hetzner VPS, Caddy reverse proxy, systemd template units, zero-downtime port-swap deploys via GitHub Actions `workflow_dispatch`. Health check endpoint at `/api/health`. Auto-release tagging with PR-based notes. Files: `deploy/Caddyfile`, `deploy/dong-chinese@.service`, `scripts/server-setup.sh`, `.github/workflows/deploy.yml`, `src/routes/api/health/+server.ts`.
 
 ## Up Next
 
@@ -71,7 +71,7 @@
 
 ### Phase 4: Polish & Infrastructure
 
-- [ ] SST (Ion) deployment setup
+- [x] Deployment setup (Hetzner VPS + Caddy + systemd + GitHub Actions zero-downtime deploy)
 - [x] GitHub Actions CI pipeline (lint, check, Vitest, Playwright with Postgres service container)
 - [ ] Branch protection on master (requires GitHub Pro or public repo)
 - [ ] Service worker for offline caching (JS enhancement)

@@ -27,3 +27,5 @@ jobs:
       - run: npm run dictionary:import-unihan
       - run: npm run dictionary:import-cedict
       - run: npm run dictionary:import-animcjk
+      - name: Rebuild char_base from stage tables
+        run: npm run dictionary:rebuild-char

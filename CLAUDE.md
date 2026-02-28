@@ -119,10 +119,15 @@ src/
 │   │   └── wiki/                  # Character wiki (home, search, lists, [character], edit, history, pending, recent-changes)
 │   ├── api/
 │   │   ├── dictionary/explain/[type]/ # JSON API for component explanations
+│   │   ├── health/                # Health check (DB ping, returns {status:"ok"})
 │   │   └── tts/token/             # Azure TTS auth token
 ├── hooks.server.ts                # Server hooks: Better Auth → anonymous session → settings
 └── app.html                       # HTML template with data-theme injection
+deploy/
+├── Caddyfile                      # Caddy reverse proxy config (upstream port rewritten by deploy)
+└── dong-chinese@.service          # systemd template unit (%i = port number)
 scripts/
+├── server-setup.sh                # One-time server provisioning (Node 22, Caddy, dong user)
 ├── import-meteor-users.ts         # Migrate users from MongoDB
 ├── import-permissions.ts          # Import wikiEdit permissions from MongoDB
 └── dictionary/
