@@ -205,6 +205,10 @@ test.describe('Component type explain modal', () => {
 		const charLink = dialog.locator('.cell-char').first();
 		await charLink.click();
 
+		// URL should change to the clicked character's page
+		await expect(page).not.toHaveURL(/\/dictionary\/好/);
+		await expect(page).toHaveURL(/\/dictionary\/.+/);
+
 		// Modal should close after navigation
 		await expect(dialog).not.toBeVisible();
 	});
