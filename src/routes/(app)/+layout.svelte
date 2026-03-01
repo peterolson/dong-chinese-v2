@@ -1,9 +1,12 @@
 <script lang="ts">
 	import SiteHeader from '$lib/components/layout/site-header.svelte';
 	import Sidebar from '$lib/components/layout/sidebar.svelte';
+	import { closeSidebarOnNavigate } from '$lib/components/layout/close-sidebar-on-navigate';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+
+	closeSidebarOnNavigate();
 </script>
 
 <!-- CSS-only sidebar toggle (works without JS) -->

@@ -2,10 +2,13 @@
 	import { browser } from '$app/environment';
 	import WikiHeader from '$lib/components/wiki/wiki-header.svelte';
 	import WikiSidebar from '$lib/components/wiki/wiki-sidebar.svelte';
+	import { closeSidebarOnNavigate } from '$lib/components/layout/close-sidebar-on-navigate';
 	import { applyThemeToDOM } from '$lib/settings-client';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+
+	closeSidebarOnNavigate();
 
 	$effect(() => {
 		if (browser) {

@@ -191,4 +191,6 @@ jobs:
       - run: npx drizzle-kit push --force
       - name: Create char view
         run: npm run dictionary:create-char-view
+      - name: Seed dictionary data for e2e
+        run: npx tsx scripts/seed-e2e.ts
       - run: npx playwright test
