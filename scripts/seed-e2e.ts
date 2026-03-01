@@ -205,8 +205,8 @@ async function seed() {
 		stroke_count_simp: data.strokeCountSimp,
 		stroke_count_trad: data.strokeCountSimp,
 		is_verified: data.isVerified,
-		components: JSON.stringify(data.components),
-		fragments_simp: JSON.stringify(data.fragmentsSimp)
+		components: sql.json(data.components),
+		fragments_simp: sql.json(data.fragmentsSimp)
 	}));
 
 	await sql`
