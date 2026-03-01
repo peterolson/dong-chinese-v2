@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getCharLinkBase } from './char-link-context';
@@ -46,6 +47,11 @@
 	}: Props = $props();
 
 	const charLinkBase = getCharLinkBase();
+
+	// Close modal when navigating away (e.g. clicking a character link inside the modal)
+	afterNavigate(() => {
+		modalOpen = false;
+	});
 
 	// Modal state
 	let modalOpen = $state(false);
